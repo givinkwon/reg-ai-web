@@ -1,0 +1,7 @@
+.backButton {
+  background: transparent;
+  color: #555;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}

@@ -1,0 +1,61 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f3f4f6;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 28rem;
+}
+
+@media screen and (min-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  transition: background-color 0.3s;
+  text-align: left;
+}
+
+.card:hover {
+  background-color: #e0f2fe;
+}
+
+.emoji {
+  font-size: 1.75rem;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.description {
+  font-size: 0.875rem;
+  color: #6b7280;
+}

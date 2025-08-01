@@ -1,0 +1,48 @@
+.chatWindow {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 1rem;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.user {
+  text-align: right;
+  background: #dcf8c6;
+  padding: 0.5rem;
+  margin: 0.3rem;
+  border-radius: 8px;
+}
+
+.assistant {
+  text-align: left;
+  background: #f1f0f0;
+  padding: 0.5rem;
+  margin: 0.3rem;
+  border-radius: 8px;
+}
+
+.inputArea {
+  display: flex;
+  gap: 0.5rem;
+}
+
+input {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: #4caf50;
+  color: white;
+  border-radius: 6px;
+}
