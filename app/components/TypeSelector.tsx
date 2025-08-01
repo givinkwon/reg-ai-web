@@ -4,6 +4,7 @@ import styles from './TypeSelector.module.css';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { useChatStore } from '../store/chat'; // Zustand store import
 
 const jobTypes = [
   {
@@ -46,11 +47,12 @@ const jobTypes = [
 
 export default function TypeSelector() {
   const router = useRouter();
+  const { messages, setMessages } = useChatStore(); // Zustand 사용
 
   useEffect(() => {
     const savedType = Cookies.get('selectedJobType');
     if (savedType) {
-      router.push('/chat');
+      // router.push('/chat');
     }
   }, []);
 

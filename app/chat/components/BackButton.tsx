@@ -2,20 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { useSetRecoilState } from 'recoil';
-import { selectedJobTypeState } from '../../atoms/user';
-import { chatLogState } from '../../atoms/chat';
+import { useUserStore } from '../../store/user';
 import styles from './BackButton.module.css';
 
 export default function BackButton() {
   const router = useRouter();
-  const setJobType = useSetRecoilState(selectedJobTypeState);
-  const setChatLog = useSetRecoilState(chatLogState);
+  const setJobType = useUserStore((state) => state.setSelectedJobType);
 
   const goBack = () => {
     Cookies.remove('selectedJobType');
     setJobType('');
-    setChatLog([]);
     router.push('/');
   };
 

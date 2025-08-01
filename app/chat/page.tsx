@@ -3,13 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import { useSetRecoilState } from 'recoil';
-import { selectedJobTypeState } from '../atoms/user';
+import { useUserStore } from '../store/user';
 import ChatWindow from './components/ChatWindow';
+import BackButton from './components/BackButton'; // ✅ 추가
 
 export default function ChatPage() {
   const router = useRouter();
-  const setJobType = useSetRecoilState(selectedJobTypeState);
+  const setJobType = useUserStore((state) => state.setSelectedJobType);
 
   useEffect(() => {
     const savedType = Cookies.get('selectedJobType');
@@ -18,7 +18,12 @@ export default function ChatPage() {
     } else {
       setJobType(savedType);
     }
-  }, []);
+  }, [setJobType, router]);
 
-  return <ChatWindow />;
+  return (
+    <div style={{ padding: '1rem' }}>
+      <BackButton /> {/* ✅ 여기에 삽입 */}
+      <ChatWindow />
+    </div>
+  );
 }

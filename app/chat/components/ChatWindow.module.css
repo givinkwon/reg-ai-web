@@ -1,7 +1,7 @@
 .chatWindow {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 90vh;
   padding: 1rem;
 }
 
@@ -32,17 +32,18 @@
   gap: 0.5rem;
 }
 
-input {
+.inputField {
   flex: 1;
   padding: 0.5rem;
   border-radius: 6px;
   border: 1px solid #ccc;
 }
 
-button {
+.sendButton {
   padding: 0.5rem 1rem;
   border: none;
   background: #4caf50;
   color: white;
   border-radius: 6px;
 }
+

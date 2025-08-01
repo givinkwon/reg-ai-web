@@ -1,4 +1,3 @@
-// pages/index.tsx
 import TypeSelector from './components/TypeSelector';
 
 export default function HomePage() {
