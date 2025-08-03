@@ -1,3 +1,38 @@
+/* 1) 기본 테마(라이트) 변수 */
+:root {
+  --bg: #ffffff;
+  --text: #111111;
+  --bubble-user-bg: #dcf8c6;
+  --bubble-assistant-bg: #f1f0f0;
+  --input-bg: #ffffff;
+  --input-border: #cccccc;
+  --button-bg: #4caf50;
+  --button-text: #ffffff;
+}
+
+/* 2) 다크모드 변수 오버라이드 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --text: #eaecef;
+    --bubble-user-bg: #2a3b2c;      /* 연한 초록톤 어둡게 */
+    --bubble-assistant-bg: #1e1f22;  /* 회색 말풍선도 어둡게 */
+    --input-bg: #15171b;
+    --input-border: #363a3f;
+    --button-bg: #3aa55d;            /* 버튼은 대비 유지 */
+    --button-text: #ffffff;
+  }
+
+  /* iOS Safari가 색을 임의로 바꾸지 않도록 힌트 */
+  html { color-scheme: dark light; }
+}
+
+/* 3) 컴포넌트에 변수 적용 */
+body, .chatWindow {
+  background: var(--bg);
+  color: var(--text);
+}
+
 .chatWindow {
   display: flex;
   flex-direction: column;
@@ -13,7 +48,8 @@
 
 .user {
   text-align: right;
-  background: #dcf8c6;
+  background: var(--bubble-user-bg);
+  color: var(--text);
   padding: 0.5rem;
   margin: 0.3rem;
   border-radius: 8px;
@@ -21,7 +57,8 @@
 
 .assistant {
   text-align: left;
-  background: #f1f0f0;
+  background: var(--bubble-assistant-bg);
+  color: var(--text);
   padding: 0.5rem;
   margin: 0.3rem;
   border-radius: 8px;
@@ -36,14 +73,19 @@
   flex: 1;
   padding: 0.5rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+.inputField::placeholder {
+  color: rgba(127, 127, 127, 0.9);
 }
 
 .sendButton {
   padding: 0.5rem 1rem;
   border: none;
-  background: #4caf50;
-  color: white;
+  background: var(--button-bg);
+  color: var(--button-text);
   border-radius: 6px;
 }
-
