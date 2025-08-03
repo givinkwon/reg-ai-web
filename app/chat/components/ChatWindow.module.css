@@ -1,37 +1,32 @@
-/* 1) 기본 테마(라이트) 변수 */
 :root {
-  --bg: #ffffff;
-  --text: #111111;
-  --bubble-user-bg: #dcf8c6;
-  --bubble-assistant-bg: #f1f0f0;
-  --input-bg: #ffffff;
-  --input-border: #cccccc;
-  --button-bg: #4caf50;
-  --button-text: #ffffff;
+  --text: #111;
+  --assistant-bg: #f1f0f0;
+  --assistant-text: #111;
+  --user-bg: #dcf8c6;
+  --user-text: #111;
 }
 
-/* 2) 다크모드 변수 오버라이드 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
     --text: #eaecef;
-    --bubble-user-bg: #2a3b2c;      /* 연한 초록톤 어둡게 */
-    --bubble-assistant-bg: #1e1f22;  /* 회색 말풍선도 어둡게 */
-    --input-bg: #15171b;
-    --input-border: #363a3f;
-    --button-bg: #3aa55d;            /* 버튼은 대비 유지 */
-    --button-text: #ffffff;
+    --assistant-bg: #26272b; /* 어두운 회색 */
+    --assistant-text: #eaecef; 
+    --user-bg: #2a3b2c; 
+    --user-text: #eaecef;
   }
-
-  /* iOS Safari가 색을 임의로 바꾸지 않도록 힌트 */
-  html { color-scheme: dark light; }
 }
 
-/* 3) 컴포넌트에 변수 적용 */
-body, .chatWindow {
-  background: var(--bg);
-  color: var(--text);
+.assistant {
+  background: var(--assistant-bg);
+  color: var(--assistant-text);
 }
+
+.user {
+  background: var(--user-bg);
+  color: var(--user-text);
+}
+
+.body { background:#000; color:var(--text); }
 
 .chatWindow {
   display: flex;
