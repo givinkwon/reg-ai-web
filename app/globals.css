@@ -103,3 +103,11 @@ button:focus-visible, input:focus-visible {
   outline: 2px solid rgba(37,99,235,0.6);
   outline-offset: 2px;
 }
+
+/* globals.css */
+input:-webkit-autofill,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: var(--input-text);
+  box-shadow: 0 0 0px 1000px var(--input-bg) inset; /* 배경색 덮기 */
+  transition: background-color 5000s ease-in-out 0s;
+}
