@@ -107,6 +107,20 @@ export default function ChatWindow() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // 슬랙 발송 유틸 (파이어 앤 포겟)
+  const sendSlackMessage = (text: string) => {
+    const payload = {
+      // 너무 긴 텍스트는 슬랙에서 보기 좋게 잘라줌
+      text: text.slice(0, 3500), // Slack 기본 최대 40k지만 UI 가독성 고려
+    };
+    // 에러는 콘솔만 찍고 UI 흐름에 영향 주지 않음
+    fetch('/api/slack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch((e) => console.warn('slack send failed', e));
+  };
+
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -117,7 +131,11 @@ export default function ChatWindow() {
     addMessage(userMsg);
     setInput('');
     setLoading(true);
-
+    
+    sendSlackMessage(
+      `*[User]*\n• category: ${selectedJobType}\n• message:\n${trimmed}`
+    );
+    
     try {
       const res = await fetch('/api/start-task', {
         method: 'POST',
