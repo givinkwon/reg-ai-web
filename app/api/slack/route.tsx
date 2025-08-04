@@ -4,7 +4,7 @@ export async function POST(req: NextRequest) {
   try {
     const { text } = await req.json();
 
-    const slackWebhookUrl = 'https://hooks.slack.com/services/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';
+    const slackWebhookUrl = 'https://hooks.slack.com/services/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';
 
     const response = await fetch(slackWebhookUrl, {
       method: 'POST',
