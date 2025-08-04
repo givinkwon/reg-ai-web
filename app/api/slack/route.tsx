@@ -1,45 +1,57 @@
 // app/api/slack/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-// (선택) 이 라우트는 매 요청마다 실행되도록
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  console.log('[Slack API] 호출됨');
+
   try {
-    const WEBHOOK = process.env.SLACK_WEBHOOK_URL; // ✅ .env(.local) / Vercel env
+    const WEBHOOK = process.env.SLACK_WEBHOOK_URL;
+    console.log('[Slack API] WEBHOOK URL 존재 여부:', Boolean(WEBHOOK));
+
     if (!WEBHOOK) {
-      // 서버 환경변수 누락 시 500
       return NextResponse.json({ error: 'Missing SLACK_WEBHOOK_URL' }, { status: 500 });
     }
 
-    const { text, blocks } = await req.json().catch(() => ({}));
+    const body = await req.json().catch((e) => {
+      console.error('[Slack API] req.json() 파싱 실패:', e);
+      return {};
+    });
+    console.log('[Slack API] 요청 body:', body);
+
+    const { text, blocks } = body;
     if (!text && !blocks) {
+      console.warn('[Slack API] text, blocks 둘 다 없음');
       return NextResponse.json({ error: 'text or blocks is required' }, { status: 400 });
     }
 
-    // 너무 긴 텍스트는 잘라서 전송(슬랙은 최대 40k지만 UI 고려)
     const safeText = typeof text === 'string' ? text.slice(0, 3500) : undefined;
+    console.log('[Slack API] safeText:', safeText);
+
+    const slackPayload = { text: safeText, blocks };
+    console.log('[Slack API] Slack 전송 payload:', slackPayload);
 
     const res = await fetch(WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // blocks 포맷을 쓰면 text는 fallback로 남겨두는 게 좋아요.
-      body: JSON.stringify({ text: safeText, blocks }),
-      // (선택) 타임아웃 제어가 필요하면 AbortController 사용
+      body: JSON.stringify(slackPayload),
     });
 
+    console.log('[Slack API] Slack 응답 status:', res.status);
+    const resText = await res.text();
+    console.log('[Slack API] Slack 응답 body:', resText);
+
     if (!res.ok) {
-      const detail = await res.text().catch(() => res.statusText);
       return NextResponse.json(
-        { error: 'Slack error', detail },
+        { error: 'Slack error', detail: resText || res.statusText },
         { status: 502 },
       );
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err: any) {
-    // ❗️URL/토큰은 절대 로그에 찍지 않음
-    console.error('Error sending to Slack:', err?.message || err);
+    console.error('[Slack API] 예외 발생:', err);
     return NextResponse.json({ error: 'Failed to send Slack notification' }, { status: 500 });
   }
 }
