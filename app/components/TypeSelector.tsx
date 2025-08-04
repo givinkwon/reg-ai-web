@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useChatStore } from '../store/chat'; // Zustand store import
+import { pushToDataLayer } from '../lib/analytics';
 
 const jobTypes = [
   {
@@ -52,12 +53,15 @@ export default function TypeSelector() {
   useEffect(() => {
     const savedType = Cookies.get('selectedJobType');
     if (savedType) {
-      // router.push('/chat');
+      router.push('/chat');
     }
   }, []);
 
   const handleSelect = (typeId: string) => {
     Cookies.set('selectedJobType', typeId, { expires: 7 });
+
+    pushToDataLayer('jobtype_select', { job_type: typeId });
+
     router.push('/chat');
   };
 

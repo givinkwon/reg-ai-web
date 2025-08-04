@@ -7,7 +7,7 @@
 
 // export default function ChatWindow() {
 //   const messages = useChatStore((state) => state.messages);
-//   const addMessage = useChatStore((state) => state.addMessage);
+//   const addMesssgkrp wlxormekfurh goage = useChatStore((state) => state.addMessage);
 //   const { selectedJobType } = useUserStore();
 //   const [input, setInput] = useState('');
 //   const [loading, setLoading] = useState(false);
@@ -97,6 +97,7 @@ import { useState, useEffect } from 'react';
 import { useChatStore, ChatMessage } from '../../store/chat';
 import { useUserStore } from '../../store/user';
 import styles from './ChatWindow.module.css';
+import { pushToDataLayer } from '@/app/lib/analytics';
 
 export default function ChatWindow() {
   const messages = useChatStore((state) => state.messages);
@@ -109,6 +110,8 @@ export default function ChatWindow() {
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
+
+    pushToDataLayer('chat_send_click', {message: trimmed, length: trimmed.length, category: selectedJobType });
 
     const userMsg: ChatMessage = { role: 'user', content: trimmed };
     addMessage(userMsg);
