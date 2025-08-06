@@ -1,0 +1,15 @@
+/* components/ChatPage.module.css */
+.chatContainer {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100vh;
+  background-color: #fefefe;
+}
+
+@media (max-width: 600px) {
+  .chatContainer {
+    padding: 0.75rem;
+  }
+}

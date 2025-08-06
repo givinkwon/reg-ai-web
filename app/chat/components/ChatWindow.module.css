@@ -1,83 +1,133 @@
 .chatWindow {
   display: flex;
   flex-direction: column;
-  height: 90vh;
+  height: 100vh;
+  max-height: 100dvh; /* ✅ 모바일 웹뷰 대응 */
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
   margin-bottom: 1rem;
+  padding-right: 0.25rem; /* ✅ 스크롤바 가려짐 방지 */
 }
 
-/* 공통 말풍선 */
+/* 공통 말풍선 스타일 */
 .bubble {
-  padding: 0.5rem;
-  margin: 0.3rem;
+  padding: 0.6rem 0.9rem;
+  margin: 0.4rem 0;
   border-radius: 8px;
-  /* 인앱/알고리즘 다크 반전 방지 - 요소 단위로 라이트 고정 */
-  color-scheme: light;
+  max-width: 85%;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  color-scheme: light; /* ✅ 다크모드 반전 방지 */
 }
 
-/* user / assistant
-   - composes 사용이 안 되면 JSX에서 className={`${s.bubble} ${s.user}`}처럼 합쳐주세요. */
 .user {
   composes: bubble;
-  text-align: right;
-  background: var(--user-bg);
+  align-self: flex-end;
+  background-color: var(--user-bg);
   color: var(--user-text);
+  text-align: right;
 }
 
 .assistant {
   composes: bubble;
-  text-align: left;
-  background: var(--assistant-bg);
+  align-self: flex-start;
+  background-color: var(--assistant-bg);
   color: var(--assistant-text);
+  text-align: left;
 }
 
 /* 입력 영역 */
 .inputArea {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  flex-wrap: nowrap;
 }
 
+/* 입력 필드 */
 .inputField {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.75rem 1rem;
   border-radius: 6px;
   border: 1px solid var(--input-border);
   background: var(--input-bg);
   color: var(--input-text);
+  font-size: 1rem;
   outline: none;
+  min-width: 0; /* ✅ 모바일 줄바꿈 방지 */
 }
 
 .inputField::placeholder {
   color: var(--placeholder);
-  opacity: 1; /* iOS의 기본 희석 제거 */
+  opacity: 1;
 }
 
-/* 버튼 */
+/* 전송 버튼 */
 .sendButton {
-  padding: 0.5rem 1rem;
+  flex-shrink: 0; /* ✅ 크기 축소 방지 */
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
   border: none;
+  border-radius: 6px;
   background: var(--button-bg);
   color: var(--button-text);
-  border-radius: 6px;
   cursor: pointer;
+  white-space: nowrap; /* ✅ 텍스트 줄바꿈 방지 */
+  transition: background-color 0.2s ease;
+}
+
+.sendButton:hover {
+  background-color: var(--button-bg-hover, #005bb5);
 }
 
 .sendButton:focus-visible,
 .inputField:focus-visible {
-  outline: 2px solid rgba(76,175,80,0.6);
+  outline: 2px solid rgba(76, 175, 80, 0.6);
   outline-offset: 2px;
 }
 
-/* ChatWindow.module.css 안에서 사용 */
+/* iOS Autofill 대응 */
 .inputField:-webkit-autofill,
 .inputField:-webkit-autofill:hover,
 .inputField:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--input-text);
   box-shadow: 0 0 0px 1000px var(--input-bg) inset;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+/* 안내 메시지 */
+.notice {
+  padding: 1.5rem;
+  text-align: center;
+  color: #666;
+  font-size: 1rem;
+}
+
+/* ✅ 모바일 대응 */
+@media (max-width: 480px) {
+  .inputField {
+    font-size: 0.95rem;
+    padding: 0.65rem 0.9rem;
+  }
+
+  .sendButton {
+    font-size: 0.95rem;
+    padding: 0.65rem 0.9rem;
+  }
+
+  .bubble {
+    font-size: 0.95rem;
+    padding: 0.6rem 0.9rem;
+  }
+
+  .notice {
+    font-size: 0.95rem;
+  }
 }

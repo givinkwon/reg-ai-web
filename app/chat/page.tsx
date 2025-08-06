@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useUserStore } from '../store/user';
 import ChatWindow from './components/ChatWindow';
-import BackButton from './components/BackButton'; // ✅ 추가
+import Header from './components/Header'; // ✅ Header 컴포넌트 import
+import styles from './ChatPage.module.css';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -21,8 +22,8 @@ export default function ChatPage() {
   }, [setJobType, router]);
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <BackButton /> {/* ✅ 여기에 삽입 */}
+    <div className={styles.chatContainer}>
+      <Header /> {/* ✅ BackButton 대신 Header 삽입 */}
       <ChatWindow />
     </div>
   );

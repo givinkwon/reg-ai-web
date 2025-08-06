@@ -1,96 +1,3 @@
-// 'use client';
-
-// import { useState } from 'react';
-// import { useChatStore, ChatMessage } from '../../store/chat';
-// import { useUserStore } from '../../store/user';
-// import styles from './ChatWindow.module.css';
-
-// export default function ChatWindow() {
-//   const messages = useChatStore((state) => state.messages);
-//   const addMesssgkrp wlxormekfurh goage = useChatStore((state) => state.addMessage);
-//   const { selectedJobType } = useUserStore();
-//   const [input, setInput] = useState('');
-//   const [loading, setLoading] = useState(false);
-
-//   const sendMessage = async () => {
-//     const trimmed = input.trim();
-//     if (!trimmed) return;
-
-//     const userMsg: ChatMessage = {
-//       role: 'user',
-//       content: trimmed,
-//     };
-
-//     addMessage(userMsg);
-//     setInput('');
-//     setLoading(true);
-
-//     try {
-//       const res = await fetch('/api/chat', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           email: 'anonymous',
-//           category: selectedJobType,
-//           message: trimmed,
-//         }),
-//       });
-
-//       const data = await res.json();
-
-//       const assistantMsg: ChatMessage = {
-//         role: 'assistant',
-//         content: data.answer || '⚠️ 답변이 없습니다.',
-//       };
-
-//       addMessage(assistantMsg);
-//     } catch (e) {
-//       console.error('❌ Send message error:', e);
-//       addMessage({
-//         role: 'assistant',
-//         content: '⚠️ 에러가 발생했습니다.',
-//       });
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (!selectedJobType) return <div>직무를 먼저 선택해주세요.</div>;
-
-//   return (
-//     <div className={styles.chatWindow}>
-//       <div className={styles.messages}>
-//         {messages.map((msg, idx) => (
-//           <div
-//             key={idx}
-//             className={msg.role === 'user' ? styles.user : styles.assistant}
-//             dangerouslySetInnerHTML={{
-//               __html: msg.content.replace(/\n/g, '<br />'), // '\n' 줄바꿈도 반영
-//             }}
-//           />
-//         ))}
-//         {loading && (
-//           <div className={styles.assistant}>🌀 답변을 생성 중입니다...</div>
-//         )}
-//       </div>
-
-//       <div className={styles.inputArea}>
-//         <input
-//           className={styles.inputField}
-//           value={input}
-//           onChange={(e) => setInput(e.target.value)}
-//           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-//           placeholder="질문을 입력하세요"
-//         />
-//         <button className={styles.sendButton} onClick={sendMessage}>
-//           전송
-//         </button>
-//       </div>
-//     </div>
-//   );
-// }
-
-// 풀링
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -102,18 +9,15 @@ import { pushToDataLayer } from '@/app/lib/analytics';
 export default function ChatWindow() {
   const messages = useChatStore((state) => state.messages);
   const addMessage = useChatStore((state) => state.addMessage);
-  const { selectedJobType } = useUserStore();
+  const { selectedJobType, userInfo } = useUserStore();
   const [input, setInput] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // 슬랙 발송 유틸 (파이어 앤 포겟)
   const sendSlackMessage = (text: string) => {
     const payload = {
-      // 너무 긴 텍스트는 슬랙에서 보기 좋게 잘라줌
-      text: text.slice(0, 3500), // Slack 기본 최대 40k지만 UI 가독성 고려
+      text: text.slice(0, 3500),
     };
-    // 에러는 콘솔만 찍고 UI 흐름에 영향 주지 않음
     fetch('/api/slack', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -125,23 +29,27 @@ export default function ChatWindow() {
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    pushToDataLayer('chat_send_click', {message: trimmed, length: trimmed.length, category: selectedJobType });
+    pushToDataLayer('chat_send_click', {
+      message: trimmed,
+      length: trimmed.length,
+      category: selectedJobType,
+    });
 
     const userMsg: ChatMessage = { role: 'user', content: trimmed };
     addMessage(userMsg);
     setInput('');
     setLoading(true);
-    
+
     sendSlackMessage(
       `*[User]*\n• category: ${selectedJobType}\n• message:\n${trimmed}`
     );
-    
+
     try {
       const res = await fetch('/api/start-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: 'anonymous',
+          email: userInfo.email || 'anonymous',
           category: selectedJobType,
           message: trimmed,
         }),
@@ -151,19 +59,22 @@ export default function ChatWindow() {
       setJobId(job_id);
     } catch (err) {
       console.error('❌ API 호출 오류:', err);
-      addMessage({ role: 'assistant', content: '⚠️ 요청 중 에러가 발생했습니다.' });
+      addMessage({
+        role: 'assistant',
+        content: '⚠️ 요청 중 에러가 발생했습니다.',
+      });
       setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!jobId) return;
-  
+
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/check-task?jobId=${jobId}`); // ✅ 수정
+        const res = await fetch(`/api/check-task?jobId=${jobId}`);
         const data = await res.json();
-  
+
         if (data.status === 'done') {
           const assistantMsg: ChatMessage = {
             role: 'assistant',
@@ -174,23 +85,29 @@ export default function ChatWindow() {
           setJobId(null);
           clearInterval(interval);
         } else if (data.status === 'error') {
-          addMessage({ role: 'assistant', content: '⚠️ 서버 처리 중 오류가 발생했습니다.' });
+          addMessage({
+            role: 'assistant',
+            content: '⚠️ 서버 처리 중 오류가 발생했습니다.',
+          });
           setLoading(false);
           setJobId(null);
           clearInterval(interval);
         }
       } catch (err) {
         console.error('❌ 상태 확인 실패:', err);
-        addMessage({ role: 'assistant', content: '⚠️ 상태 확인 중 오류가 발생했습니다.' });
+        addMessage({
+          role: 'assistant',
+          content: '⚠️ 상태 확인 중 오류가 발생했습니다.',
+        });
         setLoading(false);
         setJobId(null);
         clearInterval(interval);
       }
     }, 2000);
-  
+
     return () => clearInterval(interval);
   }, [jobId]);
-  
+
   const cleanText = (text: string) =>
     text
       .replace(/---+/g, '')
@@ -198,7 +115,9 @@ export default function ChatWindow() {
       .replace(/\*\*/g, '')
       .replace(/\n/g, '<br />');
 
-  if (!selectedJobType) return <div>직무를 먼저 선택해주세요.</div>;
+  // ✅ 조건부 메시지: 로그인 여부, 직무 선택 여부 확인
+  if (!userInfo.email) return <div className={styles.notice}>⚠️ 로그인 후 이용해주세요.</div>;
+  if (!selectedJobType) return <div className={styles.notice}>⚠️ 직무를 먼저 선택해주세요.</div>;
 
   return (
     <div className={styles.chatWindow}>
