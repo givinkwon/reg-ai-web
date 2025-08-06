@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUserStore } from '../../store/user';
 import GoogleButton from './GoogleButton';
+import GoogleLogoutButton from './GoogleLogoutButton'; // ✅ 새로 추가
 import BackButton from './BackButton';
 import styles from './Header.module.css';
 
@@ -12,7 +13,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true); // ✅ hydration mismatch 방지
+    setMounted(true);
   }, []);
 
   return (
@@ -21,7 +22,10 @@ export default function Header() {
       {mounted && (
         <div className={styles.userInfo}>
           {email ? (
-            <span>👤 {displayName || email}</span>
+            <>
+              <span>👤 {displayName || email}</span>
+              <GoogleLogoutButton /> {/* ✅ 로그아웃 버튼 */}
+            </>
           ) : (
             <GoogleButton />
           )}
