@@ -5,6 +5,7 @@
   max-height: 100dvh;
   padding: 1rem;
   box-sizing: border-box;
+  background-color: var(--chat-bg, #f9f9f9); /* optional 전체 배경 */
 }
 
 .messages {
@@ -12,32 +13,39 @@
   overflow-y: auto;
   margin-bottom: 1rem;
   padding-right: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* ✅ 말풍선 간 간격 */
 }
 
 .bubble {
   padding: 0.6rem 0.9rem;
-  margin: 0.4rem 0;
-  border-radius: 8px;
+  margin: 0.2rem 0;
+  border-radius: 12px;
   max-width: 85%;
   word-wrap: break-word;
   white-space: pre-wrap;
   line-height: 1.5;
   color-scheme: light;
+  font-size: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* 사용자 메시지 - 오른쪽 정렬 */
 .user {
   composes: bubble;
   align-self: flex-end;
-  background-color: var(--user-bg);
-  color: var(--user-text);
-  text-align: right;
+  background-color: var(--user-bg, #d1eaff);
+  color: var(--user-text, #003366);
+  text-align: left;
 }
 
+/* GPT 메시지 - 왼쪽 정렬 */
 .assistant {
   composes: bubble;
   align-self: flex-start;
-  background-color: var(--assistant-bg);
-  color: var(--assistant-text);
+  background-color: var(--assistant-bg, #f1f1f1);
+  color: var(--assistant-text, #222);
   text-align: left;
 }
 
@@ -53,16 +61,16 @@
   flex: 1;
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  border: 1px solid var(--input-border);
-  background: var(--input-bg);
-  color: var(--input-text);
+  border: 1px solid var(--input-border, #ccc);
+  background: var(--input-bg, #fff);
+  color: var(--input-text, #000);
   font-size: 1rem;
   outline: none;
   min-width: 0;
 }
 
 .inputField::placeholder {
-  color: var(--placeholder);
+  color: var(--placeholder, #aaa);
   opacity: 1;
 }
 
@@ -72,8 +80,8 @@
   font-size: 1rem;
   border: none;
   border-radius: 6px;
-  background: var(--button-bg);
-  color: var(--button-text);
+  background: var(--button-bg, #007bff);
+  color: var(--button-text, #fff);
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.2s ease;

@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import { useUserStore } from '../store/user';
 import ChatWindow from './components/ChatWindow';
 import Header from './components/Header'; // ✅ Header 컴포넌트 import
-import styles from './ChatPage.module.css';
+import styles from './page.module.css';
 
 export default function ChatPage() {
   const router = useRouter();
