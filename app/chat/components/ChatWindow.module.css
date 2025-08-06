@@ -3,27 +3,29 @@
   flex-direction: column;
   height: 100vh;
   max-height: 100dvh;
+  min-height: 0;
   padding: 1rem;
   box-sizing: border-box;
-  background-color: var(--chat-bg, #f9f9f9); /* optional 전체 배경 */
+  background-color: var(--chat-bg, #f9f9f9);
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
+  max-height: 100%;
   margin-bottom: 1rem;
   padding-right: 0.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; /* ✅ 말풍선 간 간격 */
+  gap: 0.5rem;
 }
 
 .bubble {
   padding: 0.6rem 0.9rem;
   margin: 0.2rem 0;
   border-radius: 12px;
-  max-width: 85%;
-  word-wrap: break-word;
+  max-width: 100%; /* ✅ 말풍선 너비 제한 완화 */
+  word-break: break-word; /* ✅ 길이 긴 단어 줄바꿈 */
   white-space: pre-wrap;
   line-height: 1.5;
   color-scheme: light;
@@ -31,7 +33,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* 사용자 메시지 - 오른쪽 정렬 */
 .user {
   composes: bubble;
   align-self: flex-end;
@@ -40,7 +41,6 @@
   text-align: left;
 }
 
-/* GPT 메시지 - 왼쪽 정렬 */
 .assistant {
   composes: bubble;
   align-self: flex-start;
@@ -55,6 +55,10 @@
   gap: 0.5rem;
   width: 100%;
   flex-wrap: nowrap;
+  position: sticky;        /* ✅ 하단 고정 */
+  bottom: 0;
+  background: #f9f9f9;
+  padding-top: 0.5rem;
 }
 
 .inputField {
@@ -112,7 +116,6 @@
   font-size: 1rem;
 }
 
-/* ✅ 로그인 유도 메시지 */
 .loginHint {
   background-color: #fff8c5;
   color: #333;
@@ -125,7 +128,6 @@
   border: 1px solid #f1d36f;
 }
 
-/* ✅ 모바일 대응 */
 @media (max-width: 480px) {
   .inputField {
     font-size: 0.95rem;
@@ -140,6 +142,7 @@
   .bubble {
     font-size: 0.95rem;
     padding: 0.6rem 0.9rem;
+    max-width: 100%; /* ✅ 모바일에서도 말풍선 넓게 */
   }
 
   .notice,
