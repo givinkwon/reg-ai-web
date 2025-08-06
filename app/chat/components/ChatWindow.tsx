@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useChatStore, ChatMessage } from '../../store/chat';
 import { useUserStore } from '../../store/user';
 import styles from './ChatWindow.module.css';
@@ -13,6 +14,14 @@ export default function ChatWindow() {
   const [input, setInput] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  // ✅ 직무 미선택 시 홈으로 이동
+  useEffect(() => {
+    if (!selectedJobType) {
+      router.push('/');
+    }
+  }, [selectedJobType]);
 
   const sendSlackMessage = (text: string) => {
     const payload = {
@@ -115,12 +124,15 @@ export default function ChatWindow() {
       .replace(/\*\*/g, '')
       .replace(/\n/g, '<br />');
 
-  // ✅ 조건부 메시지: 로그인 여부, 직무 선택 여부 확인
-  if (!userInfo.email) return <div className={styles.notice}>⚠️ 로그인 후 이용해주세요.</div>;
-  if (!selectedJobType) return <div className={styles.notice}>⚠️ 직무를 먼저 선택해주세요.</div>;
-
   return (
     <div className={styles.chatWindow}>
+      {/* ✅ 로그인 유도 메시지 (로그인 안했을 때만 표시) */}
+      {!userInfo.email && (
+        <div className={styles.loginHint}>
+          ⚠️ 로그인하시면 대화 기록을 기반으로 더 똑똑한 답변을 받을 수 있어요!
+        </div>
+      )}
+
       <div className={styles.messages}>
         {messages.map((msg, idx) => (
           <div

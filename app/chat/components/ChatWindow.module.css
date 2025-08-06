@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-height: 100dvh; /* ✅ 모바일 웹뷰 대응 */
+  max-height: 100dvh;
   padding: 1rem;
   box-sizing: border-box;
 }
@@ -11,10 +11,9 @@
   flex: 1;
   overflow-y: auto;
   margin-bottom: 1rem;
-  padding-right: 0.25rem; /* ✅ 스크롤바 가려짐 방지 */
+  padding-right: 0.25rem;
 }
 
-/* 공통 말풍선 스타일 */
 .bubble {
   padding: 0.6rem 0.9rem;
   margin: 0.4rem 0;
@@ -23,7 +22,7 @@
   word-wrap: break-word;
   white-space: pre-wrap;
   line-height: 1.5;
-  color-scheme: light; /* ✅ 다크모드 반전 방지 */
+  color-scheme: light;
 }
 
 .user {
@@ -42,7 +41,6 @@
   text-align: left;
 }
 
-/* 입력 영역 */
 .inputArea {
   display: flex;
   align-items: center;
@@ -51,7 +49,6 @@
   flex-wrap: nowrap;
 }
 
-/* 입력 필드 */
 .inputField {
   flex: 1;
   padding: 0.75rem 1rem;
@@ -61,7 +58,7 @@
   color: var(--input-text);
   font-size: 1rem;
   outline: none;
-  min-width: 0; /* ✅ 모바일 줄바꿈 방지 */
+  min-width: 0;
 }
 
 .inputField::placeholder {
@@ -69,9 +66,8 @@
   opacity: 1;
 }
 
-/* 전송 버튼 */
 .sendButton {
-  flex-shrink: 0; /* ✅ 크기 축소 방지 */
+  flex-shrink: 0;
   padding: 0.75rem 1rem;
   font-size: 1rem;
   border: none;
@@ -79,7 +75,7 @@
   background: var(--button-bg);
   color: var(--button-text);
   cursor: pointer;
-  white-space: nowrap; /* ✅ 텍스트 줄바꿈 방지 */
+  white-space: nowrap;
   transition: background-color 0.2s ease;
 }
 
@@ -93,7 +89,6 @@
   outline-offset: 2px;
 }
 
-/* iOS Autofill 대응 */
 .inputField:-webkit-autofill,
 .inputField:-webkit-autofill:hover,
 .inputField:-webkit-autofill:focus {
@@ -102,12 +97,24 @@
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* 안내 메시지 */
 .notice {
   padding: 1.5rem;
   text-align: center;
   color: #666;
   font-size: 1rem;
+}
+
+/* ✅ 로그인 유도 메시지 */
+.loginHint {
+  background-color: #fff8c5;
+  color: #333;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 500;
+  border: 1px solid #f1d36f;
 }
 
 /* ✅ 모바일 대응 */
@@ -127,7 +134,8 @@
     padding: 0.6rem 0.9rem;
   }
 
-  .notice {
+  .notice,
+  .loginHint {
     font-size: 0.95rem;
   }
 }
