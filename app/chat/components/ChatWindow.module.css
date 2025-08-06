@@ -24,8 +24,8 @@
   padding: 0.6rem 0.9rem;
   margin: 0.2rem 0;
   border-radius: 12px;
-  max-width: 100%; /* ✅ 말풍선 너비 제한 완화 */
-  word-break: break-word; /* ✅ 길이 긴 단어 줄바꿈 */
+  max-width: 100%;
+  word-break: break-word;
   white-space: pre-wrap;
   line-height: 1.5;
   color-scheme: light;
@@ -55,9 +55,9 @@
   gap: 0.5rem;
   width: 100%;
   flex-wrap: nowrap;
-  position: sticky;        /* ✅ 하단 고정 */
+  position: sticky;
   bottom: 0;
-  background: #f9f9f9;
+  background: var(--chat-bg, #f9f9f9);
   padding-top: 0.5rem;
 }
 
@@ -128,6 +128,7 @@
   border: 1px solid #f1d36f;
 }
 
+/* 📱 모바일 최적화 */
 @media (max-width: 480px) {
   .inputField {
     font-size: 0.95rem;
@@ -142,11 +143,65 @@
   .bubble {
     font-size: 0.95rem;
     padding: 0.6rem 0.9rem;
-    max-width: 100%; /* ✅ 모바일에서도 말풍선 넓게 */
+    max-width: 100%;
   }
 
   .notice,
   .loginHint {
     font-size: 0.95rem;
+  }
+}
+
+/* 🌙 다크모드 대응 */
+@media (prefers-color-scheme: dark) {
+  .chatWindow {
+    background-color: #111827;
+  }
+
+  .messages {
+    color: #f9f9f9;
+  }
+
+  .bubble {
+    box-shadow: 0 1px 4px rgba(255, 255, 255, 0.05);
+  }
+
+  .user {
+    background-color: #2563eb;
+    color: #f1f5f9;
+  }
+
+  .assistant {
+    background-color: #1f2937;
+    color: #e5e7eb;
+  }
+
+  .inputArea {
+    background: #111827;
+  }
+
+  .inputField {
+    background: #1f2937;
+    color: #f9f9f9;
+    border-color: #374151;
+  }
+
+  .inputField::placeholder {
+    color: #888;
+  }
+
+  .sendButton {
+    background: #3b82f6;
+    color: #fff;
+  }
+
+  .sendButton:hover {
+    background: #2563eb;
+  }
+
+  .loginHint {
+    background-color: #facc15;
+    color: #1f2937;
+    border-color: #eab308;
   }
 }
