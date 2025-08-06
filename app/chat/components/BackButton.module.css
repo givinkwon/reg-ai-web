@@ -4,4 +4,19 @@
   border: none;
   font-size: 1rem;
   cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.backButton:hover {
+  color: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  .backButton {
+    color: #f5f5f5;
+  }
+
+  .backButton:hover {
+    color: #fff;
+  }
 }
