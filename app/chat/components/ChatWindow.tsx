@@ -19,7 +19,7 @@ export default function ChatWindow() {
   const router = useRouter();
 
   const LOADING_MESSAGES = [
-    '🌀 관련 법령을 탐색 중입니다...',
+    '🌀 RegAI가 질의를 분석합니다...',
     '📚 관련 법령과 조문을 찾았습니다. 분석 중입니다...',
     '🔍 정확한 답변을 위해 다시 확인 중입니다. 잠시만 기다려주세요...',
   ];
