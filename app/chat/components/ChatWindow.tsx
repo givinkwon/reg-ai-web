@@ -14,14 +14,32 @@ export default function ChatWindow() {
   const [input, setInput] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const router = useRouter();
 
-  // ✅ 직무 미선택 시 홈으로 이동
+  const LOADING_MESSAGES = [
+    '🌀 답변을 생성 중입니다...',
+    '📚 관련 법령과 조문을 찾았습니다. 분석 중입니다...',
+    '🔍 정확한 답변을 위해 다시 확인 중입니다. 잠시만 기다려주세요...',
+  ];
+
+  // 직무 미선택 시 홈으로
   useEffect(() => {
     if (!selectedJobType) {
       router.push('/');
     }
   }, [selectedJobType]);
+
+  // 30초마다 로딩 메시지 변경
+  useEffect(() => {
+    if (!loading) return;
+
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev < 2 ? prev + 1 : prev));
+    }, 30000); // 30초마다 다음 메시지
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const sendSlackMessage = (text: string) => {
     const payload = {
@@ -48,6 +66,7 @@ export default function ChatWindow() {
     addMessage(userMsg);
     setInput('');
     setLoading(true);
+    setLoadingMessageIndex(0);
 
     sendSlackMessage(
       `*[User]*\n• category: ${selectedJobType}\n• message:\n${trimmed}`
@@ -92,7 +111,6 @@ export default function ChatWindow() {
           addMessage(assistantMsg);
           setLoading(false);
           setJobId(null);
-          clearInterval(interval);
         } else if (data.status === 'error') {
           addMessage({
             role: 'assistant',
@@ -100,7 +118,6 @@ export default function ChatWindow() {
           });
           setLoading(false);
           setJobId(null);
-          clearInterval(interval);
         }
       } catch (err) {
         console.error('❌ 상태 확인 실패:', err);
@@ -110,7 +127,6 @@ export default function ChatWindow() {
         });
         setLoading(false);
         setJobId(null);
-        clearInterval(interval);
       }
     }, 2000);
 
@@ -126,7 +142,6 @@ export default function ChatWindow() {
 
   return (
     <div className={styles.chatWindow}>
-      {/* ✅ 로그인 유도 메시지 (로그인 안했을 때만 표시) */}
       {!userInfo.email && (
         <div className={styles.loginHint}>
           ⚠️ 로그인하시면 대화 기록을 기반으로 더 똑똑한 답변을 받을 수 있어요!
@@ -141,8 +156,16 @@ export default function ChatWindow() {
             dangerouslySetInnerHTML={{ __html: msg.content }}
           />
         ))}
+
         {loading && (
-          <div className={styles.assistant}>🌀 답변을 생성 중입니다...</div>
+          <div className={styles.assistant}>
+            {LOADING_MESSAGES[loadingMessageIndex]}
+            <div className={styles.typingDots}>
+              <span className={styles.dot}></span>
+              <span className={styles.dot}></span>
+              <span className={styles.dot}></span>
+            </div>
+          </div>
         )}
       </div>
 

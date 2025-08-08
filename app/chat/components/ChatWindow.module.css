@@ -49,6 +49,50 @@
   text-align: left;
 }
 
+/* ✅ 스피너 애니메이션 (세 점이 깜빡이는 효과) */
+.loadingDots {
+  display: inline-block;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.loadingDots span {
+  display: inline-block;
+  font-size: 1.5rem;
+  animation: blink 1.4s infinite both;
+}
+
+.loadingDots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.loadingDots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+
+/* ✅ 단계별 로딩 메시지 스타일 */
+.loadingStage {
+  composes: bubble;
+  align-self: flex-start;
+  background-color: var(--assistant-bg, #f1f1f1);
+  color: var(--assistant-text, #222);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .inputArea {
   display: flex;
   align-items: center;
@@ -203,5 +247,10 @@
     background-color: #facc15;
     color: #1f2937;
     border-color: #eab308;
+  }
+
+  .loadingStage {
+    background-color: #1f2937;
+    color: #e5e7eb;
   }
 }
