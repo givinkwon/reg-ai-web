@@ -15,6 +15,7 @@ export default function ChatWindow() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('');
   const router = useRouter();
 
   const LOADING_MESSAGES = [
@@ -23,14 +24,12 @@ export default function ChatWindow() {
     '🔍 정확한 답변을 위해 다시 확인 중입니다. 잠시만 기다려주세요...',
   ];
 
-  // 직무 미선택 시 홈으로
   useEffect(() => {
     if (!selectedJobType) {
       router.push('/');
     }
   }, [selectedJobType]);
 
-  // 30초마다 로딩 메시지 변경
   useEffect(() => {
     if (!loading) return;
 
@@ -67,6 +66,7 @@ export default function ChatWindow() {
     setInput('');
     setLoading(true);
     setLoadingMessageIndex(0);
+    setStatusMessage('');
 
     sendSlackMessage(
       `*[User]*\n• category: ${selectedJobType}\n• message:\n${trimmed}`
@@ -103,6 +103,11 @@ export default function ChatWindow() {
         const res = await fetch(`/api/check-task?jobId=${jobId}`);
         const data = await res.json();
 
+        // ✅ status_message 받아서 저장
+        if (data.status_message) {
+          setStatusMessage(data.status_message);
+        }
+
         if (data.status === 'done') {
           const assistantMsg: ChatMessage = {
             role: 'assistant',
@@ -111,6 +116,7 @@ export default function ChatWindow() {
           addMessage(assistantMsg);
           setLoading(false);
           setJobId(null);
+          setStatusMessage('');
         } else if (data.status === 'error') {
           addMessage({
             role: 'assistant',
@@ -118,6 +124,7 @@ export default function ChatWindow() {
           });
           setLoading(false);
           setJobId(null);
+          setStatusMessage('');
         }
       } catch (err) {
         console.error('❌ 상태 확인 실패:', err);
@@ -127,6 +134,7 @@ export default function ChatWindow() {
         });
         setLoading(false);
         setJobId(null);
+        setStatusMessage('');
       }
     }, 2000);
 
@@ -160,7 +168,7 @@ export default function ChatWindow() {
         {loading && (
           <div className={styles.assistant}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>{LOADING_MESSAGES[loadingMessageIndex]}</span>
+              <span>{statusMessage || LOADING_MESSAGES[loadingMessageIndex]}</span>
               <div className={styles.loadingDots}>
                 <span className={styles.dot}></span>
                 <span className={styles.dot}></span>
@@ -169,7 +177,6 @@ export default function ChatWindow() {
             </div>
           </div>
         )}
-
       </div>
 
       <div className={styles.inputArea}>
