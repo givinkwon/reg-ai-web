@@ -159,14 +159,17 @@ export default function ChatWindow() {
 
         {loading && (
           <div className={styles.assistant}>
-            {LOADING_MESSAGES[loadingMessageIndex]}
-            <div className={styles.typingDots}>
-              <span className={styles.dot}></span>
-              <span className={styles.dot}></span>
-              <span className={styles.dot}></span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>{LOADING_MESSAGES[loadingMessageIndex]}</span>
+              <div className={styles.loadingDots}>
+                <span className={styles.dot}></span>
+                <span className={styles.dot}></span>
+                <span className={styles.dot}></span>
+              </div>
             </div>
           </div>
         )}
+
       </div>
 
       <div className={styles.inputArea}>
