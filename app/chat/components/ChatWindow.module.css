@@ -434,3 +434,119 @@
     -webkit-text-fill-color: var(--input-text) !important;
   }
 }
+
+/* =========================
+   🌙 DARK MODE — 고가독 팔레트
+   - 삼성/웹킷 강제 다크 대비까지 고려
+   - 태그(칩) / 제목 / 입력 / 버튼 컬러 확실히 분리
+   ========================= */
+@media (prefers-color-scheme: dark) {
+  /* 패널/텍스트 */
+  .monitorPane {
+    background: #0f172a !important;     /* slate-900 */
+    border-color: #1f2937 !important;   /* slate-800 */
+    color: #e5e7eb !important;          /* slate-200 */
+  }
+  .panelTitle,
+  .sectionTitle {
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+    opacity: 1 !important;
+  }
+
+  /* 설명 텍스트(헬퍼) */
+  .helper {
+    color: #cbd5e1 !important;          /* slate-300 */
+    border-color: #334155 !important;   /* slate-700 */
+    background: transparent !important;
+  }
+
+  /* 입력 필드 */
+  .field,
+  .inputField {
+    background: #111827 !important;     /* slate-800 */
+    color: #e5e7eb !important;
+    -webkit-text-fill-color: #e5e7eb !important;
+    border-color: #374151 !important;   /* slate-700 */
+  }
+  .field::placeholder,
+  .inputField::placeholder {
+    color: #94a3b8 !important;          /* slate-400 */
+    -webkit-text-fill-color: #94a3b8 !important;
+  }
+
+  /* 태그(칩) — 일반/호버/선택 */
+  .chip {
+    background: #0b1220 !important;     /* 아주 진한 남보라 */
+    border-color: #334155 !important;   /* slate-700 */
+    color: #e5e7eb !important;          /* 텍스트 밝게 */
+    -webkit-text-fill-color: #e5e7eb !important;
+  }
+  .chip:hover {
+    background: #111827 !important;     /* slate-800 */
+    border-color: #475569 !important;   /* slate-600 */
+  }
+  .chipActive {
+    background: #1e3a8a !important;     /* blue-800 */
+    border-color: #3b82f6 !important;   /* blue-500 */
+    color: #e0e7ff !important;          /* indigo-100 */
+    -webkit-text-fill-color: #e0e7ff !important;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.35) inset;
+  }
+
+  /* 어시스턴트 버블/링크/코드도 대비 강화 */
+  .assistant {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+    border-color: #1f2937 !important;
+  }
+  .assistant a {
+    color: #60a5fa !important;          /* blue-400 */
+    text-decoration: underline;
+  }
+  .assistant pre,
+  .assistant code {
+    background: #0b1220 !important;
+    color: #e5e7eb !important;
+  }
+
+  /* 진행상태/로딩 점 */
+  .loadingStage { color: #cbd5e1 !important; }
+  .dot { background-color: #94a3b8 !important; }
+
+  /* 버튼은 파란계열 유지 */
+  .primary,
+  .sendButton {
+    background: #3b82f6 !important;     /* blue-500 */
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+  .primary:hover,
+  .sendButton:hover {
+    background: #2563eb !important;     /* blue-600 */
+  }
+
+  /* 보조 버튼 */
+  .secondary {
+    color: #93c5fd !important;          /* blue-300 */
+    border-color: #3b82f6 !important;
+    background: transparent !important;
+  }
+  .secondary:hover { background: rgba(59,130,246,0.1) !important; }
+
+  .ghost {
+    color: #e5e7eb !important;
+    border-color: #334155 !important;
+    background: transparent !important;
+  }
+  .ghost:hover { background: rgba(148,163,184,0.12) !important; }
+}
+
+/* ✅ 삼성 인터넷/웹킷 강제 가독성 모드 방어 (색 다시 고정) */
+@supports (-webkit-touch-callout: none) {
+  .chip, .chipActive, .field, .inputField,
+  .panelTitle, .sectionTitle, .helper,
+  .monitorPane, .assistant {
+    -webkit-text-fill-color: currentColor !important;
+  }
+}
