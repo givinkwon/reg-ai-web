@@ -329,3 +329,108 @@
     border-color: GrayText !important;
   }
 }
+
+/* =========================
+   🔒 Samsung Internet 강제 다크/가독성 모드 방어
+   - 흰 배경 + 흰 글씨 이슈 강제 수정
+   - 모니터 패널/칩/입력/제목에 색을 고정
+   ========================= */
+
+/* 라이트 기본값: 진한 글자색으로 강제 */
+.monitorPane,
+.monitorPane *,
+.panelTitle,
+.sectionTitle,
+.chip,
+.chip *,
+.field,
+.field *,
+.inputField,
+.inputField *,
+.assistant,
+.assistant * {
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important; /* 삼성/웹킷 */
+  opacity: 1 !important; /* 자동 반투명화 방지 */
+}
+
+/* 칩(태그) 배경/테두리도 강제 */
+.chip {
+  background: var(--chip-bg) !important;
+  border-color: var(--chip-border) !important;
+}
+.chipActive {
+  background: var(--chip-active-bg) !important;
+  border-color: var(--button-bg) !important;
+  color: var(--chip-active-text) !important;
+  -webkit-text-fill-color: var(--chip-active-text) !important;
+}
+
+/* 입력 필드/플레이스홀더 고정 */
+.field,
+.inputField {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-text) !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+}
+.field::placeholder,
+.inputField::placeholder {
+  color: var(--placeholder) !important;
+  -webkit-text-fill-color: var(--placeholder) !important;
+}
+
+/* 버튼(파란색) 텍스트는 항상 흰색 유지 */
+.sendButton,
+.primary {
+  color: var(--button-text) !important;
+  -webkit-text-fill-color: var(--button-text) !important;
+}
+
+/* 삼성 인터넷(웹킷) 전용 보정 — 선택적으로 더 강제 */
+@supports (-webkit-touch-callout: none) {
+  .monitorPane,
+  .monitorPane *,
+  .chip,
+  .chip *,
+  .field,
+  .field *,
+  .panelTitle,
+  .sectionTitle {
+    color: var(--text) !important;
+    -webkit-text-fill-color: var(--text) !important;
+  }
+}
+
+/* 다크모드일 때 텍스트/칩 색을 분리 고정 */
+@media (prefers-color-scheme: dark) {
+  .monitorPane,
+  .monitorPane *,
+  .panelTitle,
+  .sectionTitle,
+  .assistant,
+  .assistant * {
+    color: var(--assistant-text) !important;      /* = var(--text) 다크값 */
+    -webkit-text-fill-color: var(--assistant-text) !important;
+  }
+
+  .chip {
+    background: var(--chip-bg) !important;
+    border-color: var(--chip-border) !important;
+    color: var(--chip-text) !important;
+    -webkit-text-fill-color: var(--chip-text) !important;
+  }
+  .chipActive {
+    background: var(--chip-active-bg) !important;
+    color: var(--chip-active-text) !important;
+    -webkit-text-fill-color: var(--chip-active-text) !important;
+  }
+
+  .field,
+  .inputField {
+    background: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border) !important;
+    -webkit-text-fill-color: var(--input-text) !important;
+  }
+}
