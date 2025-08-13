@@ -2,50 +2,67 @@
 @import "tailwindcss";
 
 /* === 1) 전역 CSS 변수 (라이트 기본) === */
+/* =========================
+   Theme tokens
+   ========================= */
 :root {
-  --bg: #ffffff;
-  --text: #171717; /* 기존 foreground 값과 통일 */
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
 
-  --assistant-bg: #f1f0f0;
-  --assistant-text: #111111;
-
-  --user-bg: #dcf8c6;
-  --user-text: #111111;
+  --user-bg: #dbeafe;        /* blue-100 */
+  --user-text: #0b3b8c;      /* deep blue */
+  --assistant-bg: #f3f4f6;   /* gray-100 */
+  --assistant-text: #111827;
 
   --input-bg: #ffffff;
-  --input-text: #111111;
-  --input-border: #cccccc;
+  --input-text: #111827;
+  --input-border: #cbd5e1;
+  --placeholder: #9ca3af;
 
-  --button-bg: #2563eb;
+  --button-bg: #2563eb;      /* blue-600 */
+  --button-bg-hover: #1e40af;/* blue-800 */
   --button-text: #ffffff;
 
-  --placeholder: rgba(127,127,127,0.9);
+  --chip-bg: #eef2ff;        /* indigo-50 */
+  --chip-text: #1f2937;
+  --chip-border: #c7d2fe;
 }
 
-/* === 2) 다크 모드 오버라이드 === */
+/* 시스템 다크모드 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0a0a0a;   /* 기존 background(#0a0a0a) 유지 */
-    --text: #ededed; /* 기존 foreground(#ededed) 유지 */
+    --bg: #0b1120;           /* slate-950-ish */
+    --surface: #0f172a;      /* slate-900 */
+    --text: #e5e7eb;         /* gray-200 */
+    --muted: #94a3b8;        /* slate-400 */
+    --border: #1f2937;       /* slate-800 */
 
-    --assistant-bg: #26272b;
-    --assistant-text: #eaecef;
+    --user-bg: #1d4ed8;      /* blue-700 */
+    --user-text: #e5e7eb;
+    --assistant-bg: #111827; /* gray-900 */
+    --assistant-text: #e5e7eb;
 
-    --user-bg: #2a3b2c;
-    --user-text: #eaecef;
+    --input-bg: #0f172a;
+    --input-text: #f8fafc;
+    --input-border: #1f2937;
+    --placeholder: #94a3b8;
 
-    --input-bg: #15171b;
-    --input-text: #eaecef;
-    --input-border: #363a3f;
-
-    --button-bg: #2563eb;
+    --button-bg: #3b82f6;        /* blue-500 */
+    --button-bg-hover: #2563eb;  /* blue-600 */
     --button-text: #ffffff;
 
-    --placeholder: rgba(180,180,180,0.9);
+    --chip-bg: #172554;       /* indigo-950 */
+    --chip-text: #c7d2fe;
+    --chip-border: #1e3a8a;
   }
+}
 
-  /* 인앱/모바일의 알고리즘 다크 반전 완화 */
-  html { color-scheme: light dark; }
+/* (선택) 수동 다크토글: <body data-theme="dark"> */
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 /* === 3) Tailwind @theme inline: 전역 변수만 참조 === */
