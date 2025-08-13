@@ -1,3 +1,69 @@
+/* =========================
+   Theme tokens
+   ========================= */
+:root {
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --user-bg: #dbeafe;        /* blue-100 */
+  --user-text: #0b3b8c;      /* deep blue */
+  --assistant-bg: #f3f4f6;   /* gray-100 */
+  --assistant-text: #111827;
+
+  --input-bg: #ffffff;
+  --input-text: #111827;
+  --input-border: #cbd5e1;
+  --placeholder: #9ca3af;
+
+  --button-bg: #2563eb;      /* blue-600 */
+  --button-bg-hover: #1e40af;/* blue-800 */
+  --button-text: #ffffff;
+
+  --chip-bg: #eef2ff;        /* indigo-50 */
+  --chip-text: #1f2937;
+  --chip-border: #c7d2fe;
+}
+
+/* 시스템 다크모드 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1120;           /* slate-950-ish */
+    --surface: #0f172a;      /* slate-900 */
+    --text: #e5e7eb;         /* gray-200 */
+    --muted: #94a3b8;        /* slate-400 */
+    --border: #1f2937;       /* slate-800 */
+
+    --user-bg: #1d4ed8;      /* blue-700 */
+    --user-text: #e5e7eb;
+    --assistant-bg: #111827; /* gray-900 */
+    --assistant-text: #e5e7eb;
+
+    --input-bg: #0f172a;
+    --input-text: #f8fafc;
+    --input-border: #1f2937;
+    --placeholder: #94a3b8;
+
+    --button-bg: #3b82f6;        /* blue-500 */
+    --button-bg-hover: #2563eb;  /* blue-600 */
+    --button-text: #ffffff;
+
+    --chip-bg: #172554;       /* indigo-950 */
+    --chip-text: #c7d2fe;
+    --chip-border: #1e3a8a;
+  }
+}
+
+/* (선택) 수동 다크토글: <body data-theme="dark"> */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* =========================
+   Layout
+   ========================= */
 .chatWindow {
   display: flex;
   flex-direction: column;
@@ -6,14 +72,15 @@
   min-height: 0;
   padding: 1rem;
   box-sizing: border-box;
-  background-color: var(--chat-bg, #f9f9f9);
+  background-color: var(--bg);
+  color: var(--text);
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
   max-height: 100%;
-  min-height: 0; /* ✅ 추가 */
+  min-height: 0;
   margin-bottom: 1rem;
   padding-right: 0.25rem;
   display: flex;
@@ -21,6 +88,9 @@
   gap: 0.5rem;
 }
 
+/* =========================
+   Bubbles
+   ========================= */
 .bubble {
   padding: 0.6rem 0.9rem;
   margin: 0.2rem 0;
@@ -29,68 +99,87 @@
   word-break: break-word;
   white-space: pre-wrap;
   line-height: 1.5;
-  color-scheme: light;
   font-size: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
 }
 
 .user {
   composes: bubble;
   align-self: flex-end;
-  background-color: var(--user-bg, #d1eaff);
-  color: var(--user-text, #003366);
+  background-color: var(--user-bg);
+  color: var(--user-text);
   text-align: left;
 }
 
 .assistant {
   composes: bubble;
   align-self: flex-start;
-  background-color: var(--assistant-bg, #f1f1f1);
-  color: var(--assistant-text, #222);
+  background-color: var(--assistant-bg);
+  color: var(--assistant-text);
   text-align: left;
 }
 
-/* ✅ 스피너 애니메이션 (세 점이 깜빡이는 효과) */
+.assistant a {
+  color: var(--button-bg);
+  text-decoration: underline;
+}
+@media (prefers-color-scheme: dark) {
+  .assistant a { color: #60a5fa; }
+}
+
+/* 코드/프리 텍스트 대비 개선 */
+.assistant pre,
+.assistant code {
+  background: rgba(0,0,0,0.05);
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  .assistant pre,
+  .assistant code {
+    background: rgba(255,255,255,0.06);
+  }
+}
+
+/* =========================
+   Loading (typing) dots
+   ========================= */
 .loadingDots {
-  display: inline-block;
-  text-align: left;
-  line-height: 1.5;
+  display: inline-flex;
+  gap: 0.15rem;
+  margin-left: 0.25rem;
 }
 
-.loadingDots span {
-  display: inline-block;
-  font-size: 1.5rem;
+.dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--muted);
+  border-radius: 50%;
   animation: blink 1.4s infinite both;
 }
-
-.loadingDots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.loadingDots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes blink {
-  0% {
-    opacity: 0.2;
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.2;
-  }
+  0% { opacity: 0.2; }
+  20% { opacity: 1; }
+  100% { opacity: 0.2; }
 }
 
-/* ✅ 단계별 로딩 메시지 스타일 */
+/* 단계별 로딩 메시지 */
 .loadingStage {
   font-style: italic;
   display: flex;
   align-items: center;
   gap: 0.4rem;
   line-height: 1.5;
+  color: var(--muted);
 }
 
+/* =========================
+   Input
+   ========================= */
 .inputArea {
   display: flex;
   align-items: center;
@@ -99,7 +188,7 @@
   flex-wrap: nowrap;
   position: sticky;
   bottom: 0;
-  background: var(--chat-bg, #f9f9f9);
+  background: var(--bg);
   padding-top: 0.5rem;
 }
 
@@ -107,16 +196,17 @@
   flex: 1;
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  border: 1px solid var(--input-border, #ccc);
-  background: var(--input-bg, #fff);
-  color: var(--input-text, #000);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-text);
   font-size: 1rem;
   outline: none;
   min-width: 0;
+  accent-color: var(--button-bg);
 }
 
 .inputField::placeholder {
-  color: var(--placeholder, #aaa);
+  color: var(--placeholder);
   opacity: 1;
 }
 
@@ -124,22 +214,21 @@
   flex-shrink: 0;
   padding: 0.75rem 1rem;
   font-size: 1rem;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 6px;
-  background: var(--button-bg, #007bff);
-  color: var(--button-text, #fff);
+  background: var(--button-bg);
+  color: var(--button-text);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.15s ease, transform 0.02s ease;
 }
 
-.sendButton:hover {
-  background-color: var(--button-bg-hover, #005bb5);
-}
+.sendButton:hover { background-color: var(--button-bg-hover); }
+.sendButton:active { transform: translateY(1px); }
 
 .sendButton:focus-visible,
 .inputField:focus-visible {
-  outline: 2px solid rgba(76, 175, 80, 0.6);
+  outline: 2px solid rgba(59,130,246,0.6);
   outline-offset: 2px;
 }
 
@@ -151,10 +240,13 @@
   transition: background-color 5000s ease-in-out 0s;
 }
 
+/* =========================
+   Notices
+   ========================= */
 .notice {
   padding: 1.5rem;
   text-align: center;
-  color: #666;
+  color: var(--muted);
   font-size: 1rem;
 }
 
@@ -169,120 +261,48 @@
   font-weight: 500;
   border: 1px solid #f1d36f;
 }
+@media (prefers-color-scheme: dark) {
+  .loginHint {
+    background-color: #facc15;
+    color: #1f2937;
+    border-color: #eab308;
+  }
+}
 
-/* 📱 모바일 최적화 */
+/* =========================
+   Mobile tweaks
+   ========================= */
 @media (max-width: 480px) {
   .inputField {
     font-size: 0.95rem;
     padding: 0.65rem 0.9rem;
   }
-
   .sendButton {
     font-size: 0.95rem;
     padding: 0.65rem 0.9rem;
   }
-
   .bubble {
     font-size: 0.95rem;
     padding: 0.6rem 0.9rem;
     max-width: 100%;
   }
-
   .notice,
   .loginHint {
     font-size: 0.95rem;
   }
 }
 
-/* 🌙 다크모드 대응 */
+/* =========================
+   Scrollbar (optional)
+   ========================= */
+.messages::-webkit-scrollbar { width: 10px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+}
 @media (prefers-color-scheme: dark) {
-  .chatWindow {
-    background-color: #111827;
-  }
-
-  .messages {
-    color: #f9f9f9;
-  }
-
-  .bubble {
-    box-shadow: 0 1px 4px rgba(255, 255, 255, 0.05);
-  }
-
-  .user {
-    background-color: #2563eb;
-    color: #f1f5f9;
-  }
-
-  .assistant {
-    background-color: #1f2937;
-    color: #e5e7eb;
-  }
-
-  .inputArea {
-    background: #111827;
-  }
-
-  .inputField {
-    background: #1f2937;
-    color: #f9f9f9;
-    border-color: #374151;
-  }
-
-  .inputField::placeholder {
-    color: #888;
-  }
-
-  .sendButton {
-    background: #3b82f6;
-    color: #fff;
-  }
-
-  .sendButton:hover {
-    background: #2563eb;
-  }
-
-  .loginHint {
-    background-color: #facc15;
-    color: #1f2937;
-    border-color: #eab308;
-  }
-
-  .loadingStage {
-    background-color: #1f2937;
-    color: #e5e7eb;
-  }
-}
-
-/* ✅ 말풍선 내에서 사용하는 점 세 개 애니메이션 */
-.loadingDots {
-  display: inline-flex;
-  gap: 0.15rem;
-  margin-left: 0.25rem;
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  background-color: #999;
-  border-radius: 50%;
-  animation: blink 1.4s infinite both;
-}
-
-.dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes blink {
-  0% {
-    opacity: 0.2;
-  }
-  20% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.2;
+  .messages::-webkit-scrollbar-thumb {
+    background: #334155; /* slate-700 */
   }
 }
