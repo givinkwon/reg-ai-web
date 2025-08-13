@@ -7,8 +7,8 @@
   min-height: 0;
   padding: 1rem;
   box-sizing: border-box;
-  background-color: #f9fafb;   /* 밝은 배경 고정 */
-  color: #111827;              /* 본문 글자 고정 */
+  background-color: #f9fafb;   /* 라이트 고정 배경 */
+  color: #111827;              /* 기본 글자 */
 }
 
 .messages {
@@ -58,6 +58,11 @@
   border-radius: 6px;
 }
 
+/* ===== Welcome / Actions ===== */
+.welcomeCard { border-radius: 8px; padding: 12px; }
+.welcomeText { margin-bottom: 8px; }
+.actionRow { display: flex; gap: 8px; flex-wrap: wrap; }
+
 /* ===== Monitoring panel ===== */
 .monitorPane {
   background: #ffffff !important;
@@ -85,7 +90,7 @@
   gap: 8px;
 }
 
-/* ===== Chips (Tags) — 라이트 기본 ===== */
+/* ===== Chips (Tags) — 기본(라이트) ===== */
 .chip,
 button.chip {
   display: inline-flex;
@@ -95,9 +100,9 @@ button.chip {
   border-radius: 9999px;
   font-size: 0.95rem;
   line-height: 1;
-  background: #f3f4f6 !important;       /* 연회색 배경 */
-  border: 1px solid #cbd5e1 !important;  /* 연회색 테두리 */
-  color: #111827 !important;             /* 어두운 글자 */
+  background: #f3f4f6 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #111827 !important;
   -webkit-text-fill-color: #111827 !important;
   cursor: pointer;
   user-select: none;
@@ -106,11 +111,31 @@ button.chip {
 
 .chipActive,
 button.chip.chipActive {
-  background: #1e3a8a !important;        /* 진한 남색 */
+  background: #1e3a8a !important;
   border-color: #1e3a8a !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
   box-shadow: inset 0 0 0 2px rgba(30,58,138,.15);
+}
+
+/* 선택된 태그 토큰 */
+.selectedTag {
+  padding: 4px 8px;
+  border-radius: 9999px;
+  background: #e0e7ff;
+  color: #111827 !important;
+  border: 1px solid #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tagRemove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* ===== Fields & helper ===== */
@@ -120,7 +145,6 @@ button.chip.chipActive {
   align-items: center;
   margin-top: 8px;
 }
-
 .field {
   flex: 1;
   padding: 0.7rem 0.9rem;
@@ -143,6 +167,25 @@ button.chip.chipActive {
   background: transparent !important;
 }
 
+/* ===== Candidate list ===== */
+.optionList {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  background: #ffffff;
+  margin: 10px 0;
+}
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+.optionRow:last-child { border-bottom: none; }
+
 /* ===== Actions / Buttons ===== */
 .actions {
   display: flex;
@@ -150,7 +193,6 @@ button.chip.chipActive {
   margin-top: 12px;
   flex-wrap: wrap;
 }
-
 .btn {
   padding: 0.7rem 1rem;
   border-radius: 8px;
@@ -159,14 +201,12 @@ button.chip.chipActive {
   border: 1px solid transparent;
   white-space: nowrap;
 }
-
 .primary {
   composes: btn;
   background: #2563eb !important;
   color: #ffffff !important;
 }
 .primary:hover { background: #1e40af !important; }
-
 .secondary {
   composes: btn;
   background: transparent !important;
@@ -174,7 +214,6 @@ button.chip.chipActive {
   border-color: #2563eb !important;
 }
 .secondary:hover { background: rgba(37,99,235,0.08) !important; }
-
 .ghost {
   composes: btn;
   background: transparent !important;
@@ -217,7 +256,6 @@ button.chip.chipActive {
   background: #f9fafb;
   padding-top: 0.5rem;
 }
-
 .inputField {
   flex: 1;
   padding: 0.75rem 1rem;
@@ -230,7 +268,6 @@ button.chip.chipActive {
   min-width: 0;
 }
 .inputField::placeholder { color: #6b7280 !important; }
-
 .sendButton {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
@@ -261,7 +298,6 @@ button.chip.chipActive {
   color: #475569;
   font-size: 1rem;
 }
-
 .loginHint {
   background-color: #fff8c5;
   color: #333333;
@@ -282,34 +318,25 @@ button.chip.chipActive {
   .notice, .loginHint { font-size: .95rem; }
 }
 
-/* ===== Dark scheme (1회 선언, 삼성 강제다크 포함) ===== */
+/* ===== Dark scheme (prefers-color-scheme) ===== */
 @media (prefers-color-scheme: dark) {
   .chatWindow { background: #0b1120; color: #e5e7eb; }
   .assistant { background: #1f2937; color: #e5e7eb; border-color: #374151; }
   .user { background: #1d4ed8; color: #e5e7eb; }
 
-  .monitorPane {
-    background: #0f172a !important;
-    border-color: #334155 !important;
-    color: #e5e7eb !important;
-  }
-  .panelTitle, .sectionTitle {
-    color: #e5e7eb !important;
-    -webkit-text-fill-color: #e5e7eb !important;
-  }
+  .monitorPane { background: #0f172a !important; border-color: #334155 !important; color: #e5e7eb !important; }
+  .panelTitle, .sectionTitle { color: #e5e7eb !important; -webkit-text-fill-color: #e5e7eb !important; }
 
-  /* 칩(태그) — 강한 대비 */
-  .chip,
-  button.chip {
-    background: #111827 !important;     /* slate-800 */
-    border-color: #374151 !important;    /* slate-700 */
+  .chip, button.chip {
+    background: #111827 !important;
+    border-color: #374151 !important;
     color: #f3f4f6 !important;
     -webkit-text-fill-color: #f3f4f6 !important;
   }
   .chip:hover { background: #0b1220 !important; border-color: #475569 !important; }
-  .chipActive,
-  button.chip.chipActive {
-    background: #2563eb !important;     /* blue-600 */
+
+  .chipActive, button.chip.chipActive {
+    background: #2563eb !important;
     border-color: #2563eb !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
@@ -341,7 +368,7 @@ button.chip.chipActive {
   .ghost { color: #e5e7eb !important; border-color: #334155 !important; }
 }
 
-/* ===== High-contrast (Windows/Android 접근성 모드) ===== */
+/* ===== High-contrast ===== */
 @media (forced-colors: active) {
   .monitorPane, .chip, .chipActive, .field, .inputField, .sendButton,
   .primary, .secondary, .ghost {
@@ -351,108 +378,50 @@ button.chip.chipActive {
   }
 }
 
-/* ===== Samsung / WebKit 텍스트 컬러 보호 ===== */
-@supports (-webkit-touch-callout: none) {
-  .chip, .chipActive, .field, .inputField,
-  .panelTitle, .sectionTitle, .helper,
-  .monitorPane, .assistant {
-    -webkit-text-fill-color: currentColor !important;
-  }
-}
-
-/* ================================
-   🔧 Samsung Internet 강제 대비 핫픽스
-   칩/버튼/입력 텍스트 색을 다크/라이트에 맞게 고정
-   ================================ */
-
-/* 기본: 어떤 테마에서도 텍스트 흐릿해지지 않게 */
-.monitorPane, .monitorPane * { opacity: 1 !important; }
-.chip { -webkit-appearance: none; appearance: none; }
-
-/* ----- 라이트 테마 강제 ----- */
-body[data-theme="light"] .monitorPane {
-  background: #f8fafc !important;      /* 밝은 패널 */
-  border-color: #e5e7eb !important;
-  color: #111827 !important;
-}
-body[data-theme="light"] .panelTitle,
-body[data-theme="light"] .sectionTitle {
-  color: #111827 !important;
-  -webkit-text-fill-color: #111827 !important;
-}
-body[data-theme="light"] .chip {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #111827 !important;
-  -webkit-text-fill-color: #111827 !important;
-}
-body[data-theme="light"] .chipActive {
-  background: #e0e7ff !important;
-  border-color: #3b82f6 !important;
-  color: #111827 !important;
-  -webkit-text-fill-color: #111827 !important;
-}
-body[data-theme="light"] .field,
-body[data-theme="light"] .inputField {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #111827 !important;
-  -webkit-text-fill-color: #111827 !important;
-}
-
-/* ----- 다크 테마 강제 ----- */
-body[data-theme="dark"] .monitorPane {
-  background: #0f172a !important;      /* slate-900 */
-  border-color: #1f2937 !important;
-  color: #e5e7eb !important;
-}
-body[data-theme="dark"] .panelTitle,
-body[data-theme="dark"] .sectionTitle {
-  color: #e5e7eb !important;
-  -webkit-text-fill-color: #e5e7eb !important;
-}
-body[data-theme="dark"] .chip {
-  background: #1f2937 !important;      /* slate-800ish */
-  border-color: #475569 !important;    /* slate-600ish */
-  color: #f9fafb !important;
-  -webkit-text-fill-color: #f9fafb !important;
-}
-body[data-theme="dark"] .chip:hover {
-  background: #111827 !important;
-  border-color: #64748b !important;
-}
-body[data-theme="dark"] .chipActive {
-  background: #1e40af !important;      /* blue-800 */
-  border-color: #60a5fa !important;    /* blue-400 */
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(59,130,246,.35) inset;
-}
-body[data-theme="dark"] .field,
-body[data-theme="dark"] .inputField {
-  background: #111827 !important;
-  border-color: #374151 !important;
-  color: #e5e7eb !important;
-  -webkit-text-fill-color: #e5e7eb !important;
-}
-body[data-theme="dark"] .primary,
-body[data-theme="dark"] .sendButton {
-  background: #3b82f6 !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-/* 비활성 칩도 흐려지지 않게 */
-.chip[disabled], .chip[aria-disabled="true"] { opacity: 1 !important; }
-
-/* 로딩 점/보조텍스트 대비 강화 */
-body[data-theme="dark"] .loadingStage { color: #cbd5e1 !important; }
-body[data-theme="dark"] .dot { background-color: #94a3b8 !important; }
-
-/* WebKit이 텍스트 색을 바꾸는 걸 막기 */
+/* ===== Samsung / WebKit text-color protection ===== */
 @supports (-webkit-touch-callout: none) {
   .chip, .chipActive, .field, .inputField,
   .panelTitle, .sectionTitle, .assistant, .monitorPane {
     -webkit-text-fill-color: currentColor !important;
   }
 }
+
+/* ===== Optional: explicit theme override via data-theme ===== */
+.monitorPane, .monitorPane * { opacity: 1 !important; }
+.chip { -webkit-appearance: none; appearance: none; }
+
+body[data-theme="light"] .monitorPane { background: #f8fafc !important; border-color: #e5e7eb !important; color: #111827 !important; }
+body[data-theme="light"] .chip {
+  background: #ffffff !important; border-color: #cbd5e1 !important; color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+body[data-theme="light"] .chipActive {
+  background: #e0e7ff !important; border-color: #3b82f6 !important; color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+body[data-theme="light"] .field, body[data-theme="light"] .inputField {
+  background: #ffffff !important; border-color: #cbd5e1 !important; color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+body[data-theme="dark"] .monitorPane { background: #0f172a !important; border-color: #1f2937 !important; color: #e5e7eb !important; }
+body[data-theme="dark"] .chip {
+  background: #1f2937 !important; border-color: #475569 !important; color: #f9fafb !important;
+  -webkit-text-fill-color: #f9fafb !important;
+}
+body[data-theme="dark"] .chipActive {
+  background: #1e40af !important; border-color: #60a5fa !important; color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(59,130,246,.35) inset;
+}
+body[data-theme="dark"] .field, body[data-theme="dark"] .inputField {
+  background: #111827 !important; border-color: #374151 !important; color: #e5e7eb !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+}
+body[data-theme="dark"] .primary, body[data-theme="dark"] .sendButton {
+  background: #3b82f6 !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;
+}
+
+.chip[disabled], .chip[aria-disabled="true"] { opacity: 1 !important; }
+body[data-theme="dark"] .loadingStage { color: #cbd5e1 !important; }
+body[data-theme="dark"] .dot { background-color: #94a3b8 !important; }

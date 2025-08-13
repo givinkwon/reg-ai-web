@@ -27,33 +27,28 @@ const TAG_PRESETS: Record<string, string[]> = {
   environment: ['화학물질', '대기', '수질', '폐기물', '유해물질', '온실가스', 'REACH', 'K-REACH'],
   procurement: ['국가계약법', '입찰', '낙찰하한율', '계약이행', '조달청 고시'],
   hr: ['중대재해', '산업안전보건', '채용절차', '장애인고용', '개인정보보호', '징계·인사'],
-  // 혹시 모르는 기본값
   default: ['시행일', '개정', '부칙', '별표서식', '고시개정', '행정예고'],
 };
 
 export default function ChatWindow() {
   const router = useRouter();
 
-  // 기존 전역 스토어
   const messages = useChatStore((s) => s.messages);
   const addMessage = useChatStore((s) => s.addMessage);
   const { selectedJobType, userInfo } = useUserStore();
 
-  // 공통 입력/잡 상태
   const [input, setInput] = useState('');
   const [jobId, setJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
 
-  // 모니터링 UI 상태
   const [monitorMode, setMonitorMode] = useState(false);
   const [monItems, setMonItems] = useState<MonItem[]>([]);
   const [pickedDocs, setPickedDocs] = useState<Record<string, boolean>>({});
   const [searchQ, setSearchQ] = useState('');
   const [monLoading, setMonLoading] = useState(false);
 
-  // 태그 상태(프리셋 + 커스텀)
   const presetTags = useMemo(
     () => TAG_PRESETS[selectedJobType as keyof typeof TAG_PRESETS] || TAG_PRESETS.default,
     [selectedJobType],
@@ -61,7 +56,6 @@ export default function ChatWindow() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
 
-  // 로딩 단계 문구
   const LOADING_MESSAGES = useMemo(
     () => [
       '🌀 RegAI가 질의/태그를 분석합니다...',
@@ -71,12 +65,10 @@ export default function ChatWindow() {
     [],
   );
 
-  // 직무 미선택 시 홈으로
   useEffect(() => {
     if (!selectedJobType) router.push('/');
   }, [selectedJobType, router]);
 
-  // 로딩 중 친절한 메시지 순환
   useEffect(() => {
     if (!loading) return;
     const interval = setInterval(() => {
@@ -87,7 +79,6 @@ export default function ChatWindow() {
     return () => clearInterval(interval);
   }, [loading, LOADING_MESSAGES.length]);
 
-  // --- Slack (없으면 실패 무시) ---
   const sendSlackMessage = (text: string) => {
     const payload = { text: text.slice(0, 3500) };
     fetch('/api/slack', {
@@ -97,7 +88,6 @@ export default function ChatWindow() {
     }).catch(() => {});
   };
 
-  // --- 일반 질의 (/api/start-task) ---
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || monitorMode) return;
@@ -130,13 +120,12 @@ export default function ChatWindow() {
       if (!res.ok) throw new Error(`start-task failed: ${res.status}`);
       const { job_id } = await res.json();
       setJobId(job_id);
-    } catch (err) {
+    } catch {
       addMessage({ role: 'assistant', content: '⚠️ 요청 중 에러가 발생했습니다.' });
       setLoading(false);
     }
   };
 
-  // === 첫 인사에서 “오늘의 모니터링” 클릭 → 태그 우선 UI 열기 ===
   const openMonitoring = async () => {
     setMonitorMode(true);
     setSelectedTags([]);
@@ -144,11 +133,8 @@ export default function ChatWindow() {
     setPickedDocs({});
     setMonItems([]);
     setSearchQ('');
-    // 태그만으로도 실행 가능하지만, 초기에 기본 후보를 보여주고 싶으면 아래 주석 해제:
-    // await loadOptions('', []);
   };
 
-  // --- 태그 토글/추가/삭제 ---
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
@@ -164,7 +150,6 @@ export default function ChatWindow() {
     setSelectedTags((prev) => prev.filter((t) => t !== tag));
   };
 
-  // --- 문서 후보 로드(태그와 검색어 동시 사용 가능) ---
   const loadOptions = async (q?: string, tags?: string[]) => {
     const tagCsv = (tags && tags.length > 0 ? tags : selectedTags).join(',');
     const url =
@@ -177,7 +162,6 @@ export default function ChatWindow() {
     setMonItems((data.items || []) as MonItem[]);
   };
 
-  // --- 문서 선택/초기화 ---
   const togglePickDoc = (key: string) => {
     setPickedDocs((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -189,13 +173,11 @@ export default function ChatWindow() {
     setCustomTagInput('');
   };
 
-  // --- 모니터링 시작 ---
   const runMonitoring = async () => {
     const selections = monItems
       .filter((x) => pickedDocs[`${x.doc_type}:${x.doc_id}`])
       .map((x) => ({ doc_type: x.doc_type, doc_id: x.doc_id }));
 
-    // selections가 비어도 OK: 백엔드가 tags만으로 “오늘 업데이트” 필터링 가능해야 함
     if (selectedTags.length === 0 && selections.length === 0) {
       addMessage({ role: 'assistant', content: '📌 태그를 1개 이상 선택하거나 문서를 선택해 주세요.' });
       return;
@@ -209,9 +191,9 @@ export default function ChatWindow() {
         body: JSON.stringify({
           email: userInfo.email || 'anonymous',
           category: selectedJobType,
-          tags: selectedTags,          // ✅ 태그 전달(백엔드는 옵션으로 받도록)
-          selections,                  // ✅ 선택 문서(없어도 OK)
-          since: undefined,            // 필요시 "YYYY-MM-DD"
+          tags: selectedTags,
+          selections,
+          since: undefined,
           brief_level: 'normal',
         }),
       });
@@ -219,19 +201,17 @@ export default function ChatWindow() {
       const { job_id } = await res.json();
       setJobId(job_id);
 
-      // 패널 닫고 로딩 UI로 전환
       setMonitorMode(false);
       setLoading(true);
       setLoadingMessageIndex(0);
       setStatusMessage('');
-    } catch (e) {
+    } catch {
       addMessage({ role: 'assistant', content: '⚠️ 모니터링 시작 중 오류가 발생했습니다.' });
     } finally {
       setMonLoading(false);
     }
   };
 
-  // --- 폴링: taskId 우선, 실패 시 jobId 백업 ---
   useEffect(() => {
     if (!jobId) return;
 
@@ -242,9 +222,7 @@ export default function ChatWindow() {
           res = await fetch(`/api/check-task?jobId=${jobId}`, { cache: 'no-store' });
         }
         if (!res.ok) {
-          if (res.status === 404) return; // 아직 준비 전이면 조용히 대기
-          const text = await res.text().catch(() => '');
-          console.error('check-task failed', res.status, text);
+          if (res.status === 404) return;
           addMessage({ role: 'assistant', content: '⚠️ 상태 확인 중 오류가 발생했습니다.' });
           setLoading(false);
           setJobId(null);
@@ -272,8 +250,7 @@ export default function ChatWindow() {
           setStatusMessage('');
           clearInterval(interval);
         }
-      } catch (err) {
-        console.error('❌ 상태 확인 실패:', err);
+      } catch {
         addMessage({ role: 'assistant', content: '⚠️ 상태 확인 중 오류가 발생했습니다.' });
         setLoading(false);
         setJobId(null);
@@ -285,7 +262,6 @@ export default function ChatWindow() {
     return () => clearInterval(interval);
   }, [jobId, addMessage]);
 
-  // 유틸
   const cleanText = (text: string) =>
     text
       .replace(/---+/g, '')
@@ -293,98 +269,64 @@ export default function ChatWindow() {
       .replace(/\*\*/g, '')
       .replace(/\n/g, '<br />');
 
-  // ===================== 렌더 =====================
   return (
     <div className={styles.chatWindow}>
-      {/* 로그인 유도 */}
       {!userInfo.email && (
         <div className={styles.loginHint}>
           ⚠️ 로그인하시면 대화 기록을 기반으로 더 똑똑한 답변을 받을 수 있어요!
         </div>
       )}
 
-      {/* 첫 인사 + 액션칩 (대화가 비었을 때) */}
       {messages.length === 0 && (
-        <div className={styles.assistant} style={{ marginBottom: 12, borderRadius: 8, padding: 12 }}>
-          <div style={{ marginBottom: 8 }}>안녕하세요! 필요한 규제 업데이트를 한눈에 브리핑해 드릴게요. 😊</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={openMonitoring}
-              style={{ border: '1px solid #e2e2e2', background: '#fff', borderRadius: 999, padding: '6px 12px', cursor: 'pointer' }}
-            >
+        <div className={`${styles.assistant} ${styles.welcomeCard}`}>
+          <div className={styles.welcomeText}>
+            안녕하세요! 필요한 규제 업데이트를 한눈에 브리핑해 드릴게요. 😊
+          </div>
+          <div className={styles.actionRow}>
+            <button onClick={openMonitoring} className={styles.chip}>
               # 오늘의 모니터링
             </button>
           </div>
         </div>
       )}
 
-      {/* 모니터링 패널 */}
       {monitorMode && (
-        <div
-          className={styles.assistant}
-          style={{ marginBottom: 12, borderRadius: 8, padding: 12, background: '#f7f7f9', border: '1px solid #eee' }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>오늘의 모니터링</div>
+        <div className={`${styles.assistant} ${styles.monitorPane}`}>
+          <div className={styles.panelTitle}>오늘의 모니터링</div>
 
-          {/* 1) 태그 선택(프리셋) */}
-          <div style={{ marginBottom: 8 }}>관심 태그를 선택하세요 (복수 선택 가능)</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          <div className={styles.sectionTitle}>관심 태그를 선택하세요 (복수 선택 가능)</div>
+          <div className={styles.tagGrid}>
             {presetTags.map((tag) => (
               <button
                 key={tag}
                 onClick={() => toggleTag(tag)}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: selectedTags.includes(tag) ? '1px solid #5b8cff' : '1px solid #ddd',
-                  background: selectedTags.includes(tag) ? '#eef3ff' : '#fff',
-                  cursor: 'pointer',
-                }}
+                className={`${styles.chip} ${selectedTags.includes(tag) ? styles.chipActive : ''}`}
               >
                 #{tag}
               </button>
             ))}
           </div>
 
-          {/* 커스텀 태그 입력 */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+          <div className={styles.fieldRow}>
             <input
-              className={styles.inputField}
+              className={`${styles.field} ${styles.inputField}`}
               placeholder="원하는 태그(키워드)를 직접 입력"
               value={customTagInput}
               onChange={(e) => setCustomTagInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addCustomTag()}
             />
-            <button onClick={addCustomTag}>추가</button>
+            <button className={styles.primary} onClick={addCustomTag}>추가</button>
           </div>
 
-          {/* 선택된 태그 목록 */}
           {selectedTags.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div className={styles.tagGrid}>
               {selectedTags.map((t) => (
-                <span
-                  key={t}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: 999,
-                    background: '#222',
-                    color: '#fff',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
+                <span key={t} className={styles.selectedTag}>
                   #{t}
                   <button
                     aria-label={`${t} 제거`}
                     onClick={() => removeSelectedTag(t)}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontWeight: 700,
-                    }}
+                    className={styles.tagRemove}
                   >
                     ×
                   </button>
@@ -393,47 +335,27 @@ export default function ChatWindow() {
             </div>
           )}
 
-          {/* 2) 문서 후보 검색/로드 (선택사항) */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <div className={styles.fieldRow}>
             <input
-              className={styles.inputField}
+              className={`${styles.field} ${styles.inputField}`}
               placeholder="법령/행정규칙/자치법규 검색 (선택)"
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadOptions(searchQ, selectedTags)}
             />
-            <button onClick={() => loadOptions(searchQ, selectedTags)}>검색</button>
+            <button className={styles.primary} onClick={() => loadOptions(searchQ, selectedTags)}>검색</button>
           </div>
 
-          <div
-            style={{
-              maxHeight: 260,
-              overflow: 'auto',
-              border: '1px solid #eee',
-              borderRadius: 6,
-              padding: 8,
-              background: '#fff',
-              marginBottom: 10,
-            }}
-          >
+          <div className={styles.optionList}>
             {monItems.length === 0 ? (
-              <div style={{ color: '#777' }}>
+              <div className={styles.helper}>
                 (선택) 문서 후보를 보고 싶으면 위에서 검색하세요. 태그만 선택해도 모니터링을 시작할 수 있어요.
               </div>
             ) : (
               monItems.map((it) => {
                 const key = `${it.doc_type}:${it.doc_id}`;
                 return (
-                  <label
-                    key={key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '6px 4px',
-                      borderBottom: '1px dashed #eee',
-                    }}
-                  >
+                  <label key={key} className={styles.optionRow}>
                     <input
                       type="checkbox"
                       checked={!!pickedDocs[key]}
@@ -448,11 +370,12 @@ export default function ChatWindow() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button disabled={monLoading} onClick={runMonitoring}>
+          <div className={styles.actions}>
+            <button className={styles.primary} disabled={monLoading} onClick={runMonitoring}>
               {monLoading ? '시작 중...' : '모니터링 시작'}
             </button>
             <button
+              className={styles.ghost}
               onClick={() => {
                 setMonitorMode(false);
                 clearMonitorPane();
@@ -464,7 +387,6 @@ export default function ChatWindow() {
         </div>
       )}
 
-      {/* 메시지 영역 */}
       <div className={styles.messages}>
         {messages.map((msg, idx) => (
           <div
@@ -476,7 +398,7 @@ export default function ChatWindow() {
 
         {loading && (
           <div className={styles.assistant}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className={styles.loadingStage}>
               <span>{statusMessage || LOADING_MESSAGES[loadingMessageIndex]}</span>
               <div className={styles.loadingDots}>
                 <span className={styles.dot}></span>
@@ -488,7 +410,6 @@ export default function ChatWindow() {
         )}
       </div>
 
-      {/* 입력 영역 (모니터링 중에는 비활성화) */}
       <div className={styles.inputArea}>
         <input
           className={styles.inputField}
