@@ -8,38 +8,12 @@ export const metadata: Metadata = {
   description: "Chat App",
 };
 
-const GTM_ID = "GTM-MS4RQT3J"; // 필요시 env로 이동
+const GTM_ID = "GTM-MS4RQT3J";
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        {/* Viewport (삼성 브라우저 확대 버그 방지) */}
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
-        />
-
-        {/* ✅ 라이트/다크 모두 지원을 선언 */}
-        <meta name="color-scheme" content="light dark" />
-        <meta name="supported-color-schemes" content="light dark" />
-
-        {/* ✅ OS/브라우저 상단바 색상을 라이트/다크에 각각 명시 */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9fafb" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b1120" />
-
-        {/* iOS 상태바 대비 명시 (선택) */}
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-
-        {/* (선택) 파비콘 */}
-        {/* <link rel="icon" href="/favicon.ico" /> */}
-
-        {/* Google Tag Manager */}
         <Script id="gtm-base" strategy="afterInteractive">
           {`
             (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -49,11 +23,29 @@ export default function RootLayout({
             })(window,document,'script','dataLayer','${GTM_ID}');
           `}
         </Script>
-        {/* End Google Tag Manager */}
-      </head>
 
+        {/* 시스템에게 라이트/다크 둘 다 지원한다 알림 */}
+        <meta name="color-scheme" content="light dark" />
+
+        {/* ✅ 최초 로드 시 body[data-theme] 설정 (삼성 인터넷 강제 다크 대응) */}
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            try {
+              const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              const theme = prefersDark ? 'dark' : 'light';
+              document.documentElement.setAttribute('data-theme', theme);
+              document.body && document.body.setAttribute('data-theme', theme);
+              // 시스템 테마 변경 시 실시간 반영
+              window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                const t = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', t);
+                document.body && document.body.setAttribute('data-theme', t);
+              });
+            } catch (_) {}
+          `}
+        </Script>
+      </head>
       <body>
-        {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe
             src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
@@ -62,8 +54,6 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-        {/* End Google Tag Manager (noscript) */}
-
         {children}
       </body>
     </html>

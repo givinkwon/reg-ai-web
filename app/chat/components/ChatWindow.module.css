@@ -435,118 +435,109 @@
   }
 }
 
-/* =========================
-   🌙 DARK MODE — 고가독 팔레트
-   - 삼성/웹킷 강제 다크 대비까지 고려
-   - 태그(칩) / 제목 / 입력 / 버튼 컬러 확실히 분리
-   ========================= */
-@media (prefers-color-scheme: dark) {
-  /* 패널/텍스트 */
-  .monitorPane {
-    background: #0f172a !important;     /* slate-900 */
-    border-color: #1f2937 !important;   /* slate-800 */
-    color: #e5e7eb !important;          /* slate-200 */
-  }
-  .panelTitle,
-  .sectionTitle {
-    color: #e5e7eb !important;
-    -webkit-text-fill-color: #e5e7eb !important;
-    opacity: 1 !important;
-  }
+/* --- 칩(태그) 기본 normalize: 버튼/라벨 어떤 태그든 동일하게 --- */
+.chip {
+  -webkit-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--chip-text);
+}
+/* 버튼일 수도 있으니 상태별 기본색 제거 */
+button.chip { border-style: solid; }
+.chip * { color: inherit; }
 
-  /* 설명 텍스트(헬퍼) */
-  .helper {
-    color: #cbd5e1 !important;          /* slate-300 */
-    border-color: #334155 !important;   /* slate-700 */
-    background: transparent !important;
-  }
-
-  /* 입력 필드 */
-  .field,
-  .inputField {
-    background: #111827 !important;     /* slate-800 */
-    color: #e5e7eb !important;
-    -webkit-text-fill-color: #e5e7eb !important;
-    border-color: #374151 !important;   /* slate-700 */
-  }
-  .field::placeholder,
-  .inputField::placeholder {
-    color: #94a3b8 !important;          /* slate-400 */
-    -webkit-text-fill-color: #94a3b8 !important;
-  }
-
-  /* 태그(칩) — 일반/호버/선택 */
-  .chip {
-    background: #0b1220 !important;     /* 아주 진한 남보라 */
-    border-color: #334155 !important;   /* slate-700 */
-    color: #e5e7eb !important;          /* 텍스트 밝게 */
-    -webkit-text-fill-color: #e5e7eb !important;
-  }
-  .chip:hover {
-    background: #111827 !important;     /* slate-800 */
-    border-color: #475569 !important;   /* slate-600 */
-  }
-  .chipActive {
-    background: #1e3a8a !important;     /* blue-800 */
-    border-color: #3b82f6 !important;   /* blue-500 */
-    color: #e0e7ff !important;          /* indigo-100 */
-    -webkit-text-fill-color: #e0e7ff !important;
-    box-shadow: 0 0 0 2px rgba(59,130,246,0.35) inset;
-  }
-
-  /* 어시스턴트 버블/링크/코드도 대비 강화 */
-  .assistant {
-    background: #111827 !important;
-    color: #e5e7eb !important;
-    border-color: #1f2937 !important;
-  }
-  .assistant a {
-    color: #60a5fa !important;          /* blue-400 */
-    text-decoration: underline;
-  }
-  .assistant pre,
-  .assistant code {
-    background: #0b1220 !important;
-    color: #e5e7eb !important;
-  }
-
-  /* 진행상태/로딩 점 */
-  .loadingStage { color: #cbd5e1 !important; }
-  .dot { background-color: #94a3b8 !important; }
-
-  /* 버튼은 파란계열 유지 */
-  .primary,
-  .sendButton {
-    background: #3b82f6 !important;     /* blue-500 */
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-  }
-  .primary:hover,
-  .sendButton:hover {
-    background: #2563eb !important;     /* blue-600 */
-  }
-
-  /* 보조 버튼 */
-  .secondary {
-    color: #93c5fd !important;          /* blue-300 */
-    border-color: #3b82f6 !important;
-    background: transparent !important;
-  }
-  .secondary:hover { background: rgba(59,130,246,0.1) !important; }
-
-  .ghost {
-    color: #e5e7eb !important;
-    border-color: #334155 !important;
-    background: transparent !important;
-  }
-  .ghost:hover { background: rgba(148,163,184,0.12) !important; }
+/* 활성 칩 */
+.chipActive {
+  background: var(--chip-active-bg);
+  border-color: var(--button-bg);
+  color: var(--chip-active-text);
 }
 
-/* ✅ 삼성 인터넷/웹킷 강제 가독성 모드 방어 (색 다시 고정) */
+/* 비활성/disabled 칩도 강제 */
+.chip[disabled],
+.chip[aria-disabled="true"] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   🌙 다크모드 — body[data-theme="dark"]로 강제
+   =============================== */
+body[data-theme="dark"] .monitorPane {
+  background: #0f172a !important;   /* slate-900 */
+  border-color: #1f2937 !important; /* slate-800 */
+  color: #e5e7eb !important;
+}
+
+body[data-theme="dark"] .panelTitle,
+body[data-theme="dark"] .sectionTitle {
+  color: #e5e7eb !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+}
+
+/* ✅ 칩(태그) 색 완전 고정 */
+body[data-theme="dark"] .chip {
+  background: #0b1220 !important;     /* 아주 진한 남보라 */
+  border-color: #334155 !important;   /* slate-700 */
+  color: #e5e7eb !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+}
+body[data-theme="dark"] .chip:hover {
+  background: #111827 !important;     /* slate-800 */
+  border-color: #475569 !important;
+}
+body[data-theme="dark"] .chipActive {
+  background: #1e3a8a !important;     /* blue-800 */
+  border-color: #3b82f6 !important;   /* blue-500 */
+  color: #e0e7ff !important;          /* indigo-100 */
+  -webkit-text-fill-color: #e0e7ff !important;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.35) inset;
+}
+
+/* 입력/버튼도 다크 고정 */
+body[data-theme="dark"] .field,
+body[data-theme="dark"] .inputField {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+  border-color: #374151 !important;
+}
+body[data-theme="dark"] .field::placeholder,
+body[data-theme="dark"] .inputField::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+body[data-theme="dark"] .primary,
+body[data-theme="dark"] .sendButton {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+body[data-theme="dark"] .primary:hover,
+body[data-theme="dark"] .sendButton:hover {
+  background: #2563eb !important;
+}
+
+/* 진행상태/로딩 점 */
+body[data-theme="dark"] .loadingStage { color: #cbd5e1 !important; }
+body[data-theme="dark"] .dot { background-color: #94a3b8 !important; }
+
+/* ✅ 삼성/웹킷 고대비 모드가 텍스트 색 바꾸는 것 방지 */
 @supports (-webkit-touch-callout: none) {
   .chip, .chipActive, .field, .inputField,
-  .panelTitle, .sectionTitle, .helper,
-  .monitorPane, .assistant {
+  .panelTitle, .sectionTitle, .assistant, .monitorPane {
     -webkit-text-fill-color: currentColor !important;
   }
 }
