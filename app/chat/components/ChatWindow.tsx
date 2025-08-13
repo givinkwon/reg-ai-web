@@ -335,41 +335,6 @@ export default function ChatWindow() {
             </div>
           )}
 
-          <div className={styles.fieldRow}>
-            <input
-              className={`${styles.field} ${styles.inputField}`}
-              placeholder="법령/행정규칙/자치법규 검색 (선택)"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && loadOptions(searchQ, selectedTags)}
-            />
-            <button className={styles.primary} onClick={() => loadOptions(searchQ, selectedTags)}>검색</button>
-          </div>
-
-          <div className={styles.optionList}>
-            {monItems.length === 0 ? (
-              <div className={styles.helper}>
-                (선택) 문서 후보를 보고 싶으면 위에서 검색하세요. 태그만 선택해도 모니터링을 시작할 수 있어요.
-              </div>
-            ) : (
-              monItems.map((it) => {
-                const key = `${it.doc_type}:${it.doc_id}`;
-                return (
-                  <label key={key} className={styles.optionRow}>
-                    <input
-                      type="checkbox"
-                      checked={!!pickedDocs[key]}
-                      onChange={() => togglePickDoc(key)}
-                    />
-                    <span>
-                      <b>[{it.doc_type}]</b> {it.title}
-                    </span>
-                  </label>
-                );
-              })
-            )}
-          </div>
-
           <div className={styles.actions}>
             <button className={styles.primary} disabled={monLoading} onClick={runMonitoring}>
               {monLoading ? '시작 중...' : '모니터링 시작'}
