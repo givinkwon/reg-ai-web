@@ -2,67 +2,68 @@
 @import "tailwindcss";
 
 /* === 1) 전역 CSS 변수 (라이트 기본) === */
-/* =========================
-   Theme tokens
-   ========================= */
-:root {
+:global(:root) {
+  /* surfaces & text */
   --bg: #f9fafb;
   --surface: #ffffff;
   --text: #111827;
-  --muted: #6b7280;
+  --muted: #475569;      /* 짙은 회색(라이트) */
   --border: #e5e7eb;
 
+  /* chat bubbles */
   --user-bg: #dbeafe;        /* blue-100 */
-  --user-text: #0b3b8c;      /* deep blue */
+  --user-text: #0b3b8c;
   --assistant-bg: #f3f4f6;   /* gray-100 */
   --assistant-text: #111827;
 
+  /* inputs */
   --input-bg: #ffffff;
   --input-text: #111827;
   --input-border: #cbd5e1;
-  --placeholder: #9ca3af;
+  --placeholder: #6b7280;
 
-  --button-bg: #2563eb;      /* blue-600 */
-  --button-bg-hover: #1e40af;/* blue-800 */
+  /* buttons */
+  --button-bg: #2563eb;        /* blue-600 */
+  --button-bg-hover: #1e40af;  /* blue-800 */
   --button-text: #ffffff;
 
-  --chip-bg: #eef2ff;        /* indigo-50 */
-  --chip-text: #1f2937;
-  --chip-border: #c7d2fe;
+  /* chips (tags) */
+  --chip-bg: #eef2ff;          /* indigo-50 */
+  --chip-text: #1f2937;        /* gray-800 */
+  --chip-border: #c7d2fe;      /* indigo-200 */
+  --chip-active-bg: #e0e7ff;   /* indigo-100 */
+  --chip-active-text: #1e293b; /* gray-800 */
 }
 
 /* 시스템 다크모드 */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1120;           /* slate-950-ish */
-    --surface: #0f172a;      /* slate-900 */
-    --text: #e5e7eb;         /* gray-200 */
-    --muted: #94a3b8;        /* slate-400 */
-    --border: #1f2937;       /* slate-800 */
+  :global(:root) {
+    --bg: #0b1120;            /* slate-950 느낌 */
+    --surface: #0f172a;       /* slate-900 */
+    --text: #e5e7eb;          /* slate-200 */
+    --muted: #cbd5e1;         /* slate-300 */
+    --border: #1f2937;        /* slate-800 */
 
-    --user-bg: #1d4ed8;      /* blue-700 */
-    --user-text: #e5e7eb;
-    --assistant-bg: #111827; /* gray-900 */
+    --user-bg: #1d4ed8;       /* blue-700 */
+    --user-text: #e5e7eb;     /* slate-200 */
+    --assistant-bg: #111827;  /* slate-900 */
     --assistant-text: #e5e7eb;
 
     --input-bg: #0f172a;
     --input-text: #f8fafc;
-    --input-border: #1f2937;
-    --placeholder: #94a3b8;
+    --input-border: #334155;
+    --placeholder: #9ca3af;
 
     --button-bg: #3b82f6;        /* blue-500 */
     --button-bg-hover: #2563eb;  /* blue-600 */
     --button-text: #ffffff;
 
-    --chip-bg: #172554;       /* indigo-950 */
-    --chip-text: #c7d2fe;
-    --chip-border: #1e3a8a;
+    --chip-bg: #0b1220;          /* token 대비↑ */
+    --chip-text: #c7d2fe;        /* indigo-200 */
+    --chip-border: #1e3a8a;      /* indigo-900 */
+    --chip-active-bg: #1e3a8a;   /* indigo-900 */
+    --chip-active-text: #e0e7ff; /* indigo-100 */
   }
-}
-
-/* (선택) 수동 다크토글: <body data-theme="dark"> */
-:root[data-theme="dark"] {
-  color-scheme: dark;
 }
 
 /* === 3) Tailwind @theme inline: 전역 변수만 참조 === */

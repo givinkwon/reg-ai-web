@@ -26,7 +26,7 @@
 }
 
 /* =========================
-   Bubbles
+   Chat bubbles
    ========================= */
 .bubble {
   padding: 0.6rem 0.9rem;
@@ -39,6 +39,7 @@
   font-size: 1rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   border: 1px solid var(--border);
+  color: var(--assistant-text);
 }
 
 .user {
@@ -46,7 +47,6 @@
   align-self: flex-end;
   background-color: var(--user-bg);
   color: var(--user-text);
-  text-align: left;
 }
 
 .assistant {
@@ -54,7 +54,6 @@
   align-self: flex-start;
   background-color: var(--assistant-bg);
   color: var(--assistant-text);
-  text-align: left;
 }
 
 .assistant a {
@@ -65,7 +64,7 @@
   .assistant a { color: #60a5fa; }
 }
 
-/* 코드/프리 텍스트 대비 개선 */
+/* code 영역 대비 */
 .assistant pre,
 .assistant code {
   background: rgba(0,0,0,0.05);
@@ -80,7 +79,137 @@
 }
 
 /* =========================
-   Loading (typing) dots
+   Monitoring panel (chips / fields / buttons)
+   ========================= */
+.monitorPane {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.panelTitle {
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.sectionTitle {
+  font-weight: 600;
+  margin: 10px 0 6px;
+  color: var(--text);          /* 👉 흐린 회색 대신 본문색으로 */
+  opacity: 0.95;
+}
+
+.tagGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--button-bg);
+  outline-offset: 2px;
+}
+
+.chipActive {
+  background: var(--chip-active-bg);
+  color: var(--chip-active-text);
+  border-color: var(--button-bg);
+}
+
+.fieldRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.field {
+  flex: 1;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-size: 1rem;
+  outline: none;
+  min-width: 0;
+}
+
+.field::placeholder {
+  color: var(--placeholder);
+}
+
+.helper {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  color: var(--muted);      /* 👉 다크에서도 선명 */
+  background: transparent;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.primary {
+  composes: btn;
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+.primary:hover { background: var(--button-bg-hover); }
+
+.secondary {
+  composes: btn;
+  background: transparent;
+  color: var(--button-bg);
+  border-color: var(--button-bg);
+}
+.secondary:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.ghost {
+  composes: btn;
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.ghost:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+/* =========================
+   Loading dots
    ========================= */
 .loadingDots {
   display: inline-flex;
@@ -115,7 +244,7 @@
 }
 
 /* =========================
-   Input
+   Input row (chat bottom)
    ========================= */
 .inputArea {
   display: flex;
@@ -142,10 +271,7 @@
   accent-color: var(--button-bg);
 }
 
-.inputField::placeholder {
-  color: var(--placeholder);
-  opacity: 1;
-}
+.inputField::placeholder { color: var(--placeholder); }
 
 .sendButton {
   flex-shrink: 0;
@@ -159,22 +285,15 @@
   white-space: nowrap;
   transition: background-color 0.15s ease, transform 0.02s ease;
 }
-
-.sendButton:hover { background-color: var(--button-bg-hover); }
+.sendButton:hover { background: var(--button-bg-hover); }
 .sendButton:active { transform: translateY(1px); }
 
 .sendButton:focus-visible,
-.inputField:focus-visible {
+.inputField:focus-visible,
+.field:focus-visible,
+.chip:focus-visible {
   outline: 2px solid rgba(59,130,246,0.6);
   outline-offset: 2px;
-}
-
-.inputField:-webkit-autofill,
-.inputField:-webkit-autofill:hover,
-.inputField:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--input-text);
-  box-shadow: 0 0 0px 1000px var(--input-bg) inset;
-  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* =========================
@@ -210,23 +329,10 @@
    Mobile tweaks
    ========================= */
 @media (max-width: 480px) {
-  .inputField {
-    font-size: 0.95rem;
-    padding: 0.65rem 0.9rem;
-  }
-  .sendButton {
-    font-size: 0.95rem;
-    padding: 0.65rem 0.9rem;
-  }
-  .bubble {
-    font-size: 0.95rem;
-    padding: 0.6rem 0.9rem;
-    max-width: 100%;
-  }
-  .notice,
-  .loginHint {
-    font-size: 0.95rem;
-  }
+  .inputField { font-size: 0.95rem; padding: 0.65rem 0.9rem; }
+  .sendButton { font-size: 0.95rem; padding: 0.65rem 0.9rem; }
+  .bubble { font-size: 0.95rem; padding: 0.6rem 0.9rem; max-width: 100%; }
+  .notice, .loginHint { font-size: 0.95rem; }
 }
 
 /* =========================
@@ -239,7 +345,5 @@
   border-radius: 6px;
 }
 @media (prefers-color-scheme: dark) {
-  .messages::-webkit-scrollbar-thumb {
-    background: #334155; /* slate-700 */
-  }
+  .messages::-webkit-scrollbar-thumb { background: #334155; }
 }
