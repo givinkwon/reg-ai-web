@@ -7,8 +7,8 @@
   min-height: 0;
   padding: 1rem;
   box-sizing: border-box;
-  background-color: var(--bg);
-  color: var(--text);
+  background-color: #f9fafb;     /* 밝은 배경 고정 */
+  color: #111827;                /* 본문 글자 고정 */
 }
 
 .messages {
@@ -33,26 +33,25 @@
   white-space: pre-wrap;
   line-height: 1.5;
   font-size: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .user {
   composes: bubble;
   align-self: flex-end;
-  background-color: var(--user-bg);
-  color: var(--user-text);
+  background-color: #dbeafe;  /* 파랑빛 말풍선 */
+  color: #0b3b8c;             /* 진한 파랑 글자 */
 }
 
 .assistant {
   composes: bubble;
   align-self: flex-start;
-  background-color: var(--assistant-bg);
-  color: var(--assistant-text);
+  background-color: #f3f4f6;  /* 옅은 회색 */
+  color: #111827;
 }
-.assistant a { color: var(--button-bg); text-decoration: underline; }
-.assistant pre,
-.assistant code {
+.assistant a { color: #2563eb; text-decoration: underline; }
+.assistant pre, .assistant code {
   background: rgba(0,0,0,0.05);
   padding: 0.15rem 0.35rem;
   border-radius: 6px;
@@ -60,34 +59,23 @@
 
 /* ===== Monitoring panel ===== */
 .monitorPane {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: #ffffff !important;      /* 패널 흰 배경 강제 */
+  color: #111827 !important;           /* 진한 글자 강제 */
+  border: 1px solid #e5e7eb !important;
   border-radius: 12px;
   padding: 14px;
-}
-
-/* 💥 다크모드에서 패널/내부 텍스트가 흐려지는 문제 강제 해결 */
-@media (prefers-color-scheme: dark) {
-  .monitorPane,
-  .monitorPane * {
-    color: var(--text) !important;
-    opacity: 1 !important;
-  }
 }
 
 .panelTitle {
   font-weight: 800;
   margin-bottom: 10px;
-  color: var(--text);
-  opacity: 1 !important; /* 강제 */
+  color: #111827 !important;
 }
 
 .sectionTitle {
   font-weight: 700;
   margin: 10px 0 6px;
-  color: var(--text);
-  opacity: 1 !important; /* 강제 */
+  color: #111827 !important;
 }
 
 .tagGrid {
@@ -96,7 +84,8 @@
   gap: 8px;
 }
 
-/* 칩(태그) – 다크/라이트 모두 선명하게 */
+/* ===== Chips (Tags) =====
+   💡 라이트/다크 모두 대비가 보장되도록 색 고정 */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -104,25 +93,21 @@
   border-radius: 9999px;
   font-size: 0.95rem;
   line-height: 1;
-  background: var(--chip-bg);
-  border: 1px solid var(--chip-border);
+  background: #f3f4f6 !important;   /* 연회색 배경 */
+  border: 1px solid #cbd5e1 !important;
+  color: #111827 !important;        /* 항상 어두운 글자 */
   cursor: pointer;
   user-select: none;
-  color: var(--chip-text) !important;
 }
-.chip * { color: inherit !important; } /* 내부 span/아이콘 색 보장 */
+.chip * { color: inherit !important; } /* 내부 span/아이콘도 동일 */
 
-.chip:focus-visible {
-  outline: 2px solid var(--button-bg);
-  outline-offset: 2px;
-}
 .chipActive {
-  background: var(--chip-active-bg);
-  border-color: var(--button-bg);
-  color: var(--chip-active-text) !important;
+  background: #1e3a8a !important;   /* 진한 남색 */
+  border-color: #1e3a8a !important;
+  color: #ffffff !important;        /* 흰 글자 */
 }
-.chipActive * { color: inherit !important; }
 
+/* ===== Fields & helper ===== */
 .fieldRow {
   display: flex;
   gap: 8px;
@@ -134,24 +119,25 @@
   flex: 1;
   padding: 0.7rem 0.9rem;
   border-radius: 8px;
-  border: 1px solid var(--input-border);
-  background: var(--input-bg);
-  color: var(--input-text) !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
   font-size: 1rem;
   outline: none;
   min-width: 0;
 }
-.field::placeholder { color: var(--placeholder); }
+.field::placeholder { color: #6b7280 !important; }
 
 .helper {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px dashed var(--border);
-  color: var(--muted) !important;
-  background: transparent;
+  border: 1px dashed #e5e7eb !important;
+  color: #475569 !important;
+  background: transparent !important;
 }
 
+/* ===== Actions / Buttons ===== */
 .actions {
   display: flex;
   gap: 8px;
@@ -170,48 +156,38 @@
 
 .primary {
   composes: btn;
-  background: var(--button-bg);
-  color: var(--button-text);
+  background: #2563eb !important;   /* 파랑 */
+  color: #ffffff !important;         /* 흰 글자 */
 }
-.primary:hover { background: var(--button-bg-hover); }
+.primary:hover { background: #1e40af !important; }
 
 .secondary {
   composes: btn;
-  background: transparent;
-  color: var(--button-bg);
-  border-color: var(--button-bg);
+  background: transparent !important;
+  color: #2563eb !important;
+  border-color: #2563eb !important;
 }
-.secondary:hover { background: rgba(37,99,235,0.08); }
+.secondary:hover { background: rgba(37,99,235,0.08) !important; }
 
 .ghost {
   composes: btn;
-  background: transparent;
-  color: var(--text);
-  border-color: var(--border);
+  background: transparent !important;
+  color: #111827 !important;
+  border-color: #e5e7eb !important;
 }
-.ghost:hover { background: rgba(148,163,184,0.12); }
+.ghost:hover { background: rgba(148,163,184,0.12) !important; }
 
 /* ===== Loading dots ===== */
-.loadingDots {
-  display: inline-flex;
-  gap: 0.15rem;
-  margin-left: 0.25rem;
-}
+.loadingDots { display: inline-flex; gap: 0.15rem; margin-left: 0.25rem; }
 .dot {
-  width: 6px;
-  height: 6px;
-  background-color: var(--muted);
+  width: 6px; height: 6px;
+  background-color: #475569;
   border-radius: 50%;
   animation: blink 1.4s infinite both;
 }
 .dot:nth-child(2){animation-delay:.2s}
 .dot:nth-child(3){animation-delay:.4s}
-
-@keyframes blink {
-  0% { opacity: .2; }
-  20% { opacity: 1; }
-  100% { opacity: .2; }
-}
+@keyframes blink { 0%{opacity:.2} 20%{opacity:1} 100%{opacity:.2} }
 
 .loadingStage {
   font-style: italic;
@@ -219,7 +195,7 @@
   align-items: center;
   gap: 0.4rem;
   line-height: 1.5;
-  color: var(--muted) !important;
+  color: #475569 !important;
 }
 
 /* ===== Chat bottom input ===== */
@@ -231,7 +207,7 @@
   flex-wrap: nowrap;
   position: sticky;
   bottom: 0;
-  background: var(--bg);
+  background: #f9fafb;
   padding-top: 0.5rem;
 }
 
@@ -239,15 +215,14 @@
   flex: 1;
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  border: 1px solid var(--input-border);
-  background: var(--input-bg);
-  color: var(--input-text) !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
   font-size: 1rem;
   outline: none;
   min-width: 0;
-  accent-color: var(--button-bg);
 }
-.inputField::placeholder { color: var(--placeholder); }
+.inputField::placeholder { color: #6b7280 !important; }
 
 .sendButton {
   flex-shrink: 0;
@@ -255,20 +230,20 @@
   font-size: 1rem;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: var(--button-bg);
-  color: var(--button-text);
+  background: #2563eb !important;
+  color: #ffffff !important;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color .15s ease, transform .02s ease;
 }
-.sendButton:hover { background: var(--button-bg-hover); }
+.sendButton:hover { background: #1e40af !important; }
 .sendButton:active { transform: translateY(1px); }
 
 .sendButton:focus-visible,
 .inputField:focus-visible,
 .field:focus-visible,
 .chip:focus-visible {
-  outline: 2px solid rgba(59,130,246,0.6);
+  outline: 2px solid rgba(37,99,235,0.6);
   outline-offset: 2px;
 }
 
@@ -276,13 +251,13 @@
 .notice {
   padding: 1.5rem;
   text-align: center;
-  color: var(--muted);
+  color: #475569;
   font-size: 1rem;
 }
 
 .loginHint {
   background-color: #fff8c5;
-  color: #333;
+  color: #333333;
   padding: 0.75rem 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -290,13 +265,6 @@
   font-size: 1rem;
   font-weight: 500;
   border: 1px solid #f1d36f;
-}
-@media (prefers-color-scheme: dark) {
-  .loginHint {
-    background-color: #facc15;
-    color: #1f2937;
-    border-color: #eab308;
-  }
 }
 
 /* ===== Mobile ===== */
@@ -307,93 +275,57 @@
   .notice, .loginHint { font-size: .95rem; }
 }
 
-/* ===== Scrollbar (optional) ===== */
-.messages::-webkit-scrollbar { width: 10px; }
-.messages::-webkit-scrollbar-track { background: transparent; }
-.messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
-
+/* ===== Dark scheme explicit overrides (삼성 강제다크 케이스 포함) ===== */
 @media (prefers-color-scheme: dark) {
-  /* 패널 배경/테두리/텍스트 */
+  .chatWindow { background: #0b1120; color: #e5e7eb; }
+  .assistant { background: #1f2937; color: #e5e7eb; border-color: #374151; }
+  .user { background: #1d4ed8; color: #e5e7eb; }
+
   .monitorPane {
-    background: #0f172a !important;    /* slate-900 */
-    border-color: #334155 !important;  /* slate-700 */
-    color: #e5e7eb !important;         /* text */
-  }
-  /* 패널 내부 요소가 투명/옅게 보이는 현상 방지 */
-  .monitorPane * {
-    color: #e5e7eb !important;
-    opacity: 1 !important;
-  }
-
-  /* 제목/섹션 제목은 확실히 밝게 */
-  .panelTitle,
-  .sectionTitle {
-    color: #f3f4f6 !important;         /* slate-100 */
-    opacity: 1 !important;
-  }
-
-  /* 입력 필드/헬퍼 */
-  .field {
-    background: #111827 !important;    /* slate-800 */
-    color: #f8fafc !important;         /* slate-50 */
-    border-color: #334155 !important;  /* slate-700 */
-  }
-  .field::placeholder { color: #9ca3af !important; }  /* slate-400 */
-  .helper {
-    color: #cbd5e1 !important;         /* slate-300 */
+    background: #0f172a !important;
     border-color: #334155 !important;
+    color: #e5e7eb !important;
   }
+  .panelTitle, .sectionTitle { color: #f3f4f6 !important; }
 
-  /* 칩(태그) – 다크에서 확실한 대비 */
   .chip {
-    background: #0b1220 !important;    /* 아주 짙은 남색 */
-    border-color: #1e3a8a !important;  /* blue-900 */
-    color: #e5e7eb !important;         /* slate-200 */
+    background: #111827 !important;
+    border-color: #374151 !important;
+    color: #f3f4f6 !important;
   }
   .chipActive {
-    background: #1e3a8a !important;    /* blue-900 */
-    border-color: #3b82f6 !important;  /* blue-500 */
-    color: #e0e7ff !important;         /* indigo-100 */
-  }
-
-  /* 버튼 대비 강화 */
-  .primary {
-    background: #3b82f6 !important;    /* blue-500 */
+    background: #2563eb !important;
+    border-color: #2563eb !important;
     color: #ffffff !important;
   }
-  .primary:hover { background: #2563eb !important; } /* blue-600 */
 
-  .secondary {
-    background: transparent !important;
-    color: #60a5fa !important;         /* blue-400 */
-    border-color: #3b82f6 !important;
-  }
-  .secondary:hover { background: rgba(59,130,246,0.12) !important; }
-
-  .ghost {
-    background: transparent !important;
-    color: #e5e7eb !important;
+  .field {
+    background: #111827 !important;
+    color: #f8fafc !important;
     border-color: #334155 !important;
   }
-  .ghost:hover { background: rgba(148,163,184,0.12) !important; }
+  .field::placeholder { color: #9ca3af !important; }
 
-  /* 하단 입력 박스/전송 버튼도 동일 톤 */
-  .inputArea { background: #0b1120 !important; }      /* slate-950 */
+  .helper { color: #cbd5e1 !important; border-color: #334155 !important; }
+
+  .inputArea { background: #0b1120 !important; }
   .inputField {
     background: #111827 !important;
     color: #f8fafc !important;
     border-color: #334155 !important;
   }
-  .sendButton {
-    background: #3b82f6 !important;
-    color: #ffffff !important;
-  }
-  .sendButton:hover { background: #2563eb !important; }
 
-  /* 알림 박스 */
-  .loginHint {
-    background: #facc15 !important;    /* amber-400 */
-    color: #1f2937 !important;         /* slate-800 */
-    border-color: #eab308 !important;  /* amber-500 */
+  .primary { background: #3b82f6 !important; color: #ffffff !important; }
+  .primary:hover { background: #2563eb !important; }
+  .secondary { color: #60a5fa !important; border-color: #3b82f6 !important; }
+  .ghost { color: #e5e7eb !important; border-color: #334155 !important; }
+}
+
+/* ===== High-contrast (Windows/Android 접근성 모드) ===== */
+@media (forced-colors: active) {
+  .monitorPane, .chip, .chipActive, .field, .inputField, .sendButton, .primary, .secondary, .ghost {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border-color: GrayText !important;
   }
 }
