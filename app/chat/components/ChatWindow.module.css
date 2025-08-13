@@ -311,3 +311,89 @@
 .messages::-webkit-scrollbar { width: 10px; }
 .messages::-webkit-scrollbar-track { background: transparent; }
 .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+@media (prefers-color-scheme: dark) {
+  /* 패널 배경/테두리/텍스트 */
+  .monitorPane {
+    background: #0f172a !important;    /* slate-900 */
+    border-color: #334155 !important;  /* slate-700 */
+    color: #e5e7eb !important;         /* text */
+  }
+  /* 패널 내부 요소가 투명/옅게 보이는 현상 방지 */
+  .monitorPane * {
+    color: #e5e7eb !important;
+    opacity: 1 !important;
+  }
+
+  /* 제목/섹션 제목은 확실히 밝게 */
+  .panelTitle,
+  .sectionTitle {
+    color: #f3f4f6 !important;         /* slate-100 */
+    opacity: 1 !important;
+  }
+
+  /* 입력 필드/헬퍼 */
+  .field {
+    background: #111827 !important;    /* slate-800 */
+    color: #f8fafc !important;         /* slate-50 */
+    border-color: #334155 !important;  /* slate-700 */
+  }
+  .field::placeholder { color: #9ca3af !important; }  /* slate-400 */
+  .helper {
+    color: #cbd5e1 !important;         /* slate-300 */
+    border-color: #334155 !important;
+  }
+
+  /* 칩(태그) – 다크에서 확실한 대비 */
+  .chip {
+    background: #0b1220 !important;    /* 아주 짙은 남색 */
+    border-color: #1e3a8a !important;  /* blue-900 */
+    color: #e5e7eb !important;         /* slate-200 */
+  }
+  .chipActive {
+    background: #1e3a8a !important;    /* blue-900 */
+    border-color: #3b82f6 !important;  /* blue-500 */
+    color: #e0e7ff !important;         /* indigo-100 */
+  }
+
+  /* 버튼 대비 강화 */
+  .primary {
+    background: #3b82f6 !important;    /* blue-500 */
+    color: #ffffff !important;
+  }
+  .primary:hover { background: #2563eb !important; } /* blue-600 */
+
+  .secondary {
+    background: transparent !important;
+    color: #60a5fa !important;         /* blue-400 */
+    border-color: #3b82f6 !important;
+  }
+  .secondary:hover { background: rgba(59,130,246,0.12) !important; }
+
+  .ghost {
+    background: transparent !important;
+    color: #e5e7eb !important;
+    border-color: #334155 !important;
+  }
+  .ghost:hover { background: rgba(148,163,184,0.12) !important; }
+
+  /* 하단 입력 박스/전송 버튼도 동일 톤 */
+  .inputArea { background: #0b1120 !important; }      /* slate-950 */
+  .inputField {
+    background: #111827 !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+  }
+  .sendButton {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+  }
+  .sendButton:hover { background: #2563eb !important; }
+
+  /* 알림 박스 */
+  .loginHint {
+    background: #facc15 !important;    /* amber-400 */
+    color: #1f2937 !important;         /* slate-800 */
+    border-color: #eab308 !important;  /* amber-500 */
+  }
+}
