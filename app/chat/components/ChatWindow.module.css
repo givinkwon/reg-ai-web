@@ -359,3 +359,100 @@ button.chip.chipActive {
     -webkit-text-fill-color: currentColor !important;
   }
 }
+
+/* ================================
+   🔧 Samsung Internet 강제 대비 핫픽스
+   칩/버튼/입력 텍스트 색을 다크/라이트에 맞게 고정
+   ================================ */
+
+/* 기본: 어떤 테마에서도 텍스트 흐릿해지지 않게 */
+.monitorPane, .monitorPane * { opacity: 1 !important; }
+.chip { -webkit-appearance: none; appearance: none; }
+
+/* ----- 라이트 테마 강제 ----- */
+body[data-theme="light"] .monitorPane {
+  background: #f8fafc !important;      /* 밝은 패널 */
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+body[data-theme="light"] .panelTitle,
+body[data-theme="light"] .sectionTitle {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+body[data-theme="light"] .chip {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+body[data-theme="light"] .chipActive {
+  background: #e0e7ff !important;
+  border-color: #3b82f6 !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+body[data-theme="light"] .field,
+body[data-theme="light"] .inputField {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+/* ----- 다크 테마 강제 ----- */
+body[data-theme="dark"] .monitorPane {
+  background: #0f172a !important;      /* slate-900 */
+  border-color: #1f2937 !important;
+  color: #e5e7eb !important;
+}
+body[data-theme="dark"] .panelTitle,
+body[data-theme="dark"] .sectionTitle {
+  color: #e5e7eb !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+}
+body[data-theme="dark"] .chip {
+  background: #1f2937 !important;      /* slate-800ish */
+  border-color: #475569 !important;    /* slate-600ish */
+  color: #f9fafb !important;
+  -webkit-text-fill-color: #f9fafb !important;
+}
+body[data-theme="dark"] .chip:hover {
+  background: #111827 !important;
+  border-color: #64748b !important;
+}
+body[data-theme="dark"] .chipActive {
+  background: #1e40af !important;      /* blue-800 */
+  border-color: #60a5fa !important;    /* blue-400 */
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(59,130,246,.35) inset;
+}
+body[data-theme="dark"] .field,
+body[data-theme="dark"] .inputField {
+  background: #111827 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb !important;
+  -webkit-text-fill-color: #e5e7eb !important;
+}
+body[data-theme="dark"] .primary,
+body[data-theme="dark"] .sendButton {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* 비활성 칩도 흐려지지 않게 */
+.chip[disabled], .chip[aria-disabled="true"] { opacity: 1 !important; }
+
+/* 로딩 점/보조텍스트 대비 강화 */
+body[data-theme="dark"] .loadingStage { color: #cbd5e1 !important; }
+body[data-theme="dark"] .dot { background-color: #94a3b8 !important; }
+
+/* WebKit이 텍스트 색을 바꾸는 걸 막기 */
+@supports (-webkit-touch-callout: none) {
+  .chip, .chipActive, .field, .inputField,
+  .panelTitle, .sectionTitle, .assistant, .monitorPane {
+    -webkit-text-fill-color: currentColor !important;
+  }
+}
