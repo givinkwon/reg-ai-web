@@ -1,13 +1,17 @@
-/* === Tailwind === */
+/* === Tailwind (v4는 @import, v3는 @tailwind 사용)
+   프로젝트가 v4면 아래 한 줄만 남기고, v3면
+   @tailwind base; @tailwind components; @tailwind utilities; 로 바꾸세요. */
 @import "tailwindcss";
 
-/* ===== Global Theme Tokens ===== */
+/* =========================
+   Global Theme Tokens
+   ========================= */
 :root {
-  /* base surfaces & text */
+  /* surfaces & text */
   --bg: #f9fafb;
   --surface: #ffffff;
-  --text: #111827;         /* 본문 텍스트 */
-  --muted: #475569;        /* 보조 텍스트 */
+  --text: #111827;
+  --muted: #475569;
   --border: #e5e7eb;
 
   /* bubbles */
@@ -29,17 +33,20 @@
 
   /* chips */
   --chip-bg: #eef2ff;
-  --chip-text: #1f2937;          /* 칩 텍스트(라이트) */
+  --chip-text: #1f2937;
   --chip-border: #c7d2fe;
   --chip-active-bg: #e0e7ff;
   --chip-active-text: #111827;
+
+  /* 브라우저 자동 다크/라이트 지원 힌트 */
+  color-scheme: light dark;
 }
 
-/* 시스템 다크모드 대응 */
+/* 시스템 다크모드 자동 적용 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b1120;             /* slate-950 */
-    --surface: #0f172a;        /* slate-900 */
+    --bg: #0b1120;         /* slate-950 */
+    --surface: #0f172a;    /* slate-900 */
     --text: #e5e7eb;
     --muted: #cbd5e1;
     --border: #1f2937;
@@ -58,63 +65,107 @@
     --button-bg-hover: #2563eb;
     --button-text: #ffffff;
 
-    /* 칩(태그) – 다크 대비 강하게 */
+    /* 칩(태그) – 다크 대비 강화 */
     --chip-bg: #0b1220;
-    --chip-text: #e5e7eb;      /* 칩 텍스트(다크) */
+    --chip-text: #e5e7eb;
     --chip-border: #1e3a8a;
     --chip-active-bg: #1e3a8a;
     --chip-active-text: #e0e7ff;
   }
 }
 
-/* 앱 전체 기본 배경/글자 (선택) */
+/* 선택적으로 수동 강제 다크: <html data-theme="dark"> */
+html[data-theme="dark"] {
+  --bg: #0b1120;
+  --surface: #0f172a;
+  --text: #e5e7eb;
+  --muted: #cbd5e1;
+  --border: #1f2937;
+
+  --user-bg: #1d4ed8;
+  --user-text: #e5e7eb;
+  --assistant-bg: #111827;
+  --assistant-text: #e5e7eb;
+
+  --input-bg: #0f172a;
+  --input-text: #f8fafc;
+  --input-border: #334155;
+  --placeholder: #9ca3af;
+
+  --button-bg: #3b82f6;
+  --button-bg-hover: #2563eb;
+  --button-text: #ffffff;
+
+  --chip-bg: #0b1220;
+  --chip-text: #e5e7eb;
+  --chip-border: #1e3a8a;
+  --chip-active-bg: #1e3a8a;
+  --chip-active-text: #e0e7ff;
+
+  color-scheme: dark;
+}
+
+/* =========================
+   Base
+   ========================= */
 html, body {
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* === 5) 폼/버튼 기본 === */
-input {
+/* 링크/텍스트 기본 컬러 상속 */
+a, p, span, label, h1, h2, h3, h4, h5, h6 { color: inherit; }
+
+/* =========================
+   Form Controls
+   ========================= */
+input, textarea, select {
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.7rem 0.9rem;
   font-size: 1rem;
   background: var(--input-bg);
   color: var(--input-text);
   border: 1px solid var(--input-border);
-  border-radius: 6px;
+  border-radius: 8px;
   outline: none;
+  min-width: 0;
+  accent-color: var(--button-bg);
 }
-input::placeholder {
-  color: var(--placeholder);
-  opacity: 1;
-}
+input::placeholder,
+textarea::placeholder { color: var(--placeholder); opacity: 1; }
 
 /* 크롬/안드 자동완성 색상 보정 */
-input:-webkit-autofill {
-  -webkit-text-fill-color: var(--input-text);
-  transition: background-color 5000s ease-in-out 0s;
-}
-
-button {
-  padding: 0.5rem 1rem;
-  margin-left: 0.5rem;
-  background: #2563eb; /* Tailwind blue-600 */
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* 접근성: 포커스 표시 */
-button:focus-visible, input:focus-visible {
-  outline: 2px solid rgba(37,99,235,0.6);
-  outline-offset: 2px;
-}
-
-/* globals.css */
 input:-webkit-autofill,
 textarea:-webkit-autofill {
   -webkit-text-fill-color: var(--input-text);
-  box-shadow: 0 0 0px 1000px var(--input-bg) inset; /* 배경색 덮기 */
+  box-shadow: 0 0 0px 1000px var(--input-bg) inset;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+/* =========================
+   Buttons
+   ========================= */
+button {
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color .15s ease, transform .02s ease;
+}
+button:hover { background: var(--button-bg-hover); }
+button:active { transform: translateY(1px); }
+
+/* 접근성: 포커스 표시 */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(59,130,246,0.6); /* blue-500 */
+  outline-offset: 2px;
 }
