@@ -49,12 +49,20 @@ export default function ChatWindow() {
   const [searchQ, setSearchQ] = useState('');
   const [monLoading, setMonLoading] = useState(false);
 
+  // 상단 state 목록에 추가
+  const [threadId, setThreadId] = useState<string | null>(null);
+
   const presetTags = useMemo(
     () => TAG_PRESETS[selectedJobType as keyof typeof TAG_PRESETS] || TAG_PRESETS.default,
     [selectedJobType],
   );
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
+  
+  useEffect(() => {
+    // 사용자가 카테고리를 바꾸면 새 스레드로 시작하고 싶을 때만 사용
+    setThreadId(null);
+  }, [selectedJobType]);
 
   const LOADING_MESSAGES = useMemo(
     () => [
@@ -105,26 +113,48 @@ export default function ChatWindow() {
     setLoadingMessageIndex(0);
     setStatusMessage('');
 
-    sendSlackMessage(`*[User]*\n• category: ${selectedJobType}\n• message:\n${trimmed}`);
+    sendSlackMessage(`*[User]*\n• category: ${selectedJobType}\n• threadId: ${threadId ?? '(new)'}\n• message:\n${trimmed}`);
 
     try {
-      const res = await fetch('/api/start-task', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userInfo.email || 'anonymous',
-          category: selectedJobType,
-          message: trimmed,
-        }),
-      });
-      if (!res.ok) throw new Error(`start-task failed: ${res.status}`);
-      const { job_id } = await res.json();
+      let res: Response;
+
+      if (!threadId) {
+        // ✅ 첫 질문: /start-task
+        res = await fetch('/api/start-task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userInfo.email || 'anonymous',
+            category: selectedJobType,
+            message: trimmed,
+          }),
+        });
+      } else {
+        // ✅ 후속 질문: /start-followup
+        res = await fetch('/api/start-followup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            thread_id: threadId,
+            email: userInfo.email || 'anonymous',
+            category: selectedJobType,
+            message: trimmed,
+          }),
+        });
+      }
+
+      if (!res.ok) throw new Error(`start-chat failed: ${res.status}`);
+      const { job_id, thread_id } = await res.json();
+
+      // 서버가 반환하는 thread_id로 업데이트(첫 질문이면 새로 세팅, 후속이면 그대로 유지/동일 확인)
+      if (thread_id) setThreadId(thread_id);
       setJobId(job_id);
-    } catch {
+    } catch (e) {
       addMessage({ role: 'assistant', content: '⚠️ 요청 중 에러가 발생했습니다.' });
       setLoading(false);
     }
   };
+
 
   const openMonitoring = async () => {
     setMonitorMode(true);
