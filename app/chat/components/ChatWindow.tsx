@@ -215,43 +215,86 @@ export default function ChatWindow() {
   useEffect(() => {
     if (!jobId) return;
 
+    // 🔸 에러 메시지 헬퍼 (이 effect 내부에만 사용)
+    const renderServerError = async (res: Response, fallback = '요청 실패') => {
+      const statusLine = `(${res.status} ${res.statusText || ''})`.trim();
+      try {
+        // JSON 파싱 시도
+        const body = await res.clone().json().catch(() => null);
+        if (body) {
+          const detail =
+            body.detail ??
+            body.error ??
+            body.status_message ??
+            body.message ??
+            body.gpt_response ??
+            JSON.stringify(body);
+          return `⚠️ 상태 확인 실패 ${statusLine}\n${detail}`;
+        }
+        // 텍스트 파싱 시도
+        const text = await res.clone().text().catch(() => '');
+        return `⚠️ 상태 확인 실패 ${statusLine}\n${text?.slice(0, 800) || fallback}`;
+      } catch {
+        return `⚠️ 상태 확인 실패 ${statusLine}\n${fallback}`;
+      }
+    };
+
+    const renderThrownError = (e: unknown, ctx = '상태 확인 중') => {
+      const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
+      return `⚠️ ${ctx} 오류가 발생했습니다.\n${msg}`;
+    };
+
     const interval = setInterval(async () => {
       try {
         let res = await fetch(`/api/check-task?taskId=${jobId}`, { cache: 'no-store' });
         if (res.status === 400 || res.status === 422) {
           res = await fetch(`/api/check-task?jobId=${jobId}`, { cache: 'no-store' });
         }
+
         if (!res.ok) {
-          if (res.status === 404) return;
-          addMessage({ role: 'assistant', content: '⚠️ 상태 확인 중 오류가 발생했습니다.' });
+          // ✅ 404도 메시지 남기고 깔끔히 종료(계속 폴링 방지)
+          const msg = await renderServerError(res, '상태 확인에 실패했습니다.');
+          addMessage({ role: 'assistant', content: msg.replace(/\n/g, '<br />') });
           setLoading(false);
           setJobId(null);
+          setStatusMessage('');
           clearInterval(interval);
           return;
         }
+
         const data = await res.json();
 
         if (data.status_message) setStatusMessage(data.status_message);
 
         if (data.status === 'done') {
-          addMessage({
-            role: 'assistant',
-            content: cleanText(data.gpt_response || '⚠️ 요약이 비어 있습니다.'),
-          });
+          // ✅ 완료 but 빈 결과 안내 개선
+          const content = cleanText(
+            data.gpt_response ||
+              (data.is_empty ? '📭 키워드/태그에 해당하는 변경이 없습니다.' : '✅ 작업이 완료되었습니다.')
+          );
+          addMessage({ role: 'assistant', content });
           setLoading(false);
           setJobId(null);
           setStatusMessage('');
           clearMonitorPane();
           clearInterval(interval);
         } else if (data.status === 'error') {
-          addMessage({ role: 'assistant', content: '⚠️ 서버 처리 중 오류가 발생했습니다.' });
+          // ✅ 서버가 내려준 구체 에러 우선 노출
+          const errMsg = cleanText(
+            data.error || data.status_message || '⚠️ 서버 처리 중 오류가 발생했습니다.'
+          );
+          addMessage({ role: 'assistant', content: errMsg });
           setLoading(false);
           setJobId(null);
           setStatusMessage('');
           clearInterval(interval);
         }
-      } catch {
-        addMessage({ role: 'assistant', content: '⚠️ 상태 확인 중 오류가 발생했습니다.' });
+      } catch (e) {
+        // ✅ 네트워크/예외 메시지 그대로 표시
+        addMessage({
+          role: 'assistant',
+          content: renderThrownError(e).replace(/\n/g, '<br />'),
+        });
         setLoading(false);
         setJobId(null);
         setStatusMessage('');
