@@ -353,13 +353,13 @@ export default function ChatWindow() {
       {messages.length === 0 && (
         <div className={`${styles.assistant} ${styles.welcomeCard}`}>
           <div className={styles.welcomeText}>
-            안녕하세요! 필요한 규제 업데이트를 한눈에 브리핑해 드릴게요. 😊
+            안녕하세요! 필요한 규제 정보를 알려드릴게요. 😊
           </div>
-          <div className={styles.actionRow}>
+          {/* <div className={styles.actionRow}>
             <button onClick={openMonitoring} className={styles.chip}>
               # 오늘의 모니터링
             </button>
-          </div>
+          </div> */}
         </div>
       )}
 
@@ -454,7 +454,7 @@ export default function ChatWindow() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !monitorMode && sendMessage()}
-          placeholder="질문을 입력하거나, 위의 # 오늘의 모니터링을 클릭하세요"
+          placeholder="질문을 입력을 입력하세요"
           disabled={monitorMode}
         />
         <button className={styles.sendButton} onClick={sendMessage} disabled={loading || monitorMode}>
