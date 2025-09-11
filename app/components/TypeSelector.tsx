@@ -14,42 +14,42 @@ const jobTypes = [
     label: '환경/안전',
     description: '대기환경, 산업안전, 화학물질 담당자',
   },
-  {
-    id: 'finance',
-    emoji: '🏦',
-    label: '금융 규제/컴플라이언스',
-    description: '금융감독원, 자산운용사 등 금융 규제 담당',
-  },
-  {
-    id: 'hr',
-    emoji: '👔',
-    label: '인사/노무',
-    description: '근로기준법, 채용/해고, 직장 내 괴롭힘 등',
-  },
+  // {
+  //   id: 'finance',
+  //   emoji: '🏦',
+  //   label: '금융 규제/컴플라이언스',
+  //   description: '금융감독원, 자산운용사 등 금융 규제 담당',
+  // },
+  // {
+  //   id: 'hr',
+  //   emoji: '👔',
+  //   label: '인사/노무',
+  //   description: '근로기준법, 채용/해고, 직장 내 괴롭힘 등',
+  // },
   {
     id: 'infosec',
     emoji: '🛡️',
     label: '정보보안/컴플라이언스',
     description: 'ISMS, 개인정보보호, 전자금융감독 등',
   },
-  {
-    id: 'bio',
-    emoji: '🧬',
-    label: '바이오/제약 인허가',
-    description: '의약품/의료기기 관련 허가 담당자',
-  },
-  {
-    id: 'construction',
-    emoji: '🏗️',
-    label: '건설 인허가',
-    description: '건설산업기본법, 기술진흥법 등 담당자',
-  },
-  {
-    id: 'procurement',
-    emoji: '📦',
-    label: '구매/공공입찰',
-    description: '공공계약, 조달청 등 입찰 담당자',
-  },
+  // {
+  //   id: 'bio',
+  //   emoji: '🧬',
+  //   label: '바이오/제약 인허가',
+  //   description: '의약품/의료기기 관련 허가 담당자',
+  // },
+  // {
+  //   id: 'construction',
+  //   emoji: '🏗️',
+  //   label: '건설 인허가',
+  //   description: '건설산업기본법, 기술진흥법 등 담당자',
+  // },
+  // {
+  //   id: 'procurement',
+  //   emoji: '📦',
+  //   label: '구매/공공입찰',
+  //   description: '공공계약, 조달청 등 입찰 담당자',
+  // },
 ];
 
 export default function TypeSelector() {
