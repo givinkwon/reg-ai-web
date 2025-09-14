@@ -1,13 +1,3 @@
-:root{
-  --panel-bg:#fff;
-  --overlay:rgba(12,18,36,.35);
-  --border:#EAEDF5;
-  --shadow:0 10px 30px rgba(18,29,56,.18);
-  --text:#303650;
-  --muted:#6b7493;
-  --accent:#2388FF;
-}
-
 /* 오버레이 */
 .overlay{
   position:fixed; inset:0; background:var(--overlay);
