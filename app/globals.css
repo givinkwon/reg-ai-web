@@ -15,6 +15,14 @@
   --border:#EAEDF5; --border-strong:#D8DEEA;
   --btn-blue:#2B7AFB; --btn-blue-2:#2174FD;
   
+  --panel-bg:#fff;
+  --overlay:rgba(12,18,36,.35);
+  --border:#EAEDF5;
+  --shadow:0 10px 30px rgba(18,29,56,.18);
+  --text:#303650;
+  --muted:#6b7493;
+  --accent:#2388FF;
+  
   /* 추가: 회색 톤 토큰 */
   --app-bg:#F3F6FB;          /* 페이지 배경 */
   --sidebar-bg:#F6F8FD;      /* 사이드바 배경 */
