@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Settings, ChevronDown, Copy, RotateCcw, ArrowUp } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useChatController } from '../useChatController';
@@ -11,12 +11,19 @@ export default function ChatArea() {
   const {
     messages, input, setInput,
     loading, loadingMessageIndex, LOADING_MESSAGES, statusMessage,
-    sendMessage,
+    sendMessage, regenerate,
   } = useChatController();
 
   const setRightOpen = useChatStore((st) => st.setRightOpen);
+  const setMessages  = useChatStore((st) => st.setMessages);
 
-  // 새 메시지 도착 시 하단으로 스크롤
+  // 복사 토스트
+  const [copied, setCopied] = useState(false);
+
+  // 각 assistant 본문 엘리먼트 참조 (index -> element)
+  const contentRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  // 하단 스크롤
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -27,6 +34,56 @@ export default function ChatArea() {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  // HTML -> 텍스트 (백업용)
+  const htmlToText = (html: string) => {
+    try {
+      const clean = html.replace(/<br\s*\/?>/gi, '\n');
+      const doc = new DOMParser().parseFromString(clean, 'text/html');
+      return (doc.body.textContent || '').replace(/\u00A0/g, ' ').trim();
+    } catch {
+      return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+>/g, '').trim();
+    }
+  };
+
+  // 클립보드 복사 (navigator + textarea fallback)
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // 무시
+    }
+  };
+
+  // 복사: ref 우선, 실패 시 htmlToText 백업
+  const handleCopy = async (idx: number, fallbackHtml: string) => {
+    const el = contentRefs.current[idx];
+    const text = el?.innerText?.trim() || htmlToText(fallbackHtml);
+    if (text) await copyToClipboard(text);
+  };
+
+  // 다시 생성: 해당 assistant 카드 제거 후, 위쪽의 최근 user 질문으로 재요청
+  const handleRegenerate = (idx: number) => {
+    const upperUser = [...messages].slice(0, idx).reverse().find((m) => m.role === 'user');
+    const fallbackUser = [...messages].reverse().find((m) => m.role === 'user');
+    const q = htmlToText(upperUser?.content || fallbackUser?.content || '');
+    if (!q) return;
+    setMessages(messages.filter((_, i) => i !== idx));
+    regenerate(q);
   };
 
   return (
@@ -71,7 +128,6 @@ export default function ChatArea() {
             {messages.map((m, i) => {
               const isUser = m.role === 'user';
 
-              // 사용자 메시지: 우측 말풍선
               if (isUser) {
                 return (
                   <div key={i} className={s.userRow}>
@@ -85,16 +141,20 @@ export default function ChatArea() {
                 );
               }
 
-              // AI 메시지: 카드 + 액션바
+              // assistant
               return (
                 <div key={i} className={s.aiMsg}>
-                  <div className={s.msgContent} dangerouslySetInnerHTML={{ __html: m.content }} />
+                  <div
+                    ref={(el) => { contentRefs.current[i] = el; }}
+                    className={s.msgContent}
+                    dangerouslySetInnerHTML={{ __html: m.content }}
+                  />
                   <div className={s.actionRow}>
                     <div className={s.miniActions}>
-                      <button className={s.iconBtn} title="다시 생성">
+                      <button className={s.iconBtn} title="다시 생성" onClick={() => handleRegenerate(i)}>
                         <RotateCcw className={s.iconAction} />
                       </button>
-                      <button className={s.iconBtn} title="복사">
+                      <button className={s.iconBtn} title="복사" onClick={() => handleCopy(i, m.content)}>
                         <Copy className={s.iconAction} />
                       </button>
                     </div>
@@ -131,6 +191,27 @@ export default function ChatArea() {
             <ArrowUp className={s.iconMdAccent} />
           </button>
         </div>
+
+        {/* 복사 토스트 (인라인 스타일로 확실히 고정 표시) */}
+        {copied && (
+          <div
+            style={{
+              position: 'fixed',
+              left: '50%',
+              bottom: 76,
+              transform: 'translateX(-50%)',
+              background: 'rgba(33,41,66,.92)',
+              color: '#fff',
+              fontSize: 13,
+              padding: '8px 12px',
+              borderRadius: 10,
+              boxShadow: '0 6px 20px rgba(0,0,0,.18)',
+              zIndex: 9999,
+            }}
+          >
+            복사되었습니다
+          </div>
+        )}
       </div>
     </section>
   );

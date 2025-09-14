@@ -6,7 +6,11 @@
 /* =========================
    Global Theme Tokens
    ========================= */
+
 :root {
+  --text-dark:#303650; --text-neutral:#666F8D; --accent:#2388FF;
+  --border-light:#EAEDF5; --border-med:#D8DEEA;
+  --scrollPad: 20px; /* 스크롤바를 테두리에 붙이는 패딩 */
   /* surfaces & text */
   --bg: #f9fafb;
   --surface: #ffffff;

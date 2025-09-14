@@ -31,7 +31,7 @@ export function useChatController() {
     createRoom,
     activeRoomId,
     setActiveRoomTitleIfEmpty,
-    appendToActive, // ⚠️ rooms(쿠키)만 갱신하도록 구현되어 있어야 함(중복 push 금지)
+    appendToActive, // rooms(쿠키) 반영
   } = useChatStore();
 
   // user store
@@ -114,6 +114,7 @@ export function useChatController() {
     return !!last && last.role === m.role && last.content === m.content;
   };
 
+  /** 일반 전송: 사용자 메시지를 추가하고 서버 요청 */
   const sendMessage = async () => {
     if (sendingRef.current) return; // 연속 호출 가드
 
@@ -137,7 +138,7 @@ export function useChatController() {
 
     // 로컬/쿠키에 저장
     addMessage(userMsg);
-    appendToActive(userMsg); // rooms(쿠키)에도 기록
+    appendToActive(userMsg);
     setInput('');
     setLoading(true);
     setLoadingMessageIndex(0);
@@ -178,7 +179,85 @@ export function useChatController() {
     }
   };
 
-  // 모니터링 로직 그대로
+  /** 🔁 다시 생성: 사용자 메시지를 추가하지 않고 같은 질문만 재요청 */
+  const regenerate = async (question?: string) => {
+    // 중복 클릭 가드
+    if (sendingRef.current) {
+      console.debug('[regenerate] blocked: sendingRef=true');
+      return;
+    }
+  
+    // 방 보장
+    if (!activeRoomId) {
+      console.debug('[regenerate] no activeRoom -> createRoom()');
+      newChat(); // rooms 초기화 + setMessages([])
+    }
+  
+    // 질문 확보 (매개변수 없으면 마지막 user 메시지에서 가져옴)
+    let q = (question ?? '').trim();
+    if (!q) {
+      const lastUser = [...useChatStore.getState().messages].reverse().find(m => m.role === 'user');
+      q = (lastUser?.content ?? '').trim();
+    }
+    if (!q) {
+      console.debug('[regenerate] no question to send');
+      return;
+    }
+    if (!selectedJobType) {
+      console.debug('[regenerate] no selectedJobType');
+      return;
+    }
+  
+    setLoading(true);
+    setLoadingMessageIndex(0);
+    setStatusMessage('');
+  
+    sendingRef.current = true;
+    try {
+      let res: Response;
+      if (!threadId) {
+        // thread 없는 경우 처음처럼 start-task
+        res = await fetch('/api/start-task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userInfo.email || 'anonymous',
+            category: selectedJobType,
+            message: q,
+          }),
+        });
+      } else {
+        res = await fetch('/api/start-followup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            thread_id: threadId,
+            email: userInfo.email || 'anonymous',
+            category: selectedJobType,
+            message: q,
+          }),
+        });
+      }
+  
+      if (!res.ok) throw new Error(`regenerate failed: ${res.status}`);
+      const { job_id, thread_id } = await res.json();
+      if (thread_id) setThreadId(thread_id);
+      setJobId(job_id);
+    } catch (e) {
+      console.error(e);
+      const msg: ChatMessage = { role: 'assistant', content: '⚠️ 다시 생성 중 오류가 발생했습니다.' };
+      const last = useChatStore.getState().messages.slice(-1)[0];
+      if (!last || last.content !== msg.content || last.role !== msg.role) {
+        addMessage(msg);
+        appendToActive(msg);
+      }
+      setLoading(false);
+    } finally {
+      setTimeout(() => { sendingRef.current = false; }, 300);
+    }
+  };
+
+  // 모니터링 로직
   const openMonitoring = () => {
     setMonitorMode(true);
     setSelectedTags([]); setCustomTagInput(''); setPickedDocs({}); setMonItems([]); setSearchQ('');
@@ -287,7 +366,8 @@ export function useChatController() {
   return {
     messages, input, setInput,
     loading, loadingMessageIndex, LOADING_MESSAGES, statusMessage,
-    sendMessage, newChat,
+    sendMessage, regenerate,  // ⬅️ 새로고침용 메서드 노출
+    newChat,
     monitorMode, openMonitoring, selectedTags, presetTags, toggleTag,
     customTagInput, setCustomTagInput, addCustomTag, removeSelectedTag,
     monItems, setMonItems, pickedDocs, togglePickDoc, searchQ, setSearchQ,

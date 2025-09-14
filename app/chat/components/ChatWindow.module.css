@@ -150,3 +150,23 @@
 .input::placeholder{ color:var(--text-neutral); }
 .sendBtn{ padding:8px; border-radius:10px; background:#EEF3FF; }
 .iconMdAccent{ width:20px; height:20px; color:var(--accent); }
+
+/* ... 기존 스타일은 그대로 두고, 아래만 추가/보강하세요 ... */
+
+/* 토스트 */
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  background: rgba(33, 41, 66, .92);
+  color:#fff;
+  font-size:13px;
+  padding:8px 12px;
+  border-radius:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,.18);
+  z-index: 50;
+}
+
+/* (참고) 아이콘 색이 흐릿하면 유지 */
+.iconAction{ width:16px; height:16px; color:#8b95b2; stroke:#8b95b2; flex-shrink:0; }
