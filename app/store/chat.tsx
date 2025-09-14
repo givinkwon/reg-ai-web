@@ -3,9 +3,12 @@
 import { create } from 'zustand';
 import Cookies from 'js-cookie';
 
+/* =========================
+ * Types
+ * ========================= */
 export interface ChatMessage {
   role: string;
-  content: string;
+  content: string; // HTML 가능
 }
 
 export type Room = {
@@ -15,10 +18,112 @@ export type Room = {
   messages: ChatMessage[];  // 쿠키 용량 보호: 최근 N개만 저장
 };
 
+export type EvidenceItem = {
+  title: string;
+  href?: string;
+  snippet?: string;
+};
+
+export type RightPanelData = {
+  evidence: EvidenceItem[]; // 답변 근거(조문/고시/시행규칙 등)
+  forms: EvidenceItem[];    // 관련 별표/서식
+  rawHtml?: string;         // 원문 저장(재파싱/디버그용)
+};
+
+/* =========================
+ * Const
+ * ========================= */
 const COOKIE_KEY = 'regai_rooms_v1';
 const COOKIE_COLLAPSE = 'regai_sidebar_collapsed';
 const MAX_MSG_PER_ROOM = 30;
 
+/* =========================
+ * Parsing helpers (answer -> evidence/forms)
+ * ========================= */
+
+// HTML → plain text
+const htmlToText = (html: string) =>
+  html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?[^>]+>/g, '')
+    .replace(/\t/g, ' ')
+    .replace(/[ ]{2,}/g, ' ')
+    .trim();
+
+// URL 추출
+const findUrls = (s: string) => (s.match(/https?:\/\/[^\s)]+/g) || []).slice(0, 50);
+
+// 제목 다듬기
+const cleanTitle = (s: string) =>
+  s
+    .replace(/^[\-\•\d\)\. ]{0,4}/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+// “관련 별표/서식” 섹션 파싱
+const parseForms = (txt: string): EvidenceItem[] => {
+  const lines = txt.split('\n');
+  const idx = lines.findIndex((l) => /관련\s*별표\s*\/?\s*서식/i.test(l));
+  if (idx < 0) return [];
+  const out: EvidenceItem[] = [];
+  for (let k = idx + 1; k < lines.length; k++) {
+    const ln = lines[k].trim();
+    if (!ln) continue;
+    // 다음 섹션/헤더 추정되면 종료
+    if (/^\d+\)\s|^#{2,}|^\*\*/.test(ln) && k > idx + 1) break;
+
+    const url = findUrls(ln)[0];
+    const title = cleanTitle(ln.replace(url || '', ''));
+    if (title) out.push({ title, href: url });
+  }
+  return out;
+};
+
+// “근거” 섹션(조문/고시/시행규칙 등) 파싱
+const parseEvidence = (txt: string): EvidenceItem[] => {
+  const lines = txt.split('\n');
+
+  // 1) “2) 근거” 같은 섹션 헤더 먼저 시도
+  let i = lines.findIndex(
+    (l) => /(근거)(\s*[:：])?$/i.test(l) || /^\s*\d+\)\s*근거/.test(l)
+  );
+
+  // 1-1) 없으면 전체에서 조문/고시 패턴만 스캔 (fallback)
+  if (i < 0) {
+    const candidates = lines.filter((l) =>
+      /(법|령|시행규칙|고시|조|항|호|부칙|별표)/.test(l) || /제\d+조/.test(l)
+    );
+    return candidates.map((ln) => {
+      const url = findUrls(ln)[0];
+      const title = cleanTitle(ln.replace(url || '', ''));
+      return { title, href: url };
+    });
+  }
+
+  // 2) “근거” 섹션 안의 항목만 수집
+  const out: EvidenceItem[] = [];
+  for (let k = i + 1; k < lines.length; k++) {
+    const ln = lines[k].trim();
+    if (!ln) continue;
+
+    // “관련 별표/서식” 섹션 시작되면 종료
+    if (/관련\s*별표\s*\/?\s*서식/i.test(ln)) break;
+    // 다음 상위 섹션으로 넘어가면 종료
+    if (/^\d+\)\s/.test(ln) && k > i + 1) break;
+
+    // 항목 라인
+    if (/^[\-\•\d\)\. ]/.test(ln) || /(제\d+조|\[.*?\])/.test(ln)) {
+      const url = findUrls(ln)[0];
+      const title = cleanTitle(ln.replace(url || '', ''));
+      if (title) out.push({ title, href: url });
+    }
+  }
+  return out;
+};
+
+/* =========================
+ * Store
+ * ========================= */
 interface ChatStore {
   // ===== 메시지(현재 활성 방의 메시지)
   messages: ChatMessage[];
@@ -52,13 +157,18 @@ interface ChatStore {
   rightOpen: boolean;
   setRightOpen: (v: boolean) => void;
   toggleRight: () => void;
+  openRightPanel: (v: boolean) => void; // (별칭) 기존 컴포넌트 호환용
 
-  // (별칭) 기존 컴포넌트 호환용
-  openRightPanel: (v: boolean) => void;
+  // ===== 우측 패널 컨텐츠(파싱 결과)
+  rightData: RightPanelData | null;
+  setRightData: (d: RightPanelData | null) => void;
+
+  // 현재 답변(HTML)로부터 파싱해서 패널 열기
+  openRightFromHtml: (html: string) => void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
-  // ===== 메시지
+  /* ===== 메시지 ===== */
   messages: [],
   setMessages: (msgs) => {
     set({ messages: msgs });
@@ -91,7 +201,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     get().saveToCookies();
   },
 
-  // ===== 방/쿠키
+  /* ===== 방/쿠키 ===== */
   rooms: [],
   activeRoomId: null,
 
@@ -185,7 +295,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     return rooms.find((r) => r.id === activeRoomId) ?? null;
   },
 
-  // ===== 좌측 패널 축소/확장
+  /* ===== 좌측 패널 축소/확장 ===== */
   collapsed: false,
   setCollapsed: (v) => {
     set({ collapsed: v });
@@ -195,11 +305,22 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sidebarMobileOpen: false,
   setSidebarMobileOpen: (v) => set({ sidebarMobileOpen: v }),
 
-  // ===== 우측 패널(근거/서식) — 전역 UI 상태
+  /* ===== 우측 패널(근거/서식) — 전역 UI 상태 + 데이터 ===== */
   rightOpen: false,
   setRightOpen: (v) => set({ rightOpen: v }),
   toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
+  openRightPanel: (v: boolean) => set({ rightOpen: v }), // 별칭(기존 호환)
 
-  // (별칭) 기존 컴포넌트 호환
-  openRightPanel: (v: boolean) => set({ rightOpen: v }),
+  rightData: null,
+  setRightData: (d) => set({ rightData: d }),
+
+  openRightFromHtml: (html: string) => {
+    const txt = htmlToText(html);
+    const evidence = parseEvidence(txt);
+    const forms = parseForms(txt);
+    set({
+      rightData: { evidence, forms, rawHtml: html },
+      rightOpen: true,
+    });
+  },
 }));
