@@ -1,30 +1,40 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import { useUserStore } from '../store/user';
-import ChatWindow from './components/ChatWindow';
-import Header from './components/Header'; // ✅ Header 컴포넌트 import
-import styles from './page.module.css';
+import Sidebar from './components/Sidebar';
+import ChatArea from './components/ChatArea';
+import RightPanel from './components/RightPannel';
+import { useChatStore } from '../store/chat';
+import s from './page.module.css';
 
 export default function ChatPage() {
-  const router = useRouter();
-  const setJobType = useUserStore((state) => state.setSelectedJobType);
-
-  useEffect(() => {
-    const savedType = Cookies.get('selectedJobType');
-    if (!savedType) {
-      router.replace('/');
-    } else {
-      setJobType(savedType);
-    }
-  }, [setJobType, router]);
+  const { sidebarMobileOpen, setSidebarMobileOpen } = useChatStore();
 
   return (
-    <div className={styles.chatContainer}>
-      <Header /> {/* ✅ BackButton 대신 Header 삽입 */}
-      <ChatWindow />
+    <div className={s.shell}>
+      {/* 모바일 오버레이 */}
+      {sidebarMobileOpen && (
+        <>
+          <div className={s.overlay} onClick={() => setSidebarMobileOpen(false)} />
+          <div className={s.sideFloat}>
+            <Sidebar />
+          </div>
+        </>
+      )}
+
+      {/* 데스크톱 사이드바 */}
+      <div className={s.sideDesktop}>
+        <Sidebar />
+      </div>
+
+      {/* 본문 */}
+      <div className={s.main}>
+        <ChatArea />
+      </div>
+
+      {/* 오른쪽 근거 패널 */}
+      <div className={s.rightDesktop}>
+        <RightPanel />
+      </div>
     </div>
   );
 }

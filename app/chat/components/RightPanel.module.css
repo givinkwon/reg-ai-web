@@ -1,0 +1,56 @@
+:root{
+  --panel-bg:#fff; --overlay:rgba(12,18,36,.35);
+  --border:#EAEDF5; --shadow:0 10px 30px rgba(18,29,56,.18);
+  --text:#303650; --muted:#6b7493; --accent:#2388FF;
+}
+
+/* 전체를 덮는 오버레이 */
+.overlay{
+  position:fixed; inset:0; background:var(--overlay);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+  z-index:49;
+}
+.overlay.show{ opacity:1; pointer-events:auto; }
+
+/* 오른쪽 시트 */
+.sheet{
+  position:fixed; top:0; right:0; height:100dvh; width:min(420px, 92vw);
+  background:var(--panel-bg);
+  border-left:1px solid var(--border);
+  box-shadow:var(--shadow);
+  transform:translateX(100%);
+  transition:transform .25s ease;
+  z-index:50;
+
+  display:flex; flex-direction:column;
+}
+.sheet.open{ transform:translateX(0); }
+
+.header{
+  height:56px; padding:0 14px; display:flex; align-items:center; gap:10px;
+  border-bottom:1px solid var(--border);
+}
+.backBtn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:8px; background:#EEF3FF;
+}
+.icon{ width:18px; height:18px; color:#2b7afb; }
+.iconGhost{ width:18px; height:18px; color:transparent; } /* 우측 균형용 */
+.title{ font-weight:600; color:var(--text); font-size:15px; }
+
+.body{
+  flex:1; overflow:auto; padding:14px 16px 18px;
+}
+
+.groupTitle{
+  margin:6px 0 10px; font-weight:700; color:var(--text);
+}
+.linkList{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+.linkItem{
+  color:var(--text); border:1px solid var(--border); border-radius:12px;
+  padding:10px 12px; background:#fff;
+}
+.emptyBox{
+  padding:14px; border:1px dashed var(--border); border-radius:12px;
+  color:var(--muted); background:#fbfcff;
+}

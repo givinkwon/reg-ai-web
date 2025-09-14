@@ -1,0 +1,46 @@
+:root{
+    --text-dark:#303650; --accent:#2388FF;
+    --border:#EAEDF5; --border-strong:#D8DEEA;
+  }
+  
+  /* 공통 */
+  .base{
+    display:inline-flex; align-items:center; justify-content:center;
+    gap:6px;
+    font-weight:500;
+    border-radius:10px;
+    transition:background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+    cursor:pointer;
+  }
+  
+  /* 크기 */
+  .sSm{ padding:6px 10px; font-size:12px; }
+  .sMd{ padding:10px 14px; font-size:14px; }
+  .sLg{ padding:12px 18px; font-size:16px; }
+  
+  /* 스타일 */
+  .vDefault{
+    color:#fff;
+    background: linear-gradient(180deg,#2B7AFB 0%,#2174FD 100%);
+    border:1px solid #0679FF;
+    box-shadow:0 2px 5px rgba(20,88,201,.17),0 -2px .3px rgba(14,56,125,.18) inset,0 2px 1px rgba(255,255,255,.22) inset;
+  }
+  .vDefault:hover{ filter:brightness(0.98); }
+  .vDefault:active{ filter:brightness(0.95); }
+  
+  .vOutline{
+    color:var(--text-dark);
+    background:#F6F8FD;
+    border:1px solid var(--border);
+    box-shadow:0 1px 3px rgba(25,33,61,.10);
+  }
+  .vOutline:hover{ background:#EEF2FA; }
+  .vOutline:active{ background:#E6ECF8; }
+  
+  .vGhost{
+    color:var(--text-dark);
+    background:transparent;
+    border:1px dashed var(--border-strong);
+  }
+  .vGhost:hover{ background:#F8FAFE; }
+  

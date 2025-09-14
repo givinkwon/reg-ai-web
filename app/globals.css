@@ -103,13 +103,29 @@ html[data-theme="dark"] {
   --chip-active-text: #e0e7ff;
 
   color-scheme: dark;
+
+    /* Base */
+    --app-bg:        #F3F6FB;   /* 전체 배경 */
+    --panel-bg:      #F7F9FC;   /* 사이드/오른쪽 패널 기본 */
+    --sidebar-bg:    #F6F8FD;   /* 왼쪽 사이드바 */
+    --card-bg:       #FFFFFF;   /* 카드/채팅 박스 */
+    --border-soft:   #E6ECF5;   /* 옅은 보더 */
+    --border-med:    #D9E1EE;   /* 중간 보더 */
+  
+    /* 기존에 쓰던 값 유지 */
+    --text-dark:#303650;
+    --text-neutral:#666F8D;
+    --accent:#2388FF;
+    --divider:#EEF1F7;
+    --btn-blue:#2B7AFB;
+    --btn-blue-2:#2174FD;
 }
 
 /* =========================
    Base
    ========================= */
 html, body {
-  background: var(--bg);
+  background: var(--app-bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
