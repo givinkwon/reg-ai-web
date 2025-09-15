@@ -8,6 +8,10 @@
    ========================= */
 
 :root {
+  --panel-bg:#fff; --overlay:rgba(12,18,36,.35);
+  --border:#EAEDF5; --shadow:0 10px 30px rgba(18,29,56,.18);
+  --text:#303650; --muted:#6b7493; --accent:#2388FF;
+  
   --text-dark:#303650; --text-neutral:#666F8D; --accent:#2388FF;
   --border-light:#EAEDF5; --border-med:#D8DEEA;
   --scrollPad: 20px; /* 스크롤바를 테두리에 붙이는 패딩 */

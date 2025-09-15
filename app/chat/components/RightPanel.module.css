@@ -1,17 +1,17 @@
-/* 오버레이 */
+/* overlay */
 .overlay{
-  position:fixed; inset:0; background:var(--overlay);
+  position:fixed; inset:0; background:rgba(12,18,36,.35);
   opacity:0; pointer-events:none; transition:opacity .2s ease;
   z-index:49;
 }
 .overlay.show{ opacity:1; pointer-events:auto; }
 
-/* 오른쪽 시트 */
+/* sheet */
 .sheet{
-  position:fixed; top:0; right:0; height:100dvh; width:min(420px, 92vw);
-  background:var(--panel-bg);
-  border-left:1px solid var(--border);
-  box-shadow:var(--shadow);
+  position:fixed; top:0; right:0; height:100dvh; width:min(440px, 92vw);
+  background:#fff;
+  border-left:1px solid #EAEDF5;
+  box-shadow:0 10px 30px rgba(18,29,56,.18);
   transform:translateX(100%);
   transition:transform .25s ease;
   z-index:50;
@@ -21,72 +21,43 @@
 
 .header{
   height:56px; padding:0 14px; display:flex; align-items:center; gap:10px;
-  border-bottom:1px solid var(--border);
+  border-bottom:1px solid #EAEDF5;
 }
-
-/* ▶ 내부 아이콘이 흰색인 버튼 */
 .backBtn{
   display:inline-flex; align-items:center; justify-content:center;
-  width:32px; height:32px; border-radius:8px;
-  background:var(--accent); border:1px solid rgba(0,0,0,.03);
-  box-shadow:0 2px 6px rgba(35,136,255,.25);
+  width:32px; height:32px; border-radius:8px; background:#1f5ed6; /* 파란 배경 */
 }
-.backBtn:hover{ filter:brightness(.95); }
-.backIcon{ width:18px; height:18px; color:#fff; } /* 아이콘 흰색 */
+.iconWhite{ width:18px; height:18px; color:#fff; }  /* ← 흰색 아이콘 */
+.iconGhost{ width:18px; height:18px; color:transparent; } /* 우측 균형 */
+.title{ font-weight:600; color:#303650; font-size:15px; }
 
-.iconGhost{ width:18px; height:18px; color:transparent; } /* 우측 균형용 */
-.title{ font-weight:600; color:var(--text); font-size:15px; }
+.body{ flex:1; overflow:auto; padding:14px 16px 18px; }
 
-.body{
-  flex:1; overflow:auto; padding:14px 16px 18px;
-}
-
-/* 섹션 타이틀 */
-.groupTitle{
-  margin:6px 0 10px; font-weight:700; color:var(--text);
-}
-
-/* 리스트 */
-.linkList{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
-
-.linkItem{
-  color:var(--text);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:10px 12px;
-  background:#fff;
-  transition: border-color .12s ease, box-shadow .12s ease;
-}
-.linkItem:hover{
-  border-color:#dfe6f6;
-  box-shadow:0 2px 10px rgba(18,29,56,.06);
-}
-
-/* 행 레이아웃 (텍스트 + 외부링크 아이콘) */
-.row{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:10px;
-}
-.linkText{
-  display:block; line-height:1.45;
-}
-.linkIcon{
-  width:16px; height:16px; color:#90a2cc; flex:0 0 auto;
-}
-
-/* 스니펫(있다면) */
-.snippet{
-  margin:6px 0 0;
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.5;
-}
-
-/* 빈 상태 */
+.groupTitle{ margin:6px 0 10px; font-weight:700; color:#303650; }
 .emptyBox{
-  padding:14px;
-  border:1px dashed var(--border);
-  border-radius:12px;
-  color:var(--muted);
-  background:#fbfcff;
+  padding:14px; border:1px dashed #EAEDF5; border-radius:12px;
+  color:#6b7493; background:#fbfcff; margin-bottom:12px;
 }
+
+/* 근거 */
+.evList{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+.evItem{
+  border:1px solid #EAEDF5; border-radius:12px; padding:10px 12px; background:#fff;
+}
+.evTitle{ color:#303650; font-size:14px; line-height:1.45; }
+.evSnippet{ color:#6b7493; font-size:12px; margin-top:6px; }
+
+/* 서식(제목이 곧 하이퍼링크) */
+.linkList{ display:flex; flex-direction:column; gap:10px; }
+.linkItem{
+  border:1px solid #EAEDF5; border-radius:12px; padding:10px 12px; background:#fff;
+}
+
+/* 공통 링크 스타일 */
+.linkA{
+  color:#1f5ed6;
+  text-decoration:underline;
+  text-underline-offset:2px;
+  word-break:break-word;
+}
+.linkA:hover{ filter:brightness(.9); }

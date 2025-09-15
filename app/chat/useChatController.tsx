@@ -181,42 +181,26 @@ export function useChatController() {
 
   /** 🔁 다시 생성: 사용자 메시지를 추가하지 않고 같은 질문만 재요청 */
   const regenerate = async (question?: string) => {
-    // 중복 클릭 가드
-    if (sendingRef.current) {
-      console.debug('[regenerate] blocked: sendingRef=true');
-      return;
-    }
-  
-    // 방 보장
-    if (!activeRoomId) {
-      console.debug('[regenerate] no activeRoom -> createRoom()');
-      newChat(); // rooms 초기화 + setMessages([])
-    }
-  
-    // 질문 확보 (매개변수 없으면 마지막 user 메시지에서 가져옴)
+    if (sendingRef.current) return;
+
+    if (!activeRoomId) newChat();
+
+    // 질문 확보 (없으면 마지막 user 메시지 사용)
     let q = (question ?? '').trim();
     if (!q) {
       const lastUser = [...useChatStore.getState().messages].reverse().find(m => m.role === 'user');
       q = (lastUser?.content ?? '').trim();
     }
-    if (!q) {
-      console.debug('[regenerate] no question to send');
-      return;
-    }
-    if (!selectedJobType) {
-      console.debug('[regenerate] no selectedJobType');
-      return;
-    }
-  
+    if (!q || !selectedJobType) return;
+
     setLoading(true);
     setLoadingMessageIndex(0);
     setStatusMessage('');
-  
+
     sendingRef.current = true;
     try {
       let res: Response;
       if (!threadId) {
-        // thread 없는 경우 처음처럼 start-task
         res = await fetch('/api/start-task', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -238,13 +222,12 @@ export function useChatController() {
           }),
         });
       }
-  
+
       if (!res.ok) throw new Error(`regenerate failed: ${res.status}`);
       const { job_id, thread_id } = await res.json();
       if (thread_id) setThreadId(thread_id);
       setJobId(job_id);
     } catch (e) {
-      console.error(e);
       const msg: ChatMessage = { role: 'assistant', content: '⚠️ 다시 생성 중 오류가 발생했습니다.' };
       const last = useChatStore.getState().messages.slice(-1)[0];
       if (!last || last.content !== msg.content || last.role !== msg.role) {
@@ -366,7 +349,7 @@ export function useChatController() {
   return {
     messages, input, setInput,
     loading, loadingMessageIndex, LOADING_MESSAGES, statusMessage,
-    sendMessage, regenerate,  // ⬅️ 새로고침용 메서드 노출
+    sendMessage, regenerate,
     newChat,
     monitorMode, openMonitoring, selectedTags, presetTags, toggleTag,
     customTagInput, setCustomTagInput, addCustomTag, removeSelectedTag,

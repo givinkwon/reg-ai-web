@@ -86,6 +86,8 @@ export default function ChatArea() {
     regenerate(q);
   };
 
+  const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
+
   return (
     <section className={s.wrap}>
       {/* Header */}
@@ -158,7 +160,10 @@ export default function ChatArea() {
                         <Copy className={s.iconAction} />
                       </button>
                     </div>
-                    <button className={s.evidenceBtn} onClick={() => setRightOpen(true)}>
+                    <button
+                      className={s.evidenceBtn}
+                      onClick={() => openRightFromHtml(m.content)}
+                    >
                       근거 및 서식 확인하기
                     </button>
                   </div>
