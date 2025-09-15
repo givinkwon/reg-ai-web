@@ -27,9 +27,51 @@ export type RightPanelData = {
 /* =========================
  * Const
  * ========================= */
-const COOKIE_KEY = 'regai_rooms_v1';
+// NOTE: rooms/messages는 localStorage로 옮기므로 COOKIE_KEY는 더이상 사용하지 않음
 const COOKIE_COLLAPSE = 'regai_sidebar_collapsed';
+const STORAGE_KEY = 'regai_rooms_v1';
 const MAX_MSG_PER_ROOM = 30;
+
+/* =========================
+ * Storage helpers (localStorage)
+ * ========================= */
+const storage = {
+  get(): { rooms: Room[]; activeRoomId: string | null } | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      console.warn('[storage.get] failed:', e);
+      return null;
+    }
+  },
+  set(payload: { rooms: Room[]; activeRoomId: string | null }) {
+    if (typeof window === 'undefined') return;
+    try {
+      // 방어: 메시지 개수/길이 제한
+      const safeRooms = (payload.rooms || []).map((r) => ({
+        ...r,
+        messages: (r.messages || [])
+          .slice(-MAX_MSG_PER_ROOM)
+          .map((m) => ({
+            ...m,
+            content:
+              typeof m.content === 'string' && m.content.length > 40000
+                ? m.content.slice(0, 40000) + '…'
+                : m.content,
+          })),
+      }));
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ rooms: safeRooms, activeRoomId: payload.activeRoomId })
+      );
+    } catch (e) {
+      console.warn('[storage.set] failed:', e);
+    }
+  },
+};
 
 /* =========================
  * Helpers (with LOG)
@@ -65,19 +107,19 @@ const normalize = (t: string) =>
     .split('\n').map((l) => l.trimEnd()).join('\n')
     .trim();
 
-// ✅ 공통 URL 정리 유틸 (스토어 파일에 추가)
+// ✅ 공통 URL 정리 유틸
 const normalizeUrl = (u: string) => {
   if (!u) return u;
   // 꼬리문자 잘라내기
   let clean = u.replace(/[)\]\u3009>.,]+$/u, '');
-  // 특정 도메인은 https로 승격 (혼합콘텐츠 다운로드 방지)
+  // 특정 도메인은 https로 승격
   try {
     const url = new URL(clean);
     if (
       /^law\.go\.kr$/i.test(url.hostname) ||
       /^www\.law\.go\.kr$/i.test(url.hostname)
     ) {
-      url.protocol = 'https:'; // http -> https
+      url.protocol = 'https:';
       clean = url.toString();
     }
     return clean;
@@ -86,14 +128,15 @@ const normalizeUrl = (u: string) => {
   }
 };
 
-// ❗ 기존 urlOf를 이걸 쓰도록 교체
+// URL 추출
 const urlOf = (s: string): string | undefined => {
   if (!s) return undefined;
   const m = s.match(/\bhttps?:\/\/[^\s)"'>\]]+/i);
   return m ? normalizeUrl(m[0]) : undefined;
 };
 
-const cleanTitle = (s: string) => s.replace(/^[\-\•\u2022\d\)\.\s]{0,4}/, '').replace(/\s+/g, ' ').trim();
+const cleanTitle = (s: string) =>
+  s.replace(/^[\-\•\u2022\d\)\.\s]{0,4}/, '').replace(/\s+/g, ' ').trim();
 
 // `A: B` 패턴 쪼개기
 const splitByColon = (line: string) => {
@@ -105,8 +148,12 @@ const splitByColon = (line: string) => {
 
 /* ── 공통 섹션 잘라내기: 헤더가 포함된 "라인"부터 다음 섹션 직전까지 ── */
 const cutSection = (text: string, headerRe: RegExp, nextRe: RegExp): string => {
-  // 헤더가 들어있는 라인 전체를 찾는다 (multiline)
-  const m = text.match(new RegExp(`^.*${headerRe.source}.*$`, headerRe.flags.includes('m') ? headerRe.flags : headerRe.flags + 'm'));
+  const m = text.match(
+    new RegExp(
+      `^.*${headerRe.source}.*$`,
+      headerRe.flags.includes('m') ? headerRe.flags : headerRe.flags + 'm'
+    )
+  );
   if (!m) return '';
   const startIdx = text.indexOf(m[0]);
   const rest = text.slice(startIdx);
@@ -115,24 +162,23 @@ const cutSection = (text: string, headerRe: RegExp, nextRe: RegExp): string => {
 };
 
 /* ── 근거/서식 섹션 추출 ── */
-/* ── 근거 섹션 추출: '2) 근거' 라인부터 🔗 아이콘 이전까지 그대로 ── */
+/* 근거: '2) 근거' 라인부터 아이콘(🔗) 이전까지 그대로 */
 const cutEvidenceBlock = (text: string) => {
   // 🔗 이전까지만 파싱 범위
   const iconIdx = text.indexOf('🔗');
   const scope = iconIdx >= 0 ? text.slice(0, iconIdx) : text;
 
-  // 라인 전체가 정확히 "2) 근거"
+  // 라인 전체가 정확히 "2) 근거" (필요시 2. / ②도 허용하고 싶으면 정규식 확장)
   const headerLineRe = /^\s*2\)\s*근거\s*$/m;
 
   const m = scope.match(headerLineRe);
   if (!m) return '';
 
-  // 헤더 라인의 "시작 인덱스"부터 전체 블록 반환 (뒤는 안 자름)
+  // 헤더 라인의 시작부터 끝까지(아이콘 상한으로 이미 컷팅)
   const start = m.index ?? 0;
   const block = scope.slice(start).trim();
   return block;
 };
-
 
 const cutFormsBlock = (text: string) => {
   // "관련 별표/서식", "관련 별표/서식 링크", "관련 별표", "관련 서식" 모두 허용
@@ -143,18 +189,15 @@ const cutFormsBlock = (text: string) => {
 
 /* ── 근거 라인 파싱 ── */
 const parseEvidenceLine = (raw: string): EvidenceItem | null => {
-  // URL 제거 전 저장
   const url = urlOf(raw);
   const base = url ? raw.replace(url, '').trim() : raw;
 
-  console.log(raw)
-  
   // “〔법〕 …” 또는 “[법] …”
   const lawM = base.match(/(〔.+?〕|\[.+?\])/);
   const { left, right } = splitByColon(base);
 
   if (lawM) {
-    const law = lawM[1].trim();                                   // 〔화학물질관리법〕
+    const law = lawM[1].trim();
     const afterLaw = left.slice((lawM.index ?? 0) + law.length).trim(); // 제10조(…)
     const title = cleanTitle(afterLaw ? `${law} ${afterLaw}` : law);
     const snippet = right?.trim() || undefined;
@@ -174,8 +217,6 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
   let candidates = lines.filter((x) =>
     /^(-|\d+[\)\.]|〔.+?〕|\[.+?\]|제\d+조|부칙)/.test(x)
   );
-
-  console.log('[parseEvidenceLines] candidates:', candidates);
 
   const items: EvidenceItem[] = [];
   for (const raw of candidates) {
@@ -207,11 +248,15 @@ const parseFormsList = (block: string): EvidenceItem[] => {
     const head = ln.match(/^(\d+\.|-)\s*(.+)$/);
     if (head) {
       if (cur) items.push(cur);
-      cur = { title: cleanTitle(head[2]) };
+      // 라인 내에 URL이 섞여 있으면 제거 후 title만
+      const inlineUrl = urlOf(head[2]);
+      const titleOnly = inlineUrl ? head[2].replace(inlineUrl, '').trim() : head[2];
+      cur = { title: cleanTitle(titleOnly) };
+      // 인라인 URL은 href로 저장
+      if (inlineUrl) cur.href = inlineUrl;
       continue;
     }
     const u = urlOf(ln);
-    console.log(u)
     if (u && cur) { cur.href = u; continue; }
     if (cur && !/^관련\s*(?:별표|서식)/.test(ln)) cur.title = cleanTitle(`${cur.title} ${ln}`);
   }
@@ -265,8 +310,8 @@ interface ChatStore {
 
   rooms: Room[];
   activeRoomId: string | null;
-  loadFromCookies: () => void;
-  saveToCookies: () => void;
+  loadFromCookies: () => void;     // 내부 구현은 localStorage 사용
+  saveToCookies: () => void;       // 내부 구현은 localStorage 사용 + 쿠키(접힘만)
   createRoom: () => string;
   setActiveRoom: (id: string) => void;
   deleteRoom: (id: string) => void;
@@ -323,25 +368,41 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     get().saveToCookies();
   },
 
-  /* 방/쿠키 */
+  /* 방/저장 */
   rooms: [],
   activeRoomId: null,
   loadFromCookies: () => {
     try {
-      const raw = Cookies.get(COOKIE_KEY);
+      // 1) 작은 플래그는 쿠키에서
       const collapsed = Cookies.get(COOKIE_COLLAPSE);
       if (collapsed) set({ collapsed: collapsed === '1' });
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { rooms: Room[]; activeRoomId: string | null };
-      const rooms = (parsed.rooms || []).map((r) => ({ ...r, messages: Array.isArray(r.messages) ? r.messages : [] }));
-      const activeRoomId = parsed.activeRoomId || rooms[0]?.id || null;
-      set({ rooms, activeRoomId, messages: rooms.find((r) => r.id === activeRoomId)?.messages || [] });
-    } catch {}
+
+      // 2) 방/메시지는 localStorage에서
+      const stored = storage.get();
+      if (!stored) return;
+
+      const rooms = (stored.rooms || []).map((r) => ({
+        ...r,
+        messages: Array.isArray(r.messages) ? r.messages : [],
+      }));
+      const activeRoomId = stored.activeRoomId || rooms[0]?.id || null;
+      set({
+        rooms,
+        activeRoomId,
+        messages: rooms.find((r) => r.id === activeRoomId)?.messages || [],
+      });
+    } catch (e) {
+      console.warn('[loadFromCookies] failed:', e);
+    }
   },
   saveToCookies: () => {
     const { rooms, activeRoomId, collapsed } = get();
-    Cookies.set(COOKIE_KEY, JSON.stringify({ rooms, activeRoomId }), { expires: 14 });
-    Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', { expires: 365 });
+    // 1) 큰 데이터는 localStorage
+    storage.set({ rooms, activeRoomId });
+    // 2) 작은 플래그만 쿠키
+    try {
+      Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', { expires: 365 });
+    } catch {}
   },
   createRoom: () => {
     const id = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

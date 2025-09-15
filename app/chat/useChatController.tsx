@@ -19,6 +19,8 @@ const TAG_PRESETS: Record<string, string[]> = {
   default: ['시행일','개정','부칙','별표서식','고시개정','행정예고'],
 };
 
+const THREAD_STORAGE_KEY = 'regai_thread_id';
+
 export function useChatController() {
   const router = useRouter();
 
@@ -31,7 +33,7 @@ export function useChatController() {
     createRoom,
     activeRoomId,
     setActiveRoomTitleIfEmpty,
-    appendToActive, // rooms(쿠키) 반영
+    appendToActive, // rooms(localStorage) 반영
   } = useChatStore();
 
   // user store
@@ -57,7 +59,7 @@ export function useChatController() {
   // 중복 전송 가드
   const sendingRef = useRef(false);
 
-  // 1) 쿠키 → 채팅방/메시지 복원
+  // 1) localStorage/쿠키 → 채팅방/메시지 복원
   useEffect(() => { loadFromCookies(); }, [loadFromCookies]);
 
   // 2) 직무 카테고리 하이드레이션
@@ -70,7 +72,22 @@ export function useChatController() {
     if (!hydrated) return;
     if (!selectedJobType) router.push('/');
     setThreadId(null); // 카테고리 변경 시 스레드 초기화
+    // threadId는 선택적으로 유지하고 싶다면, 위 줄을 제거하세요.
   }, [hydrated, selectedJobType, router]);
+
+  // (선택) threadId를 localStorage에 유지하고 싶을 때
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(THREAD_STORAGE_KEY);
+      if (saved) setThreadId(saved);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (threadId) window.localStorage.setItem(THREAD_STORAGE_KEY, threadId);
+      else window.localStorage.removeItem(THREAD_STORAGE_KEY);
+    } catch {}
+  }, [threadId]);
 
   const presetTags = useMemo(
     () => TAG_PRESETS[(selectedJobType ?? 'default') as keyof typeof TAG_PRESETS],
@@ -117,6 +134,7 @@ export function useChatController() {
   /** 일반 전송: 사용자 메시지를 추가하고 서버 요청 */
   const sendMessage = async () => {
     if (sendingRef.current) return; // 연속 호출 가드
+    if (!hydrated) return;          // 하이드레이션 전 전송 가드
 
     const trimmed = input.trim();
     if (!trimmed || monitorMode) return;
@@ -136,7 +154,7 @@ export function useChatController() {
     // 트래킹
     pushToDataLayer('chat_send_click', { message: trimmed, length: trimmed.length, category: selectedJobType });
 
-    // 로컬/쿠키에 저장
+    // 로컬 저장
     addMessage(userMsg);
     appendToActive(userMsg);
     setInput('');
@@ -174,7 +192,6 @@ export function useChatController() {
       }
       setLoading(false);
     } finally {
-      // 너무 촘촘한 중복 클릭 방지용 딜레이
       setTimeout(() => { sendingRef.current = false; }, 300);
     }
   };
@@ -182,6 +199,7 @@ export function useChatController() {
   /** 🔁 다시 생성: 사용자 메시지를 추가하지 않고 같은 질문만 재요청 */
   const regenerate = async (question?: string) => {
     if (sendingRef.current) return;
+    if (!hydrated) return;
 
     if (!activeRoomId) newChat();
 
@@ -262,7 +280,7 @@ export function useChatController() {
       .map((x) => ({ doc_type: x.doc_type, doc_id: x.doc_id }));
     if (selectedTags.length === 0 && selections.length === 0) {
       const msg: ChatMessage = { role: 'assistant', content: '📌 태그를 1개 이상 선택하거나 문서를 선택해 주세요.' };
-      if (!lastEquals(msg)) { addMessage(msg); appendToActive(msg); }
+      addMessage(msg); appendToActive(msg);
       return;
     }
     setMonLoading(true);
@@ -278,7 +296,7 @@ export function useChatController() {
       setMonitorMode(false); setLoading(true); setLoadingMessageIndex(0); setStatusMessage('');
     } catch {
       const msg: ChatMessage = { role: 'assistant', content: '⚠️ 모니터링 시작 중 오류가 발생했습니다.' };
-      if (!lastEquals(msg)) { addMessage(msg); appendToActive(msg); }
+      addMessage(msg); appendToActive(msg);
     } finally { setMonLoading(false); }
   };
 
