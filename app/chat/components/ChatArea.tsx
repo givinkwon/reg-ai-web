@@ -186,7 +186,7 @@ export default function ChatArea() {
         {/* Input */}
         <div className={s.inputRow}>
           <input
-            className={s.input}
+            className={`${s.input} chat-input`}   // ← 전역용 클래스 추가
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKey}

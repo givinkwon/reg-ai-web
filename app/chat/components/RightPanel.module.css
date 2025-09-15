@@ -61,3 +61,47 @@
   word-break:break-word;
 }
 .linkA:hover{ filter:brightness(.9); }
+
+/* 모바일: 풀스크린 모달(바텀시트 느낌) */
+@media (max-width: 768px) {
+  .overlay{
+    background: rgba(12,18,36,.45);
+    z-index: 90; /* 시트보다 한 단계 낮게 */
+  }
+
+  .sheet{
+    left: 0; right: 0;
+    width: 100vw;
+    height: 100dvh;
+    border-left: 0;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    /* 오른쪽 슬라이드 대신 '아래에서 위로' */
+    transform: translateY(100%);
+    box-shadow: 0 -10px 30px rgba(18,29,56,.18);
+    z-index: 91;
+  }
+
+  .sheet.open{
+    transform: translateY(0);
+  }
+
+  .header{
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 2;
+    height: 54px;
+  }
+
+  .body{
+    padding-bottom: 24px; /* 홈 인디케이터 여백 */
+  }
+}
+
+/* 화면이 아주 작을 때 텍스트 크기 약간 줄이기(선택) */
+@media (max-width: 400px) {
+  .title{ font-size:14px; }
+  .evTitle{ font-size:13px; }
+  .evSnippet{ font-size:11px; }
+}

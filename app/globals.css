@@ -210,3 +210,18 @@ select:focus-visible {
   outline: 2px solid rgba(59,130,246,0.6); /* blue-500 */
   outline-offset: 2px;
 }
+
+/* ✅ 모바일 다크모드에서 채팅 입력창 자동 다크 비활성화 + 가독성 유지 */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+  .chat-input {
+    color-scheme: light;               /* UA 자동 다크 비활성화 (iOS/Safari 대응) */
+    background: #fff !important;
+    color: #111827 !important;
+    border-color: #cbd5e1 !important;
+  }
+  .chat-input::placeholder { color: #6b7280 !important; }
+  .chat-input:-webkit-autofill {
+    -webkit-text-fill-color: #111827;
+    box-shadow: 0 0 0 1000px #fff inset;
+  }
+}
