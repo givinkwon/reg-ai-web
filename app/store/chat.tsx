@@ -65,7 +65,34 @@ const normalize = (t: string) =>
     .split('\n').map((l) => l.trimEnd()).join('\n')
     .trim();
 
-const urlOf = (s: string) => (s.match(/https?:\/\/[^\s)]+/i) || [])[0] || undefined;
+// ✅ 공통 URL 정리 유틸 (스토어 파일에 추가)
+const normalizeUrl = (u: string) => {
+  if (!u) return u;
+  // 꼬리문자 잘라내기
+  let clean = u.replace(/[)\]\u3009>.,]+$/u, '');
+  // 특정 도메인은 https로 승격 (혼합콘텐츠 다운로드 방지)
+  try {
+    const url = new URL(clean);
+    if (
+      /^law\.go\.kr$/i.test(url.hostname) ||
+      /^www\.law\.go\.kr$/i.test(url.hostname)
+    ) {
+      url.protocol = 'https:'; // http -> https
+      clean = url.toString();
+    }
+    return clean;
+  } catch {
+    return clean;
+  }
+};
+
+// ❗ 기존 urlOf를 이걸 쓰도록 교체
+const urlOf = (s: string) => {
+  const m = s.match(/https?:\/\/[^\s]+/gi);
+  if (!m) return undefined;
+  return normalizeUrl(m[0]);
+};
+
 const cleanTitle = (s: string) => s.replace(/^[\-\•\u2022\d\)\.\s]{0,4}/, '').replace(/\s+/g, ' ').trim();
 
 // `A: B` 패턴 쪼개기
@@ -89,19 +116,24 @@ const cutSection = (text: string, headerRe: RegExp, nextRe: RegExp): string => {
 
 /* ── 근거/서식 섹션 추출 ── */
 const cutEvidenceBlock = (text: string) => {
-  // "근거", "2) 근거", "근거:" 등 대부분 허용
-  const headerRe = /\b근거\b/iu;
+  // 🔗 아이콘이 보이면 그 **앞까지만** 근거 후보로 사용
+  const iconIdx = text.indexOf('🔗');
+  const scope = iconIdx >= 0 ? text.slice(0, iconIdx) : text;
 
-  // 다음 섹션 후보: 관련 별표/서식(링크), 관련 별표, 서식, ###, 답변, 숫자) …
-  const nextRe = /\n\s*(?:관련\s*(?:별표(?:\s*\/?\s*서식)?|서식)(?:\s*링크)?|###|답변\b|\d+\))/iu;
+  // "근거", "2) 근거", "근거:" 등
+  const headerRe = /(^|\n)\s*(?:\d+[)\.]\s*)?근거(?:\s*[:：])?(?=\s|$)/iu;
 
-  let block = cutSection(text, headerRe, nextRe);
+  // 다음 섹션 후보(폼은 이미 잘렸으니 제외): 제목/답변/다음 번호 대항목
+  const nextRe = /\n\s*(?:#{1,6}\s*|답변\b|\d+[)\.])/iu;
+
+  let block = cutSection(scope, headerRe, nextRe);
   if (block) return block;
 
-  // fallback: 마지막 "근거"부터 끝까지라도
-  const i = text.lastIndexOf('근거');
-  return i >= 0 ? text.slice(i) : '';
+  // fallback: scope 안에서 마지막 "근거"부터 끝까지
+  const i = scope.lastIndexOf('근거');
+  return i >= 0 ? scope.slice(i) : '';
 };
+
 
 const cutFormsBlock = (text: string) => {
   // "관련 별표/서식", "관련 별표/서식 링크", "관련 별표", "관련 서식" 모두 허용
@@ -178,6 +210,7 @@ const parseFormsList = (block: string): EvidenceItem[] => {
       continue;
     }
     const u = urlOf(ln);
+    console.log(u)
     if (u && cur) { cur.href = u; continue; }
     if (cur && !/^관련\s*(?:별표|서식)/.test(ln)) cur.title = cleanTitle(`${cur.title} ${ln}`);
   }
