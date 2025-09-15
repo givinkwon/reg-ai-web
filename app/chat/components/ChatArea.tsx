@@ -96,11 +96,11 @@ export default function ChatArea() {
           <h1 className={s.brand}>REG AI</h1>
         </div>
         <div className={s.right}>
-          <Button variant="outline" size="sm" className={s.settingsBtn}>
+          {/* <Button variant="outline" size="sm" className={s.settingsBtn}>
             <Settings className={s.iconXs} />
             settings
-          </Button>
-          <div className={s.account}>
+          </Button> */}
+          {/* <div className={s.account}>
             <div className={s.avatar}>
               <svg width="13" height="14" viewBox="0 0 13 14" fill="none">
                 <path d="M6.19 1.08c-1.26.05-2.37.94-2.68 2.16-.09.33-.12.83-.07 1.15.1.65.38 1.21.85 1.67 1 .97 2.53 1.11 3.67.35 1.23-.82 1.65-2.43.98-3.74-.25-.5-.64-.91-1.12-1.19C7.39 1.21 6.84 1.07 6.19 1.08Z" fill="#2388FF"/>
@@ -110,7 +110,7 @@ export default function ChatArea() {
               <span className={s.name}>Name</span>
               <ChevronDown className={s.iconSm} />
             </div>
-          </div>
+          </div> */}
           <div className={s.vertDivider} />
           <div className={s.meta}>
             <span className={s.metaStrong}>직무명</span>

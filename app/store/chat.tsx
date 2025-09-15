@@ -115,23 +115,22 @@ const cutSection = (text: string, headerRe: RegExp, nextRe: RegExp): string => {
 };
 
 /* ── 근거/서식 섹션 추출 ── */
+/* ── 근거 섹션 추출: '2) 근거' 라인부터 🔗 아이콘 이전까지 그대로 ── */
 const cutEvidenceBlock = (text: string) => {
-  // 🔗 아이콘이 보이면 그 **앞까지만** 근거 후보로 사용
+  // 🔗 이전까지만 파싱 범위
   const iconIdx = text.indexOf('🔗');
   const scope = iconIdx >= 0 ? text.slice(0, iconIdx) : text;
 
-  // "근거", "2) 근거", "근거:" 등
-  const headerRe = /(^|\n)\s*(?:\d+[)\.]\s*)?근거(?:\s*[:：])?(?=\s|$)/iu;
+  // 라인 전체가 정확히 "2) 근거"
+  const headerLineRe = /^\s*2\)\s*근거\s*$/m;
 
-  // 다음 섹션 후보(폼은 이미 잘렸으니 제외): 제목/답변/다음 번호 대항목
-  const nextRe = /\n\s*(?:#{1,6}\s*|답변\b|\d+[)\.])/iu;
+  const m = scope.match(headerLineRe);
+  if (!m) return '';
 
-  let block = cutSection(scope, headerRe, nextRe);
-  if (block) return block;
-
-  // fallback: scope 안에서 마지막 "근거"부터 끝까지
-  const i = scope.lastIndexOf('근거');
-  return i >= 0 ? scope.slice(i) : '';
+  // 헤더 라인의 "시작 인덱스"부터 전체 블록 반환 (뒤는 안 자름)
+  const start = m.index ?? 0;
+  const block = scope.slice(start).trim();
+  return block;
 };
 
 
