@@ -70,9 +70,9 @@ const cleanTitle = (s: string) => s.replace(/^[\-\•\u2022\d\)\.\s]{0,4}/, '').
 
 // `A: B` 패턴 쪼개기
 const splitByColon = (line: string) => {
-  const m = line.match(/^(?<left>.+?)\s*[:：]\s*(?<right>.+)$/);
-  return m?.groups
-    ? { left: m.groups.left.trim(), right: m.groups.right.trim() }
+  const m = line.match(/^(.+?)\s*[:：]\s*(.+)$/);
+  return m
+    ? { left: m[1].trim(), right: m[2].trim() }
     : { left: line.trim(), right: undefined };
 };
 
