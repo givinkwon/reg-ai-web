@@ -87,10 +87,10 @@ const normalizeUrl = (u: string) => {
 };
 
 // ❗ 기존 urlOf를 이걸 쓰도록 교체
-const urlOf = (s: string) => {
-  const m = s.match(/https?:\/\/[^\s]+/gi);
-  if (!m) return undefined;
-  return normalizeUrl(m[0]);
+const urlOf = (s: string): string | undefined => {
+  if (!s) return undefined;
+  const m = s.match(/\bhttps?:\/\/[^\s)"'>\]]+/i);
+  return m ? normalizeUrl(m[0]) : undefined;
 };
 
 const cleanTitle = (s: string) => s.replace(/^[\-\•\u2022\d\)\.\s]{0,4}/, '').replace(/\s+/g, ' ').trim();
@@ -148,6 +148,8 @@ const parseEvidenceLine = (raw: string): EvidenceItem | null => {
   const url = urlOf(raw);
   const base = url ? raw.replace(url, '').trim() : raw;
 
+  console.log(raw)
+  
   // “〔법〕 …” 또는 “[법] …”
   const lawM = base.match(/(〔.+?〕|\[.+?\])/);
   const { left, right } = splitByColon(base);
