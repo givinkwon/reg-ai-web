@@ -2,8 +2,7 @@
 .wrap{
   display:flex; flex-direction:column;
   width: 100%;
-  height: 100dvh; min-height:0;
-  height: -webkit-fill-available;
+  height: 100%;
   background:#fff;
   border:1px solid var(--border-light);
   border-radius:16px;
@@ -245,4 +244,42 @@
 .typeModal * {
   color-scheme: light;
   forced-color-adjust: none;
+}
+
+/* ✅ 모바일 전용: 768px 이하에만 적용 */
+@media (max-width: 768px){
+  .wrap{
+    /* 동적 뷰포트 높이로 ‘추가 스크롤’ 제거 */
+    height: 100dvh;
+    min-height: 100svh;
+    margin-right: 0;    /* 우측 여백 때문에 가로 넘침 방지 */
+  }
+
+  .stream{
+    /* 데스크톱용 보정 제거 (가로 넘침 방지) */
+    padding-right: 0;
+    margin-right: 0;
+  }
+
+  .streamInner{
+    /* 입력창 sticky라서 과한 하단 패딩 불필요 */
+    padding: 24px 12px 24px;
+  }
+
+  /* 입력창은 하단 고정 유지 + 안전영역 고려 */
+  .inputRow{
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid var(--border-light);
+  }
+}
+
+/* iOS Safari 구형 대비(모바일 한정) */
+@supports (-webkit-touch-callout: none){
+  @media (max-width: 768px){
+    :root, html, body { height: -webkit-fill-available; }
+  }
 }

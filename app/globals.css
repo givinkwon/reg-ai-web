@@ -156,11 +156,6 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-html, body { height: 100%; }
-@supports (-webkit-touch-callout: none) {
-  html, body { height: -webkit-fill-available; }
-}
-
 /* 링크/텍스트 기본 컬러 상속 */
 a, p, span, label, h1, h2, h3, h4, h5, h6 { color: inherit; }
 
