@@ -79,13 +79,13 @@ export default function Sidebar() {
             {/* </div> */}
           {/* </div> */}
 
-          <div className={s.navItem}>
-            <div className={s.navLeft}>
-              <Search className={s.iconSm} />
+          {/* <div className={s.navItem}> */}
+            {/* <div className={s.navLeft}> */}
+              {/* <Search className={s.iconSm} /> */}
               {/* ✅ 항상 1줄로 */}
-              <span className={s.navText}>채팅 검색</span>
-            </div>
-          </div>
+              {/* <span className={s.navText}>채팅 검색</span> */}
+            {/* </div> */}
+          {/* </div> */}
         </div>
       </div>
 
