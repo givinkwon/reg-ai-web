@@ -258,8 +258,8 @@
   }
   .wrap{
     box-sizing: border-box;    /* ✅ border/padding을 height에 포함 */
-    height: 95svh;            /* ✅ 주소창 표시 상태에 덜 민감 */
-    min-height: 95svh;
+    height: 50svh !important;            /* ✅ 주소창 표시 상태에 덜 민감 */
+    min-height: 50svh !important;
     /* 이미 넣었다면 margin-right:0 유지 */
   }
 
