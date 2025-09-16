@@ -173,6 +173,15 @@
     color: #e0e7ff;
     border-color: #1e3a8a;
   }
+  .typeModalOverlay { background: rgba(4, 6, 12, .58) !important; backdrop-filter: blur(2px); }
+  .typeModal {
+    background:#0f172a !important; color:#e5e7eb !important;
+    border:1px solid #1f2937 !important; box-shadow:0 14px 48px rgba(0,0,0,.6) !important;
+  }
+  .typeCard{
+    background:#111827 !important; color:#f3f4f6 !important;
+    border:1px solid #334155 !important; box-shadow:0 2px 8px rgba(0,0,0,.35) !important;
+  }
 }
 
 /* === 타입 선택 모달 === */
@@ -191,16 +200,40 @@
 }
 .typeTitle{ font-weight: 700; margin-bottom: 12px; }
 .typeGrid{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* 버튼 기본(global) 규칙 무시하고 새로 정의 */
 .typeCard{
-  display: flex; gap: 10px; align-items: center; justify-content: center;
-  padding: 14px 12px; border: 1px solid var(--border, #e5e7eb);
-  border-radius: 12px; background: #f8fafc;
+  all: unset;                 /* ← 전역 button 스타일 싹 리셋 */
+  box-sizing: border-box;
+  display:flex; align-items:center; justify-content:center;
+  gap:10px;
+  padding:14px 12px;
+  border-radius:14px;
+  border:1px solid #e5e7eb;
+  background:#ffffff;
+  color:#0f172a;
+  box-shadow:0 2px 8px rgba(17,24,39,.06);
+  transition: transform .06s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+  cursor: pointer;            /* all:unset 이후 다시 지정 */
 }
-.typeCard:hover{ filter: brightness(.98); cursor: pointer; }
-.typeLabel{ font-weight: 600; }
+.typeCard:hover{
+  transform: translateY(-1px);
+  box-shadow:0 6px 16px rgba(17,24,39,.12);
+  border-color:#cbd5e1;
+  background:#f8fafc;
+}
+.typeLabel{ font-weight:600; }
+.typeEmoji{ font-size:22px; }
 
 /* 모바일에서도 예쁘게 */
 @media (max-width: 480px){
   .inputHasChip{ padding-left: 110px; }
   .typeModal{ width: calc(100vw - 24px); }
+}
+
+/* 모달 영역은 시스템/강제 다크 변환을 끕니다 */
+.typeModalOverlay,
+.typeModal,
+.typeModal * {
+  color-scheme: light;
+  forced-color-adjust: none;
 }
