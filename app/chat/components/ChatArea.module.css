@@ -140,3 +140,67 @@
   border:1px solid var(--border-light); border-radius:16px; padding:24px;
   box-shadow:0 2px 4px rgba(25,33,61,.08); color:var(--text-dark); background:#fff;
 }
+
+/* === 입력창 내부 칩 배치 === */
+.inputWrap{
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* 칩 */
+.typeChip{
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  background: #eef2ff; color: #1f3aed; border: 1px solid #c7d2fe;
+  z-index: 1;
+}
+.typeEmoji{ font-size: 14px; line-height: 1; }
+.typeText{ line-height: 1; }
+
+/* 입력창 왼쪽 패딩 확장(칩 공간 확보) */
+.inputHasChip{
+  padding-left: 120px; /* 칩 너비에 맞춰 조절 */
+}
+
+/* 다크모드에서도 칩 가독성 유지 */
+@media (prefers-color-scheme: dark) {
+  .typeChip{
+    background: #0b1220;
+    color: #e0e7ff;
+    border-color: #1e3a8a;
+  }
+}
+
+/* === 타입 선택 모달 === */
+.typeModalOverlay{
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 120;
+}
+.typeModal{
+  width: min(520px, 92vw);
+  background: var(--surface, #fff);
+  color: var(--text, #111);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.22);
+  padding: 20px;
+}
+.typeTitle{ font-weight: 700; margin-bottom: 12px; }
+.typeGrid{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.typeCard{
+  display: flex; gap: 10px; align-items: center; justify-content: center;
+  padding: 14px 12px; border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px; background: #f8fafc;
+}
+.typeCard:hover{ filter: brightness(.98); cursor: pointer; }
+.typeLabel{ font-weight: 600; }
+
+/* 모바일에서도 예쁘게 */
+@media (max-width: 480px){
+  .inputHasChip{ padding-left: 110px; }
+  .typeModal{ width: calc(100vw - 24px); }
+}

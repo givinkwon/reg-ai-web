@@ -5,7 +5,14 @@ import { Settings, ChevronDown, Copy, RotateCcw, ArrowUp } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useChatController } from '../useChatController';
 import { useChatStore } from '../../store/chat';
+import { useUserStore } from '../../store/user';
+import Cookies from 'js-cookie';   
 import s from './ChatArea.module.css';
+
+const TYPE_META: Record<string, { label: string; emoji: string }> = {
+  environment: { label: '환경/안전', emoji: '🌱' },
+  infosec:     { label: '정보보안',  emoji: '🛡️' },
+};
 
 export default function ChatArea() {
   const {
@@ -14,7 +21,9 @@ export default function ChatArea() {
     sendMessage, regenerate,
   } = useChatController();
 
-  const setRightOpen = useChatStore((st) => st.setRightOpen);
+  const { selectedJobType, setSelectedJobType } = useUserStore(); // ← 추가
+  const [showTypeModal, setShowTypeModal] = useState(false);      // ← 추가
+
   const setMessages  = useChatStore((st) => st.setMessages);
 
   // 복사 토스트
@@ -29,12 +38,17 @@ export default function ChatArea() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading, loadingMessageIndex]);
 
-  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
+
+  const chooseType = (id: string) => {
+    Cookies.set('selectedJobType', id, { expires: 7 });
+    setSelectedJobType(id);
+    setShowTypeModal(false);
+  };
+
+  const cur = TYPE_META[selectedJobType ?? ''] ?? { label: '분야 선택', emoji: '💼' };
 
   // HTML -> 텍스트 (백업용)
   const htmlToText = (html: string) => {
@@ -88,6 +102,7 @@ export default function ChatArea() {
 
   const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
 
+  
   return (
     <section className={s.wrap}>
       {/* Header */}
@@ -185,17 +200,57 @@ export default function ChatArea() {
 
         {/* Input */}
         <div className={s.inputRow}>
-          <input
-            className={`${s.input} chat-input`}   // ← 전역용 클래스 추가
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="질문을 입력하세요"
-          />
+          <div className={s.inputWrap}>
+            {/* ← 입력창 안쪽 왼쪽 칩 */}
+            <button
+              type="button"
+              className={s.typeChip}
+              onClick={() => setShowTypeModal(true)}
+              aria-label="분야 선택"
+              title="분야 선택"
+            >
+              <span className={s.typeEmoji}>{cur.emoji}</span>
+              <span className={s.typeText}>{cur.label}</span>
+            </button>
+
+            <input
+              className={`${s.input} ${s.inputHasChip} chat-input`}  // ← 패딩 추가 클래스
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKey}
+              placeholder="질문을 입력하세요"
+            />
+          </div>
+
           <button onClick={sendMessage} className={s.sendBtn} aria-label="전송">
             <ArrowUp className={s.iconMdAccent} />
           </button>
         </div>
+
+        {/* 타입 선택 모달 */}
+        {showTypeModal && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="분야 선택"
+            className={s.typeModalOverlay}
+            onClick={() => setShowTypeModal(false)}
+          >
+            <div className={s.typeModal} onClick={(e) => e.stopPropagation()}>
+              <h3 className={s.typeTitle}>분야를 선택하세요</h3>
+              <div className={s.typeGrid}>
+                <button className={s.typeCard} onClick={() => chooseType('environment')}>
+                  <span className={s.typeEmoji}>🌱</span>
+                  <span className={s.typeLabel}>환경/안전</span>
+                </button>
+                <button className={s.typeCard} onClick={() => chooseType('infosec')}>
+                  <span className={s.typeEmoji}>🛡️</span>
+                  <span className={s.typeLabel}>정보보안</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 복사 토스트 (인라인 스타일로 확실히 고정 표시) */}
         {copied && (
