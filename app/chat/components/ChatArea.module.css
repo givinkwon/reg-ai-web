@@ -276,10 +276,3 @@
     border-top: 1px solid var(--border-light);
   }
 }
-
-/* iOS Safari 구형 대비(모바일 한정) */
-@supports (-webkit-touch-callout: none){
-  @media (max-width: 768px){
-    :root, html, body { height: -webkit-fill-available; }
-  }
-}
