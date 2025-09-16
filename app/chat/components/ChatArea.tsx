@@ -278,7 +278,6 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
             aria-modal="true"
             aria-label="분야 선택"
             className={s.typeModalOverlay}
-            onClick={() => setShowTypeModal(false)}
           >
             <div className={s.typeModal} onClick={(e) => e.stopPropagation()}>
               <h3 className={s.typeTitle}>분야를 선택하세요</h3>
