@@ -128,6 +128,17 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     return before.replace(/\n/g, '<br />');
   };
 
+  // 쿠키 → 스토어 하이드레이션 & 미선택 시 팝업
+  useEffect(() => {
+    const saved = Cookies.get('selectedJobType') as string | undefined;
+    if (saved) {
+      setSelectedJobType(saved);
+      setShowTypeModal(false);
+    } else {
+      setShowTypeModal(true);
+    }
+  }, [setSelectedJobType]);
+
     
   return (
     <section className={s.wrap}>

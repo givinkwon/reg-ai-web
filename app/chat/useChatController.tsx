@@ -70,7 +70,7 @@ export function useChatController() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!selectedJobType) router.push('/');
+    // if (!selectedJobType) router.push('/');
     setThreadId(null); // 카테고리 변경 시 스레드 초기화
     // threadId는 선택적으로 유지하고 싶다면, 위 줄을 제거하세요.
   }, [hydrated, selectedJobType, router]);
