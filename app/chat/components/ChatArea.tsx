@@ -102,14 +102,40 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
 
   const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
 
-  
+  // "2) 근거" 이전까지만 보여주기 (2), 2. , ② 모두 허용)
+  const cutHtmlBeforeEvidence = (html: string) => {
+    if (!html) return html;
+
+    // 작업용 문자열: <br> → \n
+    const working = html.replace(/<(br|BR)\s*\/?>/g, '\n');
+
+    // 근거 헤더 라인 매칭(라인 전체가 헤더)
+    const headerRe = /^\s*(?:2\)|2\.|②)\s*근거\s*$/m;
+    const m = working.match(headerRe);
+
+    // 1순위: 근거 헤더, 2순위: "🔗"(관련 링크) 아이콘 위치
+    let cutIdx = m?.index ?? -1;
+    if (cutIdx < 0) {
+      const altIconIdx = working.indexOf('🔗');
+      if (altIconIdx >= 0) cutIdx = altIconIdx;
+    }
+
+    // 못 찾으면 원문 그대로
+    if (cutIdx <= 0) return html;
+
+    // 자른 앞부분을 다시 <br>로 복구해서 반환
+    const before = working.slice(0, cutIdx);
+    return before.replace(/\n/g, '<br />');
+  };
+
+    
   return (
     <section className={s.wrap}>
       {/* Header */}
       <div className={s.header}>
-        <div className={s.left}>
+        {/* <div className={s.left}>
           <h1 className={s.brand}>REG AI</h1>
-        </div>
+        </div> */}
         <div className={s.right}>
           {/* <Button variant="outline" size="sm" className={s.settingsBtn}>
             <Settings className={s.iconXs} />
@@ -129,7 +155,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
           <div className={s.vertDivider} />
           <div className={s.meta}>
             <span className={s.metaStrong}>전문분야명</span>
-            <span className={s.metaWeak}>분야</span>
+            <span className={s.metaWeak}>환경/안전</span>
           </div>
         </div>
       </div>
@@ -144,6 +170,9 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
 
             {messages.map((m, i) => {
               const isUser = m.role === 'user';
+              const safeHtml = m.role === 'assistant'
+              ? cutHtmlBeforeEvidence(m.content)
+              : m.content;
 
               if (isUser) {
                 return (
@@ -164,7 +193,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
                   <div
                     ref={(el) => { contentRefs.current[i] = el; }}
                     className={s.msgContent}
-                    dangerouslySetInnerHTML={{ __html: m.content }}
+                    dangerouslySetInnerHTML={{ __html: safeHtml }}
                   />
                   <div className={s.actionRow}>
                     <div className={s.miniActions}>
