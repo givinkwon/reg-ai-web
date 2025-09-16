@@ -28,7 +28,7 @@ export default function Sidebar() {
         <div className={s.titleRow}>
           {!collapsed &&
           <div className={s.brand}>
-            <img src="/logo.png" className={s.fav} alt="REG AI" />
+            <img src="/logo.ico" className={s.fav} alt="REG AI" />
             <span className={s.brandText}>REG AI</span>
           </div>
           }
