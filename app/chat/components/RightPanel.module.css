@@ -1,9 +1,14 @@
 /* overlay */
 .overlay{
-  position:fixed; inset:0; background:rgba(12,18,36,.35);
-  opacity:0; pointer-events:none; transition:opacity .2s ease;
-  z-index:49;
+  position: fixed;
+  inset: 0;
+  background: rgba(12,18,36,.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 9998; /* ↑ 크게 올림 */
 }
+
 .overlay.show{ opacity:1; pointer-events:auto; }
 
 /* sheet */
@@ -14,7 +19,7 @@
   box-shadow:0 10px 30px rgba(18,29,56,.18);
   transform:translateX(100%);
   transition:transform .25s ease;
-  z-index:50;
+  z-index: 9999; /* ↑ 크게 올림 */
   display:flex; flex-direction:column;
 }
 .sheet.open{ transform:translateX(0); }
@@ -23,11 +28,24 @@
   height:56px; padding:0 14px; display:flex; align-items:center; gap:10px;
   border-bottom:1px solid #EAEDF5;
 }
+/* RightPanel.module.css */
 .backBtn{
   display:inline-flex; align-items:center; justify-content:center;
-  width:32px; height:32px; border-radius:8px; background:#1f5ed6; /* 파란 배경 */
+  width:32px; height:32px; border-radius:8px; background:#1f5ed6;
+  color:#fff;                     /* currentColor = 흰색 */
 }
-.iconWhite{ width:18px; height:18px; color:#fff; }  /* ← 흰색 아이콘 */
+
+.iconWhite{
+  width:18px; height:18px;
+  color:#fff;                     /* 혹시 상속이 안되면 직접 지정 */
+}
+
+/* 혹시 전역 reset이 svg를 숨기는 경우 대비 */
+.backBtn svg{
+  display:block !important;
+  visibility:visible !important;
+}
+
 .iconGhost{ width:18px; height:18px; color:transparent; } /* 우측 균형 */
 .title{ font-weight:600; color:#303650; font-size:15px; }
 
@@ -62,24 +80,27 @@
 }
 .linkA:hover{ filter:brightness(.9); }
 
-/* 모바일: 풀스크린 모달(바텀시트 느낌) */
+
+/* 모바일: 바텀시트로 */
 @media (max-width: 768px) {
   .overlay{
     background: rgba(12,18,36,.45);
-    z-index: 90; /* 시트보다 한 단계 낮게 */
   }
 
   .sheet{
     left: 0; right: 0;
     width: 100vw;
-    height: 100dvh;
+    /* 바텀시트 포지션을 명확히 지정 */
+    top: auto;
+    bottom: 0;
+    height: auto;
+    max-height: 100dvh;
     border-left: 0;
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
-    /* 오른쪽 슬라이드 대신 '아래에서 위로' */
-    transform: translateY(100%);
+    transform: translateY(100%);       /* 아래에서 위로 */
     box-shadow: 0 -10px 30px rgba(18,29,56,.18);
-    z-index: 91;
+    will-change: transform;            /* 모바일 스크롤 튐 방지 */
   }
 
   .sheet.open{
@@ -90,18 +111,11 @@
     position: sticky;
     top: 0;
     background: #fff;
-    z-index: 2;
+    z-index: 1;
     height: 54px;
   }
 
   .body{
-    padding-bottom: 24px; /* 홈 인디케이터 여백 */
+    padding-bottom: 24px;
   }
-}
-
-/* 화면이 아주 작을 때 텍스트 크기 약간 줄이기(선택) */
-@media (max-width: 400px) {
-  .title{ font-size:14px; }
-  .evTitle{ font-size:13px; }
-  .evSnippet{ font-size:11px; }
 }
