@@ -249,10 +249,10 @@
 /* ✅ 모바일 전용: 768px 이하에만 적용 */
 @media (max-width: 768px){
   .wrap{
-    /* 동적 뷰포트 높이로 ‘추가 스크롤’ 제거 */
-    height: 100dvh;
+    box-sizing: border-box;    /* ✅ border/padding을 height에 포함 */
+    height: 100svh;            /* ✅ 주소창 표시 상태에 덜 민감 */
     min-height: 100svh;
-    margin-right: 0;    /* 우측 여백 때문에 가로 넘침 방지 */
+    /* 이미 넣었다면 margin-right:0 유지 */
   }
 
   .stream{
