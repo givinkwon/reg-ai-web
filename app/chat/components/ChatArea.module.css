@@ -160,7 +160,8 @@
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 8px; border-radius: 999px;
   font-size: 12px; font-weight: 600;
-  background: #eef2ff; color: #1f3aed; border: 1px solid #c7d2fe;
+  background: #eef3ff; color: #2388FF; 
+  /* border: 1px solid #c7d2fe; */
   z-index: 1;
 }
 .typeEmoji{ font-size: 14px; line-height: 1; }
@@ -174,18 +175,20 @@
 /* 다크모드에서도 칩 가독성 유지 */
 @media (prefers-color-scheme: dark) {
   .typeChip{
-    background: #0b1220;
-    color: #e0e7ff;
-    border-color: #1e3a8a;
+    background: #eef3ff;
+    color: #2388ff;
+    /* border-color: #1e3a8a; */
   }
-  .typeModalOverlay { background: rgba(4, 6, 12, .58) !important; backdrop-filter: blur(2px); }
+  .typeModalOverlay { background: #eef3ff !important; backdrop-filter: blur(2px); }
   .typeModal {
-    background:#0f172a !important; color:#e5e7eb !important;
-    border:1px solid #1f2937 !important; box-shadow:0 14px 48px rgba(0,0,0,.6) !important;
+    background:#eef3ff !important; color:#2388ff !important;
+    /* border:1px solid #1f2937 !important;  */
+    /* box-shadow:0 14px 48px rgba(0,0,0,.6) !important; */
   }
   .typeCard{
-    background:#111827 !important; color:#f3f4f6 !important;
-    border:1px solid #334155 !important; box-shadow:0 2px 8px rgba(0,0,0,.35) !important;
+    background:#eef3ff !important; color:#2388ff !important;
+    /* border:1px solid #334155 !important;  */
+    /* box-shadow:0 2px 8px rgba(0,0,0,.35) !important; */
   }
 }
 
