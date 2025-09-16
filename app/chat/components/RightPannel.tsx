@@ -90,16 +90,6 @@ export default function RightPanel() {
                       target="_blank"
                       rel="noopener noreferrer"
                       title="새 탭으로 열기"
-                      onClick={(e) => {
-                        // 상위 클릭(시트 토글 등) 전파 차단
-                        e.stopPropagation();
-                        // 브라우저/확장프로그램이 target=_blank를 막으면 폴백
-                        const w = window.open(it.href!, '_blank', 'noopener,noreferrer');
-                        if (!w) {
-                          // 최후 폴백: 같은 탭으로라도 이동
-                          window.location.href = it.href!;
-                        }
-                      }}
                     >
                       {it.title}
                     </a>

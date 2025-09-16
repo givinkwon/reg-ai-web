@@ -238,6 +238,7 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
 };
 
 /* ── 서식 파싱(번호줄 + 다음줄 URL) ── */
+/* ── 서식 파싱(번호줄 + 다음줄 URL) ── */
 const parseFormsList = (block: string): EvidenceItem[] => {
   const lines = block.split('\n').map((x) => x.trim()).filter(Boolean);
 
@@ -245,24 +246,40 @@ const parseFormsList = (block: string): EvidenceItem[] => {
   let cur: EvidenceItem | null = null;
 
   for (const ln of lines) {
-    const head = ln.match(/^(\d+\.|-)\s*(.+)$/);
-    if (head) {
-      if (cur) items.push(cur);
-      // 라인 내에 URL이 섞여 있으면 제거 후 title만
-      const inlineUrl = urlOf(head[2]);
-      const titleOnly = inlineUrl ? head[2].replace(inlineUrl, '').trim() : head[2];
-      cur = { title: cleanTitle(titleOnly) };
-      // 인라인 URL은 href로 저장
-      if (inlineUrl) cur.href = inlineUrl;
+    // 0) URL-only 라인(예: "- http://...")을 먼저 처리: 새 아이템 만들지 말고 현재 아이템 href에만 붙이기
+    const onlyUrl = ln.match(/^-?\s*(https?:\/\/[^\s)"'>\]]+)/i);
+    if (onlyUrl) {
+      if (cur) cur.href = normalizeUrl(onlyUrl[1]);
       continue;
     }
-    const u = urlOf(ln);
-    if (u && cur) { cur.href = u; continue; }
-    if (cur && !/^관련\s*(?:별표|서식)/.test(ln)) cur.title = cleanTitle(`${cur.title} ${ln}`);
+
+    // 1) 번호 헤더만 새 아이템으로 (불릿 '-' 는 제외)
+    const head = ln.match(/^(\d+[.)])\s*(.+)$/);  // "1. " 또는 "1) " 허용
+    if (head) {
+      if (cur) items.push(cur);
+
+      // 헤더 텍스트에 URL이 섞여있으면 제거 후 title만 남기기
+      const inlineUrl = urlOf(head[2]);
+      const titleOnly = inlineUrl ? head[2].replace(inlineUrl, '').trim() : head[2];
+
+      cur = { title: cleanTitle(titleOnly) };
+      if (inlineUrl) cur.href = normalizeUrl(inlineUrl);
+      continue;
+    }
+
+    // 2) 일반 텍스트 라인: URL을 제거한 텍스트만 제목에 이어붙이기
+    if (cur && !/^관련\s*(?:별표|서식)/.test(ln)) {
+      const inlineUrl = urlOf(ln);
+      const textOnly = inlineUrl ? ln.replace(inlineUrl, '').trim() : ln;
+      if (textOnly) cur.title = cleanTitle(`${cur.title} ${textOnly}`);
+      continue;
+    }
   }
+
   if (cur) items.push(cur);
   return items;
 };
+
 
 /* ── 최종 파서 (디버그 로그 포함) ── */
 const parseRightDataFromHtml = (html: string): RightPanelData => {
