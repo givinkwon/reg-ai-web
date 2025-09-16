@@ -132,9 +132,17 @@
   padding: 12px 24px 16px;
 }
 .input{
-  flex:1 1 auto; min-width:0; border:1px solid var(--border-light);
-  border-radius:12px; padding:10px 12px; outline:none;
+  flex:1 1 auto; min-width:0;
+  border:1px solid var(--border-light);
+  border-radius:12px; padding:10px 12px;
+  outline:none;
   font-size:14px; color:var(--text-dark);
+
+  /* ✅ 추가 */
+  background:#fff;                 /* 흰 배경 명시 */
+  color-scheme: light;             /* 자동 다크 off 힌트 */
+  -webkit-appearance: none;        /* iOS 기본 스타일 최소화 */
+  appearance: none;
 }
 .input::placeholder{ color:var(--text-neutral); }
 .sendBtn{ padding:8px; border-radius:10px; background:#EEF3FF; }
