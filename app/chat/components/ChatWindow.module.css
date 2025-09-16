@@ -142,6 +142,9 @@
   max-width:680px; width:100%; margin:12px auto 0;
   padding-bottom:8px;
 }
+/* 입력창 래퍼(칩 배치용) */
+.inputWrap{ position:relative; flex:1; }
+
 .input{
   flex:1 1 auto; min-width:0;
   border:1px solid var(--border-light); border-radius:12px;
@@ -150,8 +153,6 @@
 .input::placeholder{ color:var(--text-neutral); }
 .sendBtn{ padding:8px; border-radius:10px; background:#EEF3FF; }
 .iconMdAccent{ width:20px; height:20px; color:var(--accent); }
-
-/* ... 기존 스타일은 그대로 두고, 아래만 추가/보강하세요 ... */
 
 /* 토스트 */
 .toast{
@@ -170,3 +171,114 @@
 
 /* (참고) 아이콘 색이 흐릿하면 유지 */
 .iconAction{ width:16px; height:16px; color:#8b95b2; stroke:#8b95b2; flex-shrink:0; }
+
+/* ===================================================================== */
+/* ↓↓↓ 추가: 입력창 안 ‘분야’ 칩 + 칩 공간 확보 + 모달 + 다크모드 보정 ↓↓↓ */
+/* ===================================================================== */
+
+/* 입력창 왼쪽 칩(분야 표시) */
+.typeChip{
+  position:absolute; left:8px; top:50%; transform:translateY(-50%);
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid #c7ddff;
+  background:#e0ecff;
+  color:#0b3b8c;
+  font-size:13px; font-weight:600;
+  line-height:1;
+}
+.typeEmoji{ font-size:16px; line-height:1; }
+.typeText{}
+
+/* 칩만큼 입력창 왼쪽 패딩 확보 */
+.inputHasChip{ padding-left: 110px; }
+
+/* 타입 선택 모달 오버레이 */
+.typeModalOverlay{
+  position:fixed; inset:0;
+  background: rgba(12,18,36,.45);
+  backdrop-filter: blur(2px);
+  display:flex; align-items:center; justify-content:center;
+  z-index:110;
+}
+
+/* 타입 선택 모달 */
+.typeModal{
+  width:min(560px, 92vw);
+  border-radius:16px;
+  padding:18px 16px 20px;
+  background:#ffffff;
+  color:#111827;
+  border:1px solid #e5e7eb;
+  box-shadow:0 12px 40px rgba(0,0,0,.35);
+}
+.typeTitle{
+  font-weight:700; font-size:18px;
+  margin:4px 6px 14px;
+}
+.typeGrid{
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.typeCard{
+  display:flex; align-items:center; justify-content:center;
+  gap:10px;
+  padding:14px 12px;
+  border-radius:14px;
+  border:1px solid #e5e7eb;
+  background:#ffffff;
+  color:#0f172a;
+  box-shadow:0 2px 8px rgba(17,24,39,.06);
+  transition: transform .06s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+.typeCard:hover{
+  transform: translateY(-1px);
+  box-shadow:0 6px 16px rgba(17,24,39,.12);
+  border-color:#cbd5e1;
+  background:#f8fafc;
+}
+.typeLabel{ font-weight:600; }
+.typeEmoji{ font-size:22px; }
+
+/* 다크모드 대비 보정 */
+@media (prefers-color-scheme: dark) {
+  .typeModalOverlay{ background: rgba(4,6,12,.58); }
+  .typeModal{
+    background:#0f172a;           /* slate-900 */
+    color:#e5e7eb;                /* slate-200 */
+    border:1px solid #1f2937;     /* slate-800 */
+    box-shadow:0 14px 48px rgba(0,0,0,.6);
+  }
+  .typeCard{
+    background:#111827;           /* slate-900+ */
+    color:#f3f4f6;                /* slate-100 */
+    border:1px solid #334155;     /* slate-700 */
+    box-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
+  .typeCard:hover{
+    background:#0b1220;
+    border-color:#475569;
+    box-shadow:0 8px 22px rgba(0,0,0,.55);
+  }
+  .typeChip{
+    background:#1e3a8a;           /* blue-800 */
+    color:#e0e7ff;
+    border:1px solid #1d4ed8;
+  }
+}
+
+/* 수동 다크(삼성 인터넷 강제 다크 대응) */
+:global(html[data-theme="dark"]) .typeModalOverlay{ background: rgba(4,6,12,.58); }
+:global(html[data-theme="dark"]) .typeModal{
+  background:#0f172a; color:#e5e7eb; border:1px solid #1f2937; box-shadow:0 14px 48px rgba(0,0,0,.6);
+}
+:global(html[data-theme="dark"]) .typeCard{
+  background:#111827; color:#f3f4f6; border:1px solid #334155; box-shadow:0 2px 8px rgba(0,0,0,.35);
+}
+:global(html[data-theme="dark"]) .typeCard:hover{
+  background:#0b1220; border-color:#475569; box-shadow:0 8px 22px rgba(0,0,0,.55);
+}
+:global(html[data-theme="dark"]) .typeChip{
+  background:#1e3a8a; color:#e0e7ff; border:1px solid #1d4ed8;
+}
