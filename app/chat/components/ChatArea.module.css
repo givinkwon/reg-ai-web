@@ -77,6 +77,7 @@
   padding:12px 14px;
   box-shadow:0 3px 10px rgba(35,136,255,.18);
   margin-bottom: 10px;
+  margin-top: 10px;
 }
 .userContent{
   font-size:14px; line-height:1.55; white-space:pre-wrap; word-break:break-word;
