@@ -24,7 +24,7 @@ export default function BackButton() {
 
   return (
     <button className={styles.backButton} onClick={goBack}>
-      ← 직무 선택 변경
+      ← 전문분야 선택 변경
     </button>
   );
 }

@@ -15,7 +15,7 @@ type UserState = {
   setUserInfo: (info: Partial<UserInfo>) => void;
   clearUserInfo: () => void;
 
-  // ✅ 직무 타입: 미선택 상태를 안전하게 표현
+  // ✅ 전문분야 타입: 미선택 상태를 안전하게 표현
   selectedJobType: string | null;
   setSelectedJobType: (type: string | null) => void;
 

@@ -62,7 +62,7 @@ export function useChatController() {
   // 1) localStorage/쿠키 → 채팅방/메시지 복원
   useEffect(() => { loadFromCookies(); }, [loadFromCookies]);
 
-  // 2) 직무 카테고리 하이드레이션
+  // 2) 전문분야 카테고리 하이드레이션
   useEffect(() => {
     hydrateFromCookie();
     setHydrated(true);

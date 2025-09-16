@@ -128,7 +128,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
           </div> */}
           <div className={s.vertDivider} />
           <div className={s.meta}>
-            <span className={s.metaStrong}>직무명</span>
+            <span className={s.metaStrong}>전문분야명</span>
             <span className={s.metaWeak}>분야</span>
           </div>
         </div>
