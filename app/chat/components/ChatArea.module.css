@@ -248,16 +248,10 @@
 
 /* ✅ 모바일 전용: 768px 이하에만 적용 */
 @media (max-width: 768px){
-  .page, main, .content {
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-  }
   .wrap{
     box-sizing: border-box;    /* ✅ border/padding을 height에 포함 */
-    height: 100svh !important;            /* ✅ 주소창 표시 상태에 덜 민감 */
-    min-height: 100svh !important;
+    height: 95svh !important;            /* ✅ 주소창 표시 상태에 덜 민감 */
+    min-height: 95svh !important;
     /* 이미 넣었다면 margin-right:0 유지 */
   }
 
