@@ -16,8 +16,8 @@
 
 .header{ display:flex; flex-direction:column; gap:12px; }
 .titleRow{ height:40px; padding:0 6px; display:flex; justify-content:space-between; align-items:center; }
-.brand{ display:flex; align-items:center; gap:8px; min-width:0; }
-.fav{ width:16px; height:16px; }
+.brand{ display:flex; align-items:center; gap:8px; min-width:0; height: 25px; }
+.fav{ height:25px; }
 .brandText{ color:var(--text-dark); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* ✅ 파란 배경 + 흰 화살표 */
@@ -70,13 +70,31 @@
 .deleteBtn:hover{ background:#F0F3FA; }
 
 .footer{ margin-top:auto; }
-.startBtn{ background-color: #eef3ff; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; }
-.startBtn:hover {background-color: #2388ff;}
-.plus{ width:15px; height:15px; color:#2388ff; }
-.plus:hover{color: #eef3ff;}
-.startLabel{ color:#2388ff; white-space:nowrap; }
-.startLabel:hover{color: #eef3ff; white-space:nowrap; }
+/* 버튼 기본 상태 */
+.startBtn{
+  background: #eef3ff !important;
+  background-color: #eef3ff !important;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  transition: background-color .15s ease, color .15s ease;
+}
 
+/* 버튼 hover 시 배경 변경 */
+.startBtn:hover{
+  background: #2388ff !important;
+  background-color: #2388ff !important;
+}
+
+/* 아이콘/라벨 기본 색 */
+.plus{ width:15px; height:15px; color:#2388ff; }
+.startLabel{ color:#2388ff; white-space:nowrap; }
+
+/* ✨ 부모(.startBtn) hover 시 자식 색도 같이 변경 */
+.startBtn:hover .plus{ color:#eef3ff !important; }
+.startBtn:hover .startLabel{ color:#eef3ff !important; }
 /* ✅ 접힘 상태: 텍스트 숨기고, 아이콘만 세로로 */
 .collapsed .brandText,
 .collapsed .navText,
