@@ -249,10 +249,13 @@
 /* ✅ 모바일 전용: 768px 이하에만 적용 */
 @media (max-width: 768px){
   .wrap{
-    box-sizing: border-box;    /* ✅ border/padding을 height에 포함 */
-    height: 99svh !important;            /* ✅ 주소창 표시 상태에 덜 민감 */
-    min-height: 99svh !important;
-    /* 이미 넣었다면 margin-right:0 유지 */
+    position: fixed;
+    inset: 0;                 /* top:0; right:0; bottom:0; left:0 */
+    z-index: 0;
+    margin: 0;                /* 가로 넘침 방지 */
+    border-radius: 0;         /* 모서리 둥글면 화면 밖 픽셀 생길 수 있어 제거 */
+    height: auto;             /* fixed일 땐 auto로, 내부 레이아웃은 flex가 담당 */
+    box-sizing: border-box;
   }
 
   .stream{
