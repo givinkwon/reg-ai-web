@@ -71,13 +71,13 @@ export default function Sidebar() {
 
         {/* Nav */}
         <div className={s.nav}>
-          <div className={s.navItem}>
-            <div className={s.navLeft}>
+          {/* <div className={s.navItem}> */}
+            {/* <div className={s.navLeft}> */}
               {/* ✅ 집 로고 아이콘으로 교체 */}
-              <Home className={s.iconSm} />
-              <span className={s.navText}>데일리 REG</span>
-            </div>
-          </div>
+              {/* <Home className={s.iconSm} /> */}
+              {/* <span className={s.navText}>데일리 REG</span> */}
+            {/* </div> */}
+          {/* </div> */}
 
           <div className={s.navItem}>
             <div className={s.navLeft}>
