@@ -70,9 +70,12 @@
 .deleteBtn:hover{ background:#F0F3FA; }
 
 .footer{ margin-top:auto; }
-.startBtn{ width:100%; display:flex; align-items:center; justify-content:center; gap:8px; }
-.plus{ width:15px; height:15px; color:#fff; }
-.startLabel{ white-space:nowrap; }
+.startBtn{ background-color: #2388ff; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; }
+.startBtn:hover {background-color: #eef3ff;}
+.plus{ width:15px; height:15px; color:#eef3ff; }
+.plus:hover{color: #2388ff;}
+.startLabel{ color:#eef3ff; white-space:nowrap; }
+.startLabel{color: #2388ff; white-space:nowrap; }
 
 /* ✅ 접힘 상태: 텍스트 숨기고, 아이콘만 세로로 */
 .collapsed .brandText,
