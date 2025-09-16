@@ -160,7 +160,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
             </div> */}
             <div className={s.nameRow}>
               <span className={s.name}>정호수</span>
-              <ChevronDown className={s.iconSm} />
+              {/* <ChevronDown className={s.iconSm} /> */}
             </div>
           </div>
           <div className={s.vertDivider} />

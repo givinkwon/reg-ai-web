@@ -24,7 +24,12 @@
 .iconSm{ width:16px; height:16px; color:var(--text-dark); }
 .iconXs{ width:12px; height:12px; }
 
-.right{ display:flex; align-items:center; gap:16px; }
+.right {
+  margin-left: auto;       /* 오른쪽으로 밀착 */
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 .settingsBtn{ display:none; }
 @media (min-width:768px){
   .settingsBtn{
