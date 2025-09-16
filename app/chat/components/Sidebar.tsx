@@ -103,7 +103,7 @@ export default function Sidebar() {
             >
               <MessageSquare className={active ? s.iconSmAccent : s.iconSmMuted} />
               <span className={s.chatText}>{r.title || '새 대화'}</span>
-              {!collapsed && (
+              {active && !collapsed && (
                 <button
                   className={s.deleteBtn}
                   onClick={(e) => { e.stopPropagation(); deleteRoom(r.id); }}
