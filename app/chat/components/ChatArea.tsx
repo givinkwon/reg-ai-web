@@ -144,8 +144,7 @@ export default function ChatArea() {
 
     (async () => {
       try {
-        const upstream = `http://35.76.230.177:8008/public/answer?job_id=${encodeURIComponent(sharedId)}`;
-        const res = await fetch(upstream, { cache: 'no-store' });
+        const res = await fetch(`/api/public-answer?id=${encodeURIComponent(sharedId)}`, { cache: 'no-store' });
 
         if (!res.ok) {
           setMessages([
@@ -359,3 +358,4 @@ export default function ChatArea() {
     </section>
   );
 }
+
