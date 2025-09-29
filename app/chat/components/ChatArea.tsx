@@ -6,7 +6,8 @@ import { Button } from '../../components/ui/button';
 import { useChatController } from '../useChatController';
 import { useChatStore } from '../../store/chat';
 import { useUserStore } from '../../store/user';
-import Cookies from 'js-cookie';   
+import Cookies from 'js-cookie';
+import { useSearchParams } from 'next/navigation'; // ✅ NEW
 import s from './ChatArea.module.css';
 
 const TYPE_META: Record<string, { label: string; emoji: string }> = {
@@ -21,10 +22,15 @@ export default function ChatArea() {
     sendMessage, regenerate,
   } = useChatController();
 
-  const { selectedJobType, setSelectedJobType } = useUserStore(); // ← 추가
-  const [showTypeModal, setShowTypeModal] = useState(false);      // ← 추가
+  const { selectedJobType, setSelectedJobType } = useUserStore();
+  const [showTypeModal, setShowTypeModal] = useState(false);
 
   const setMessages  = useChatStore((st) => st.setMessages);
+  const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
+
+  // ✅ 공유 링크 초기 로딩 1회 보장
+  const searchParams = useSearchParams();
+  const bootOnce = useRef(false);
 
   // 복사 토스트
   const [copied, setCopied] = useState(false);
@@ -38,7 +44,7 @@ export default function ChatArea() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading, loadingMessageIndex]);
 
-const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
@@ -79,7 +85,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      // 무시
+      // ignore
     }
   };
 
@@ -100,30 +106,18 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     regenerate(q);
   };
 
-  const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
-
   // "2) 근거" 이전까지만 보여주기 (2), 2. , ② 모두 허용)
   const cutHtmlBeforeEvidence = (html: string) => {
     if (!html) return html;
-
-    // 작업용 문자열: <br> → \n
     const working = html.replace(/<(br|BR)\s*\/?>/g, '\n');
-
-    // 근거 헤더 라인 매칭(라인 전체가 헤더)
     const headerRe = /^\s*(?:2\)|2\.|②)\s*근거\s*$/m;
     const m = working.match(headerRe);
-
-    // 1순위: 근거 헤더, 2순위: "🔗"(관련 링크) 아이콘 위치
     let cutIdx = m?.index ?? -1;
     if (cutIdx < 0) {
       const altIconIdx = working.indexOf('🔗');
       if (altIconIdx >= 0) cutIdx = altIconIdx;
     }
-
-    // 못 찾으면 원문 그대로
     if (cutIdx <= 0) return html;
-
-    // 자른 앞부분을 다시 <br>로 복구해서 반환
     const before = working.slice(0, cutIdx);
     return before.replace(/\n/g, '<br />');
   };
@@ -139,25 +133,71 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     }
   }, [setSelectedJobType]);
 
-    
+  // ✅ 공유 링크(id|job_id)로 들어온 경우, FastAPI /public/answer 직접 호출 → 로컬 채팅 주입
+  useEffect(() => {
+    if (bootOnce.current) return;
+    const sharedId = searchParams.get('id') || searchParams.get('job_id');
+    if (!sharedId) return;
+
+    bootOnce.current = true;
+
+    (async () => {
+      try {
+        // FastAPI 직접 호출 (CORS 허용 필요)
+        const upstream = `http://35.76.230.177:8008/public/answer?job_id=${encodeURIComponent(sharedId)}`;
+        const res = await fetch(upstream, { cache: 'no-store' });
+
+        if (!res.ok) {
+          setMessages([
+            { role: 'assistant', content: '공유된 답변을 불러오지 못했습니다. 링크가 만료되었거나 잘못된 ID일 수 있어요.' }
+          ]);
+          return;
+        }
+
+        const data = await res.json() as {
+          job_id: string;
+          category?: 'environment' | 'infosec' | string;
+          question?: string;
+          answer_html?: string;
+          created_at?: string;
+        };
+
+        const question = (data.question || '').trim();
+        const answerHtml = (data.answer_html || '').trim();
+
+        // 카테고리 동기화
+        if (data.category && (data.category === 'environment' || data.category === 'infosec')) {
+          Cookies.set('selectedJobType', data.category, { expires: 7 });
+          setSelectedJobType(data.category);
+        }
+
+        const initialMsgs = [];
+        if (question) initialMsgs.push({ role: 'user', content: question });
+        else initialMsgs.push({ role: 'user', content: '(공유 링크로 불러온 질문)' });
+
+        if (answerHtml) initialMsgs.push({ role: 'assistant', content: answerHtml });
+        else initialMsgs.push({ role: 'assistant', content: '답변 본문이 비어 있습니다.' });
+
+        setMessages(initialMsgs);
+      } catch (e) {
+        console.error('[ChatArea] public/answer fetch error:', e);
+        setMessages([
+          { role: 'assistant', content: '공유된 답변을 불러오는 중 오류가 발생했습니다.' }
+        ]);
+      }
+    })();
+  }, [searchParams, setMessages, setSelectedJobType]);
+
   return (
     <section className={s.wrap}>
       {/* Header */}
       <div className={s.header}>
-        {/* <div className={s.left}>
-          <h1 className={s.brand}>REG AI</h1>
-        </div> */}
         <div className={s.right}>
           <Button variant="outline" size="sm" className={s.settingsBtn}>
             <Settings className={s.iconXs} />
             계정
           </Button>
           <div className={s.account}>
-            {/* <div className={s.avatar}>
-              <svg width="13" height="14" viewBox="0 0 13 14" fill="none">
-                <path d="M6.19 1.08c-1.26.05-2.37.94-2.68 2.16-.09.33-.12.83-.07 1.15.1.65.38 1.21.85 1.67 1 .97 2.53 1.11 3.67.35 1.23-.82 1.65-2.43.98-3.74-.25-.5-.64-.91-1.12-1.19C7.39 1.21 6.84 1.07 6.19 1.08Z" fill="#2388FF"/>
-              </svg>
-            </div> */}
             <div className={s.nameRow}>
               <span className={s.name}>정호수</span>
               {/* <ChevronDown className={s.iconSm} /> */}
@@ -186,8 +226,8 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
             {messages.map((m, i) => {
               const isUser = m.role === 'user';
               const safeHtml = m.role === 'assistant'
-              ? cutHtmlBeforeEvidence(m.content)
-              : m.content;
+                ? cutHtmlBeforeEvidence(m.content)
+                : m.content;
 
               if (isUser) {
                 return (
@@ -245,7 +285,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
         {/* Input */}
         <div className={s.inputRow}>
           <div className={s.inputWrap}>
-            {/* ← 입력창 안쪽 왼쪽 칩 */}
+            {/* 분야 선택 칩 */}
             <button
               type="button"
               className={s.typeChip}
@@ -258,7 +298,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
             </button>
 
             <input
-              className={`${s.input} ${s.inputHasChip} chat-input`}  // ← 패딩 추가 클래스
+              className={`${s.input} ${s.inputHasChip} chat-input`}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKey}
@@ -295,7 +335,7 @@ const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
           </div>
         )}
 
-        {/* 복사 토스트 (인라인 스타일로 확실히 고정 표시) */}
+        {/* 복사 토스트 */}
         {copied && (
           <div
             style={{
