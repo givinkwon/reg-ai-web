@@ -197,9 +197,9 @@ export default function ChatArea() {
             <Settings className={s.iconXs} />
             계정
           </Button>
-          <div className={s.account}>
+          {/* <div className={s.account}>
             <div className={s.nameRow}>
-              <span className={s.name}>정호수</span>
+              <span className={s.name}>비회원</span>
             </div>
           </div>
           <div className={s.vertDivider} />
@@ -210,7 +210,7 @@ export default function ChatArea() {
           <div className={s.meta}>
             <span className={s.metaStrong}>직무명</span>
             <span className={s.metaWeak}>Product Owner</span>
-          </div>
+          </div> */}
         </div>
       </div>
 
