@@ -1,18 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Settings, ChevronDown, Copy, RotateCcw, ArrowUp } from 'lucide-react';
+import { Settings, Copy, RotateCcw, ArrowUp } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useChatController } from '../useChatController';
 import { useChatStore } from '../../store/chat';
 import { useUserStore } from '../../store/user';
 import Cookies from 'js-cookie';
-import { useSearchParams } from 'next/navigation'; // ✅ NEW
 import s from './ChatArea.module.css';
 
 const TYPE_META: Record<string, { label: string; emoji: string }> = {
   environment: { label: '환경/안전', emoji: '🌱' },
-  infosec:     { label: '정보보안',  emoji: '🛡️' },
+  infosec: { label: '정보보안', emoji: '🛡️' },
 };
 
 export default function ChatArea() {
@@ -25,11 +24,10 @@ export default function ChatArea() {
   const { selectedJobType, setSelectedJobType } = useUserStore();
   const [showTypeModal, setShowTypeModal] = useState(false);
 
-  const setMessages  = useChatStore((st) => st.setMessages);
+  const setMessages = useChatStore((st) => st.setMessages);
   const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
 
-  // ✅ 공유 링크 초기 로딩 1회 보장
-  const searchParams = useSearchParams();
+  // 공유 링크 초기 로딩 1회 보장
   const bootOnce = useRef(false);
 
   // 복사 토스트
@@ -133,17 +131,19 @@ export default function ChatArea() {
     }
   }, [setSelectedJobType]);
 
-  // ✅ 공유 링크(id|job_id)로 들어온 경우, FastAPI /public/answer 직접 호출 → 로컬 채팅 주입
+  // 공유 링크(id|job_id)로 들어온 경우, FastAPI /public/answer 직접 호출 → 로컬 채팅 주입
   useEffect(() => {
+    if (typeof window === 'undefined') return; // SSR/빌드 단계 보호
     if (bootOnce.current) return;
-    const sharedId = searchParams.get('id') || searchParams.get('job_id');
+
+    const sp = new URLSearchParams(window.location.search);
+    const sharedId = sp.get('id') || sp.get('job_id');
     if (!sharedId) return;
 
     bootOnce.current = true;
 
     (async () => {
       try {
-        // FastAPI 직접 호출 (CORS 허용 필요)
         const upstream = `http://35.76.230.177:8008/public/answer?job_id=${encodeURIComponent(sharedId)}`;
         const res = await fetch(upstream, { cache: 'no-store' });
 
@@ -171,7 +171,7 @@ export default function ChatArea() {
           setSelectedJobType(data.category);
         }
 
-        const initialMsgs = [];
+        const initialMsgs: { role: 'user' | 'assistant'; content: string }[] = [];
         if (question) initialMsgs.push({ role: 'user', content: question });
         else initialMsgs.push({ role: 'user', content: '(공유 링크로 불러온 질문)' });
 
@@ -186,7 +186,8 @@ export default function ChatArea() {
         ]);
       }
     })();
-  }, [searchParams, setMessages, setSelectedJobType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <section className={s.wrap}>
@@ -200,7 +201,6 @@ export default function ChatArea() {
           <div className={s.account}>
             <div className={s.nameRow}>
               <span className={s.name}>정호수</span>
-              {/* <ChevronDown className={s.iconSm} /> */}
             </div>
           </div>
           <div className={s.vertDivider} />
