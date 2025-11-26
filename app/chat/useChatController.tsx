@@ -8,6 +8,31 @@ import { pushToDataLayer } from '../lib/analytics';
 
 type MonItem = { doc_type: string; doc_id: string; title: string };
 
+// NEW: sendMessage 옵션 타입
+type SendOptions = {
+  taskType?: string | null;
+  files?: File[];
+};
+
+// NEW: File → base64 변환
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        const base64 = result.split(',')[1] || result;
+        resolve(base64);
+      } else {
+        reject(new Error('파일을 읽지 못했습니다.'));
+      }
+    };
+    reader.onerror = () => {
+      reject(reader.error || new Error('파일 읽기 오류'));
+    };
+    reader.readAsDataURL(file);
+  });
+
 const TAG_PRESETS: Record<string, string[]> = {
   finance: ['은행','자산','자산운용','증권','금융소비자보호','자본시장','공시','내부통제','AML/KYC','전자금융','신용정보','마이데이터','집합투자'],
   infosec: ['개인정보','ISMS','망분리','암호화','접근통제','전자서명','침해사고','클라우드 보안','물리보안','DR/BCP'],
@@ -132,27 +157,36 @@ export function useChatController() {
   };
 
   /** 일반 전송: 사용자 메시지를 추가하고 서버 요청 */
-  const sendMessage = async () => {
+  const sendMessage = async (opts?: SendOptions) => {
     if (sendingRef.current) return; // 연속 호출 가드
     if (!hydrated) return;          // 하이드레이션 전 전송 가드
 
     const trimmed = input.trim();
-    if (!trimmed || monitorMode) return;
+    const hasFiles = !!opts?.files && opts.files.length > 0;
+
+    // 텍스트도 없고 파일도 없으면 전송 안 함
+    if ((!trimmed && !hasFiles) || monitorMode) return;
     if (!selectedJobType) return;
 
     // 활성 방 없으면 자동 생성
     if (!activeRoomId) newChat();
 
-    const userMsg: ChatMessage = { role: 'user', content: trimmed };
+    const displayText = trimmed || (hasFiles ? '[파일 전송]' : '');
+
+    const userMsg: ChatMessage = { role: 'user', content: displayText };
 
     // 첫 질문이면 제목 15자 자동 세팅
-    if (messages.length === 0) setActiveRoomTitleIfEmpty(trimmed);
+    if (messages.length === 0) setActiveRoomTitleIfEmpty(displayText);
 
     // 디듀프 가드
     if (lastEquals(userMsg)) return;
 
     // 트래킹
-    pushToDataLayer('chat_send_click', { message: trimmed, length: trimmed.length, category: selectedJobType });
+    pushToDataLayer('chat_send_click', {
+      message: displayText,
+      length: displayText.length,
+      category: selectedJobType,
+    });
 
     // 로컬 저장
     addMessage(userMsg);
@@ -162,37 +196,85 @@ export function useChatController() {
     setLoadingMessageIndex(0);
     setStatusMessage('');
 
-    sendSlackMessage(`*[User]*\n• category: ${selectedJobType}\n• threadId: ${threadId ?? '(new)'}\n• message:\n${trimmed}`);
+    const fileInfo =
+      hasFiles && opts?.files
+        ? `\n• files: ${opts.files.map((f) => f.name).join(', ')}`
+        : '';
+
+    sendSlackMessage(
+      `*[User]*\n• category: ${selectedJobType}\n• threadId: ${
+        threadId ?? '(new)'
+      }\n• message:\n${displayText}${fileInfo}`,
+    );
 
     sendingRef.current = true;
     try {
+      // 파일 base64 변환
+      let filesPayload:
+        | { name: string; type: string; size: number; content: string }[]
+        | undefined;
+
+      if (hasFiles && opts?.files) {
+        filesPayload = await Promise.all(
+          opts.files.map(async (file) => ({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            content: await fileToBase64(file),
+          })),
+        );
+      }
+
       let res: Response;
       if (!threadId) {
+        const payload: any = {
+          email: userInfo.email || 'anonymous',
+          category: selectedJobType,
+          message: displayText,
+        };
+        if (opts?.taskType) payload.task_type = opts.taskType;
+        if (filesPayload) payload.files = filesPayload;
+
         res = await fetch('/api/start-task', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: userInfo.email || 'anonymous', category: selectedJobType, message: trimmed }),
+          body: JSON.stringify(payload),
         });
       } else {
+        const payload: any = {
+          thread_id: threadId,
+          email: userInfo.email || 'anonymous',
+          category: selectedJobType,
+          message: displayText,
+        };
+        if (opts?.taskType) payload.task_type = opts.taskType;
+        if (filesPayload) payload.files = filesPayload;
+
         res = await fetch('/api/start-followup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ thread_id: threadId, email: userInfo.email || 'anonymous', category: selectedJobType, message: trimmed }),
+          body: JSON.stringify(payload),
         });
       }
+
       if (!res.ok) throw new Error(`start-chat failed: ${res.status}`);
       const { job_id, thread_id } = await res.json();
       if (thread_id) setThreadId(thread_id);
       setJobId(job_id);
     } catch (e) {
-      const errMsg: ChatMessage = { role: 'assistant', content: '⚠️ 요청 중 에러가 발생했습니다.' };
+      const errMsg: ChatMessage = {
+        role: 'assistant',
+        content: '⚠️ 요청 중 에러가 발생했습니다.',
+      };
       if (!lastEquals(errMsg)) {
         addMessage(errMsg);
         appendToActive(errMsg);
       }
       setLoading(false);
     } finally {
-      setTimeout(() => { sendingRef.current = false; }, 300);
+      setTimeout(() => {
+        sendingRef.current = false;
+      }, 300);
     }
   };
 

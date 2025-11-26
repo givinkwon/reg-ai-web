@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Settings, Copy, RotateCcw, ArrowUp } from 'lucide-react';
+import {
+  Settings,
+  Copy,
+  RotateCcw,
+  ArrowUp,
+  Plus,       
+  Search,     
+  FileText,   
+  AlertTriangle, 
+  Paperclip,  
+} from 'lucide-react';
+
 import { Button } from '../../components/ui/button';
 import { useChatController } from '../useChatController';
 import { useChatStore } from '../../store/chat';
@@ -14,6 +25,14 @@ const TYPE_META: Record<string, { label: string; emoji: string }> = {
   infosec: { label: '정보보안', emoji: '🛡️' },
 };
 
+type TaskType = 'law_research' | 'doc_review' | 'risk_assessment';
+
+const TASK_META: Record<TaskType, { label: string }> = {
+  law_research: { label: '법령 조사' },
+  doc_review: { label: '안전 문서 생성/검토' },
+  risk_assessment: { label: '위험성평가' },
+};
+
 export default function ChatArea() {
   const {
     messages, input, setInput,
@@ -23,6 +42,15 @@ export default function ChatArea() {
 
   const { selectedJobType, setSelectedJobType } = useUserStore();
   const [showTypeModal, setShowTypeModal] = useState(false);
+
+  // NEW: 작업 선택 모달 + 선택된 작업
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
+
+  // NEW: 첨부 파일
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
 
   const setMessages = useChatStore((st) => st.setMessages);
   const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
@@ -43,7 +71,10 @@ export default function ChatArea() {
   }, [messages, loading, loadingMessageIndex]);
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   const chooseType = (id: string) => {
@@ -53,6 +84,8 @@ export default function ChatArea() {
   };
 
   const cur = TYPE_META[selectedJobType ?? ''] ?? { label: '분야 선택', emoji: '💼' };
+  
+  const currentTaskMeta = selectedTask ? TASK_META[selectedTask] : null;
 
   // HTML -> 텍스트 (백업용)
   const htmlToText = (html: string) => {
@@ -118,6 +151,36 @@ export default function ChatArea() {
     if (cutIdx <= 0) return html;
     const before = working.slice(0, cutIdx);
     return before.replace(/\n/g, '<br />');
+  };
+
+  const handleSend = () => {
+    sendMessage({
+      taskType: selectedTask || undefined,
+      files: attachments,
+    });
+    // 전송 후 초기화
+    setSelectedTask(null);
+    setAttachments([]);
+  };
+
+  // NEW: 드래그&드롭
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!e.dataTransfer?.files?.length) return;
+    const files = Array.from(e.dataTransfer.files);
+    setAttachments((prev) => [...prev, ...files]);
+  };
+
+  // NEW: 파일 input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (!files.length) return;
+    setAttachments((prev) => [...prev, ...files]);
+    e.target.value = '';
   };
 
   // 쿠키 → 스토어 하이드레이션 & 미선택 시 팝업
@@ -189,6 +252,7 @@ export default function ChatArea() {
   }, []);
 
   return (
+    <>
     <section className={s.wrap}>
       {/* Header */}
       <div className={s.header}>
@@ -282,8 +346,38 @@ export default function ChatArea() {
         </div>
 
         {/* Input */}
-        <div className={s.inputRow}>
+        <div 
+          className={s.inputRow}
+          onDragOver={handleDragOver}  
+          onDrop={handleDrop}         
+        >
           <div className={s.inputWrap}>
+            {/* NEW: 작업 유형 선택 + 버튼 */}
+            <button
+              type="button"
+              className={s.plusBtn}
+              onClick={() => setShowTaskModal(true)}
+              aria-label="작업 선택"
+              title="작업 선택"
+            >
+              <Plus className={s.iconXs} />
+            </button>
+            {/* NEW: 선택된 작업 태그 */}
+            {currentTaskMeta && (
+              <div className={s.taskChip}>
+                <Search className={s.taskChipIcon} />
+                <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
+                <button
+                  type="button"
+                  className={s.taskChipClose}
+                  onClick={() => setSelectedTask(null)}
+                  aria-label="작업 태그 제거"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             {/* 분야 선택 칩 */}
             <button
               type="button"
@@ -301,14 +395,54 @@ export default function ChatArea() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKey}
-              placeholder="질문을 입력하세요"
+              placeholder="질문을 입력하거나 파일을 끌어다 놓으세요"
             />
           </div>
 
-          <button onClick={sendMessage} className={s.sendBtn} aria-label="전송">
+          {/* 파일 첨부 버튼 */}
+          <button
+            type="button"
+            className={s.attachBtn}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="파일 첨부"
+          >
+            <Paperclip className={s.iconMd} />
+          </button>
+
+          <button onClick={handleSend} className={s.sendBtn} aria-label="전송">
             <ArrowUp className={s.iconMdAccent} />
           </button>
+
+          {/* 숨겨진 파일 input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
         </div>
+        {/* NEW: 첨부 파일 리스트 */}
+        {attachments.length > 0 && (
+          <div className={s.attachList}>
+            {attachments.map((file, idx) => (
+              <div key={idx} className={s.attachChip}>
+                <Paperclip className={s.attachIcon} />
+                <span className={s.attachName}>{file.name}</span>
+                <button
+                  type="button"
+                  className={s.attachRemove}
+                  onClick={() =>
+                    setAttachments((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                  aria-label="첨부 삭제"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 타입 선택 모달 */}
         {showTypeModal && (
@@ -356,6 +490,56 @@ export default function ChatArea() {
         )}
       </div>
     </section>
+    {/* 작업 선택 모달 (+ 버튼용) */}
+    {showTaskModal && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="작업 선택"
+        className={s.typeModalOverlay}
+        onClick={() => setShowTaskModal(false)}
+      >
+        <div
+          className={s.taskModal}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className={s.typeTitle}>작업 유형을 선택하세요</h3>
+          <div className={s.taskGrid}>
+            <button
+              className={s.taskCard}
+              onClick={() => {
+                setSelectedTask('law_research');
+                setShowTaskModal(false);
+              }}
+            >
+              <Search className={s.taskCardIcon} />
+              <span className={s.taskLabel}>법령 조사</span>
+            </button>
+            <button
+              className={s.taskCard}
+              onClick={() => {
+                setSelectedTask('doc_review');
+                setShowTaskModal(false);
+              }}
+            >
+              <FileText className={s.taskCardIcon} />
+              <span className={s.taskLabel}>안전 문서 생성/검토</span>
+            </button>
+            <button
+              className={s.taskCard}
+              onClick={() => {
+                setSelectedTask('risk_assessment');
+                setShowTaskModal(false);
+              }}
+            >
+              <AlertTriangle className={s.taskCardIcon} />
+              <span className={s.taskLabel}>위험성평가</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

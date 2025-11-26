@@ -30,6 +30,7 @@
   align-items: center;
   gap: 16px;
 }
+
 .settingsBtn{ display:none; }
 @media (min-width:768px){
   .settingsBtn{
@@ -164,12 +165,14 @@
 
 /* 칩 */
 .typeChip{
-  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  position: absolute;
+  left: 44px;        /* ✅ 플러스 버튼(32px + 여백) 다음 위치 */
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 8px; border-radius: 999px;
   font-size: 12px; font-weight: 600;
   background: #eef3ff; color: #2388FF; 
-  /* border: 1px solid #c7d2fe; */
   z-index: 1;
 }
 .typeEmoji{ font-size: 14px; line-height: 1; }
@@ -177,7 +180,7 @@
 
 /* 입력창 왼쪽 패딩 확장(칩 공간 확보) */
 .inputHasChip{
-  padding-left: 120px; /* 칩 너비에 맞춰 조절 */
+  padding-left: 150px;   /* 플러스 버튼 + 칩 고려해서 여유 확보 */
 }
 
 /* 다크모드에서도 칩 가독성 유지 */
@@ -197,6 +200,31 @@
     background:#eef3ff !important; color:#2388ff !important;
     /* border:1px solid #334155 !important;  */
     /* box-shadow:0 2px 8px rgba(0,0,0,.35) !important; */
+  }
+
+  .plusBtn{
+    background:#eef3ff;
+    border-color:#cbd5e1;
+  }
+
+  .taskChip{
+    background:#eef2ff;
+    color:#1d4ed8;
+  }
+
+  .attachChip{
+    background:#e5e7eb;
+  }
+
+  .taskModal{
+    background:#eef3ff !important;
+    color:#2388ff !important;
+  }
+
+  .taskCard{
+    background:#eef3ff !important;
+    color:#2388ff !important;
+    border-color:#cbd5e1 !important;
   }
 }
 
@@ -242,7 +270,7 @@
 
 /* 모바일에서도 예쁘게 */
 @media (max-width: 480px){
-  .inputHasChip{ padding-left: 110px; }
+  .inputHasChip{ padding-left: 140px; }
   .typeModal{ width: calc(100vw - 24px); }
 }
 
@@ -286,4 +314,101 @@
     background: #fff;
     border-top: 1px solid var(--border-light);
   }
+}
+
+.plusBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:32px;
+  height:32px;
+  margin-right:6px;
+  border-radius:999px;
+  border:1px solid var(--border-light);
+  background:#fff;
+  cursor:pointer;
+}
+
+.plusBtn:hover{
+  background:#f5f7fb;
+}
+
+.taskChip{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#3730a3;
+  font-size:12px;
+}
+
+.taskChipIcon{
+  width:14px;
+  height:14px;
+}
+
+.taskChipLabel{
+  white-space:nowrap;
+}
+
+.taskChipClose{
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  font-size:12px;
+  padding:0 2px;
+}
+
+/* + 버튼으로 띄우는 작업 선택 모달 박스 */
+.taskModal{
+  width: min(420px, 92vw);
+  background:#fff;
+  color:var(--text-dark);
+  border-radius:16px;
+  box-shadow:0 12px 40px rgba(0,0,0,.22);
+  padding:18px 20px 20px;
+}
+
+/* 한 줄씩 세로 카드 배치 */
+.taskGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  margin-top:10px;
+}
+
+.taskCard{
+  all:unset;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #e5e7eb;
+  background:#f9fafb;
+  color:#0f172a;
+  cursor:pointer;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .06s ease;
+}
+
+.taskCard:hover{
+  background:#eef2ff;
+  border-color:#6366f1;
+  box-shadow:0 4px 12px rgba(15,23,42,.18);
+  transform:translateY(-1px);
+}
+
+.taskCardIcon{
+  width:18px;
+  height:18px;
+}
+
+.taskLabel{
+  font-size:13px;
+  font-weight:500;
 }
