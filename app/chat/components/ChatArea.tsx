@@ -379,7 +379,7 @@ export default function ChatArea() {
             )}
 
             {/* 분야 선택 칩 */}
-            <button
+            {/* <button
               type="button"
               className={s.typeChip}
               onClick={() => setShowTypeModal(true)}
@@ -388,7 +388,7 @@ export default function ChatArea() {
             >
               <span className={s.typeEmoji}>{cur.emoji}</span>
               <span className={s.typeText}>{cur.label}</span>
-            </button>
+            </button> */}
 
             <input
               className={`${s.input} ${s.inputHasChip} chat-input`}
