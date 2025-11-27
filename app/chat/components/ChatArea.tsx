@@ -352,51 +352,40 @@ export default function ChatArea() {
           onDrop={handleDrop}         
         >
           <div className={s.inputWrap}>
-            {/* NEW: 작업 유형 선택 + 버튼 */}
-            <button
-              type="button"
-              className={s.plusBtn}
-              onClick={() => setShowTaskModal(true)}
-              aria-label="작업 선택"
-              title="작업 선택"
-            >
-              <Plus className={s.iconXs} />
-            </button>
-            {/* NEW: 선택된 작업 태그 */}
-            {currentTaskMeta && (
-              <div className={s.taskChip}>
-                <Search className={s.taskChipIcon} />
-                <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
-                <button
-                  type="button"
-                  className={s.taskChipClose}
-                  onClick={() => setSelectedTask(null)}
-                  aria-label="작업 태그 제거"
-                >
-                  ×
-                </button>
-              </div>
-            )}
+            <div className={s.chipStrip}>
+              <button
+                type="button"
+                className={s.plusBtn}
+                onClick={() => setShowTaskModal(true)}
+                aria-label="작업 선택"
+                title="작업 선택"
+              >
+                <Plus className={s.plusIcon} />
+              </button>
 
-            {/* 분야 선택 칩 */}
-            {/* <button
-              type="button"
-              className={s.typeChip}
-              onClick={() => setShowTypeModal(true)}
-              aria-label="분야 선택"
-              title="분야 선택"
-            >
-              <span className={s.typeEmoji}>{cur.emoji}</span>
-              <span className={s.typeText}>{cur.label}</span>
-            </button> */}
+              {currentTaskMeta && (
+                <div className={s.taskChip}>
+                  <Search className={s.taskChipIcon} />
+                  <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
+                  <button
+                    type="button"
+                    className={s.taskChipClose}
+                    onClick={() => setSelectedTask(null)}
+                    aria-label="작업 태그 제거"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
 
-            <input
-              className={`${s.input} ${s.inputHasChip} chat-input`}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKey}
-              placeholder="질문을 입력하거나 파일을 끌어다 놓으세요"
-            />
+              <input
+                className={`${s.input} ${s.inputHasChip} chat-input`}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKey}
+                placeholder="질문을 입력하거나 파일을 끌어다 놓으세요"
+              />
+            </div>
           </div>
 
           {/* 파일 첨부 버튼 */}

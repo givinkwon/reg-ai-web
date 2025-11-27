@@ -163,6 +163,17 @@
   align-items: center;
 }
 
+.chipStrip{
+  position:absolute;
+  left:12px;                 /* 플러스 버튼이 붙는 위치 (필요하면 10~16px 조정) */
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  z-index:2;                 /* input 위로 올라오게 */
+}
+
 /* 칩 */
 .typeChip{
   position: absolute;
@@ -180,7 +191,7 @@
 
 /* 입력창 왼쪽 패딩 확장(칩 공간 확보) */
 .inputHasChip{
-  padding-left: 150px;   /* 플러스 버튼 + 칩 고려해서 여유 확보 */
+  padding-left: 120px;   /* 플러스 버튼 + 칩 고려해서 여유 확보 */
 }
 
 /* 다크모드에서도 칩 가독성 유지 */
@@ -203,13 +214,21 @@
   }
 
   .plusBtn{
-    background:#eef3ff;
-    border-color:#cbd5e1;
+    background:#111827;
+    border-color:#4b5563;
+  }
+  .plusIcon{
+    color:#e5e7eb;
+    stroke:#e5e7eb;
   }
 
   .taskChip{
-    background:#eef2ff;
-    color:#1d4ed8;
+    background:#1f2937;
+    color:#e5e7eb;
+  }
+  .taskChipIcon{
+    color:#93c5fd;
+    stroke:#93c5fd;
   }
 
   .attachChip{
@@ -320,12 +339,11 @@
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:32px;
-  height:32px;
-  margin-right:6px;
+  width:26px;
+  height:26px;
   border-radius:999px;
   border:1px solid var(--border-light);
-  background:#fff;
+  background:#ffffff;
   cursor:pointer;
 }
 
@@ -333,21 +351,31 @@
   background:#f5f7fb;
 }
 
+/* 아이콘 색 진하게 */
+.plusIcon{
+  width:16px;
+  height:16px;
+  color:#4b5563;
+  stroke:#4b5563;
+}
+
 .taskChip{
   display:inline-flex;
   align-items:center;
   gap:4px;
-  margin-right:6px;
   padding:4px 8px;
   border-radius:999px;
-  background:#eef2ff;
+  background:#eef3ff;
   color:#3730a3;
   font-size:12px;
+  white-space:nowrap;
 }
 
 .taskChipIcon{
   width:14px;
   height:14px;
+  color:#4c51bf;
+  stroke:#4c51bf;
 }
 
 .taskChipLabel{
