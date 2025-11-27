@@ -191,8 +191,9 @@
 
 /* 입력창 왼쪽 패딩 확장(칩 공간 확보) */
 .inputHasChip{
-  padding-left: 120px;   /* 플러스 버튼 + 칩 고려해서 여유 확보 */
+  padding-left: 150px;      /* 모바일에서 부족하면 160~170까지 조정 가능 */
 }
+
 
 /* 다크모드에서도 칩 가독성 유지 */
 @media (prefers-color-scheme: dark) {
@@ -336,6 +337,11 @@
 }
 
 .plusBtn{
+  position:absolute;       /* ✅ input 위에 겹치도록 */
+  left:10px;               /* input 왼쪽에서 10px */
+  top:50%;
+  transform:translateY(-50%);
+
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -360,6 +366,11 @@
 }
 
 .taskChip{
+  position:absolute;        /* ✅ input 안쪽으로 */
+  left:44px;                /* 플러스 버튼 오른쪽에 붙도록 */
+  top:50%;
+  transform:translateY(-50%);
+
   display:inline-flex;
   align-items:center;
   gap:4px;
@@ -369,17 +380,14 @@
   color:#3730a3;
   font-size:12px;
   white-space:nowrap;
+  max-width:calc(100% - 90px);  /* 오른쪽 공간 여유 */
 }
 
 .taskChipIcon{
   width:14px;
   height:14px;
-  color:#4c51bf;
+  color:#4c51bf;            /* ✅ 더 진하게 */
   stroke:#4c51bf;
-}
-
-.taskChipLabel{
-  white-space:nowrap;
 }
 
 .taskChipClose{
