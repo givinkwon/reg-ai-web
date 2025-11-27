@@ -352,31 +352,31 @@ export default function ChatArea() {
           onDrop={handleDrop}         
         >
           <div className={s.inputWrap}>
-            <div className={s.chipStrip}>
-              <button
-                type="button"
-                className={s.plusBtn}
-                onClick={() => setShowTaskModal(true)}
-                aria-label="작업 선택"
-                title="작업 선택"
-              >
-                <Plus className={s.plusIcon} />
-              </button>
+              <div className={s.inputShell}>
+                <button
+                  type="button"
+                  className={s.plusBtn}
+                  onClick={() => setShowTaskModal(true)}
+                  aria-label="작업 선택"
+                  title="작업 선택"
+                >
+                  <Plus className={s.plusIcon} />
+                </button>
 
-              {currentTaskMeta && (
-                <div className={s.taskChip}>
-                  <Search className={s.taskChipIcon} />
-                  <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
-                  <button
-                    type="button"
-                    className={s.taskChipClose}
-                    onClick={() => setSelectedTask(null)}
-                    aria-label="작업 태그 제거"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
+                {currentTaskMeta && (
+                  <div className={s.taskChip}>
+                    <Search className={s.taskChipIcon} />
+                    <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
+                    <button
+                      type="button"
+                      className={s.taskChipClose}
+                      onClick={() => setSelectedTask(null)}
+                      aria-label="작업 태그 제거"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
 
               <input
                 className={`${s.input} ${s.inputHasChip} chat-input`}
