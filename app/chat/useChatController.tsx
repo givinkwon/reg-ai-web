@@ -8,10 +8,20 @@ import { pushToDataLayer } from '../lib/analytics';
 
 type MonItem = { doc_type: string; doc_id: string; title: string };
 
+// 서버에 허용되는 task_type 값들
+type ServerTaskType =
+| 'law_research'
+| 'doc_review'
+| 'risk_assessment'
+| 'law_interpret'
+| 'edu_material'
+| 'guideline_interpret';
+
 // NEW: sendMessage 옵션 타입
 type SendOptions = {
-  taskType?: string | null;
+  taskType?: ServerTaskType | null; // 혹은 그냥 ServerTaskType
   files?: File[];
+  overrideMessage?: string;
 };
 
 // NEW: File → base64 변환
@@ -62,7 +72,12 @@ export function useChatController() {
   } = useChatStore();
 
   // user store
-  const { selectedJobType, userInfo, hydrateFromCookie } = useUserStore();
+  const {
+    selectedJobType,
+    userInfo,
+    hydrateFromCookie,
+    setSelectedJobType, 
+  } = useUserStore();
 
   const [hydrated, setHydrated] = useState(false);
   const [input, setInput] = useState('');
@@ -156,30 +171,106 @@ export function useChatController() {
     return !!last && last.role === m.role && last.content === m.content;
   };
 
+  // string | null | undefined 를 받아서, 서버에 보낼 수 있는 값만 돌려주는 함수
+  const normalizeTaskType = (
+    taskType: string | null | undefined,
+    ): ServerTaskType | undefined => {
+    if (!taskType) return undefined;
+
+    if (
+      taskType === 'law_research' ||
+      taskType === 'doc_review' ||
+      taskType === 'risk_assessment' ||
+      taskType === 'law_interpret' ||
+      taskType === 'edu_material' ||
+      taskType === 'guideline_interpret'
+    ) {
+      return taskType;
+    }
+
+    console.warn('[normalizeTaskType] unsupported taskType:', taskType);
+    return undefined;
+    };
+
   /** 일반 전송: 사용자 메시지를 추가하고 서버 요청 */
   const sendMessage = async (opts?: SendOptions) => {
-    if (sendingRef.current) return; // 연속 호출 가드
-    if (!hydrated) return;          // 하이드레이션 전 전송 가드
+    console.log('[sendMessage] called', {
+      opts,
+      input,
+      hydrated,
+      selectedJobType,
+      monitorMode,
+      activeRoomId,
+      messagesLen: messages.length,
+      threadId,
+    });
 
-    const trimmed = input.trim();
+    if (sendingRef.current) {
+      console.log('[sendMessage] blocked: already sending (sendingRef.current=true)');
+      return;
+    }
+    if (!hydrated) {
+      console.log('[sendMessage] blocked: !hydrated (zustand 아직 복원 안됨)');
+      return;
+    }
+
     const hasFiles = !!opts?.files && opts.files.length > 0;
 
-    // 텍스트도 없고 파일도 없으면 전송 안 함
-    if ((!trimmed && !hasFiles) || monitorMode) return;
-    if (!selectedJobType) return;
+    const raw = (opts?.overrideMessage ?? input) || '';
+    const trimmed = raw.trim();
 
-    // 활성 방 없으면 자동 생성
-    if (!activeRoomId) newChat();
+    console.log('[sendMessage] raw/trimmed', {
+      raw,
+      trimmed,
+      hasFiles,
+      monitorMode,
+    });
+
+    // 텍스트도 없고 파일도 없거나, 모니터 모드면 전송 안 함
+    if ((!trimmed && !hasFiles) || monitorMode) {
+      console.log('[sendMessage] blocked: empty or monitorMode', {
+        trimmed,
+        hasFiles,
+        monitorMode,
+      });
+      return;
+    }
+    
+    let effectiveJobType = selectedJobType;
+    if (!effectiveJobType) {
+      console.log(
+        '[sendMessage] no selectedJobType → default to "environment" (환경/안전)'
+      );
+      effectiveJobType = 'environment';
+      try {
+        // 스토어에도 반영해서 헤더/다른 컴포넌트랑 상태 맞춰주기
+        setSelectedJobType('environment');
+      } catch (e) {
+        console.warn('[sendMessage] setSelectedJobType failed', e);
+      }
+    }
+
+
+    if (!activeRoomId) {
+      console.log('[sendMessage] no activeRoomId → newChat() 호출');
+      newChat();
+    }
 
     const displayText = trimmed || (hasFiles ? '[파일 전송]' : '');
 
     const userMsg: ChatMessage = { role: 'user', content: displayText };
 
     // 첫 질문이면 제목 15자 자동 세팅
-    if (messages.length === 0) setActiveRoomTitleIfEmpty(displayText);
+    if (messages.length === 0) {
+      console.log('[sendMessage] first message → setActiveRoomTitleIfEmpty');
+      setActiveRoomTitleIfEmpty(displayText);
+    }
 
-    // 디듀프 가드
-    if (lastEquals(userMsg)) return;
+    // 직전 메시지와 완전히 같으면 중복 전송 방지
+    if (lastEquals(userMsg)) {
+      console.log('[sendMessage] blocked: lastEquals(userMsg) → 중복 전송 방지');
+      return;
+    }
 
     // 트래킹
     pushToDataLayer('chat_send_click', {
@@ -188,7 +279,8 @@ export function useChatController() {
       category: selectedJobType,
     });
 
-    // 로컬 저장
+    // 로컬에 user 메시지 추가
+    console.log('[sendMessage] addMessage/appendToActive (user)', userMsg);
     addMessage(userMsg);
     appendToActive(userMsg);
     setInput('');
@@ -201,20 +293,27 @@ export function useChatController() {
         ? `\n• files: ${opts.files.map((f) => f.name).join(', ')}`
         : '';
 
+    console.log('[sendMessage] sendSlackMessage 호출');
     sendSlackMessage(
       `*[User]*\n• category: ${selectedJobType}\n• threadId: ${
         threadId ?? '(new)'
       }\n• message:\n${displayText}${fileInfo}`,
     );
 
+    // 🔵 여기서부터 taskType 정규화해서 넣기
+    const normalizedTaskType = normalizeTaskType(opts?.taskType);
+    console.log('[sendMessage] normalizedTaskType =', normalizedTaskType);
+
     sendingRef.current = true;
+
     try {
-      // 파일 base64 변환
+      // ---------- 파일 base64 변환 ----------
       let filesPayload:
         | { name: string; type: string; size: number; content: string }[]
         | undefined;
 
       if (hasFiles && opts?.files) {
+        console.log('[sendMessage] converting files to base64...');
         filesPayload = await Promise.all(
           opts.files.map(async (file) => ({
             name: file.name,
@@ -223,8 +322,10 @@ export function useChatController() {
             content: await fileToBase64(file),
           })),
         );
+        console.log('[sendMessage] filesPayload ready', filesPayload);
       }
 
+      // ---------- API 호출 ----------
       let res: Response;
       if (!threadId) {
         const payload: any = {
@@ -232,9 +333,10 @@ export function useChatController() {
           category: selectedJobType,
           message: displayText,
         };
-        if (opts?.taskType) payload.task_type = opts.taskType;
+        if (normalizedTaskType) payload.task_type = normalizedTaskType;
         if (filesPayload) payload.files = filesPayload;
 
+        console.log('[sendMessage] POST /api/start-task', payload);
         res = await fetch('/api/start-task', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -247,9 +349,10 @@ export function useChatController() {
           category: selectedJobType,
           message: displayText,
         };
-        if (opts?.taskType) payload.task_type = opts.taskType;
+        if (normalizedTaskType) payload.task_type = normalizedTaskType;
         if (filesPayload) payload.files = filesPayload;
 
+        console.log('[sendMessage] POST /api/start-followup', payload);
         res = await fetch('/api/start-followup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -257,11 +360,28 @@ export function useChatController() {
         });
       }
 
+      console.log('[sendMessage] fetch response', res.status, res.ok);
+
       if (!res.ok) throw new Error(`start-chat failed: ${res.status}`);
-      const { job_id, thread_id } = await res.json();
-      if (thread_id) setThreadId(thread_id);
-      setJobId(job_id);
+
+      const json = await res.json();
+      console.log('[sendMessage] response json', json);
+
+      const { job_id, thread_id } = json as {
+        job_id?: string;
+        thread_id?: string;
+      };
+
+      if (thread_id) {
+        console.log('[sendMessage] setThreadId', thread_id);
+        setThreadId(thread_id);
+      }
+      if (job_id) {
+        console.log('[sendMessage] setJobId', job_id);
+        setJobId(job_id);
+      }
     } catch (e) {
+      console.error('[sendMessage] ERROR', e);
       const errMsg: ChatMessage = {
         role: 'assistant',
         content: '⚠️ 요청 중 에러가 발생했습니다.',
@@ -274,9 +394,11 @@ export function useChatController() {
     } finally {
       setTimeout(() => {
         sendingRef.current = false;
+        console.log('[sendMessage] sendingRef reset → false');
       }, 300);
     }
   };
+
 
   /** 🔁 다시 생성: 사용자 메시지를 추가하지 않고 같은 질문만 재요청 */
   const regenerate = async (question?: string) => {

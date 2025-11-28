@@ -1,23 +1,92 @@
-/* 기본 컨테이너 */
+/* ===== 기본 컨테이너 & 테마 변수 ===== */
 .wrap {
+  /* 기본 라이트 테마 변수 */
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --input-bg: #f9fafb;
+  --btn-bg: #e5edff;
+  --btn-hover: #dbeafe;
+  --border-light: #e5e7eb;
+  --text-dark: #111827;
+  --text-neutral: #9ca3af;
+  --chip-bg: #eef2ff;
+  --chip-text: #2563eb;
+  --chip-icon: #2563eb;
+  --accent: #2563eb;
+
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: var(--bg, #fff);
+  background: var(--bg);
   border: 1px solid var(--border-light);
   border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(25,33,61,.1);
-  margin-right: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* 본문 (스크롤 허용) */
+/* ===== 헤더 ===== */
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.productName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chatTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settingsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding-inline: 10px;
+}
+
+.iconXs {
+  width: 14px;
+  height: 14px;
+}
+
+/* ===== 본문 ===== */
 .body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  background: var(--surface);
 }
 
 .stream {
@@ -27,7 +96,167 @@
   padding: 16px;
 }
 
-/* ====================== 입력 영역 ====================== */
+.streamInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.welcome {
+  margin-top: 16px;
+  padding: 16px 14px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14px;
+}
+
+/* ===== 메시지 (유저) ===== */
+.userRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.userBubble {
+  max-width: min(640px, 100%);
+  padding: 10px 12px;
+  border-radius: 16px 16px 4px 16px;
+  background: #2563eb;
+  color: #f9fafb;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.userContent :global(p) {
+  margin: 0;
+}
+
+/* ===== 메시지 (AI) ===== */
+.aiRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.aiBubble {
+  max-width: min(720px, 100%);
+  padding: 10px 12px;
+  border-radius: 16px 16px 16px 4px;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.aiBubble :global(p) {
+  margin: 0 0 4px;
+}
+
+.aiBubble :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+/* ===== 메시지 액션 ===== */
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 4px;
+}
+
+.miniActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  background: #f3f4ff;
+}
+
+.iconAction {
+  width: 14px;
+  height: 14px;
+  color: #4b5563;
+}
+
+.evidenceBtn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: none;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.evidenceBtn:hover {
+  background: #e0e7ff;
+}
+
+/* ===== 로딩 카드 ===== */
+.loadingCard {
+  align-self: flex-start;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #f3f4f6;
+  font-size: 14px;
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.dots span {
+  animation: blink 1.3s infinite ease-in-out;
+  font-size: 16px;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0%, 80%, 100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.bottomSpacer {
+  height: 8px;
+}
+
+/* ===== 입력 영역 ===== */
 .inputRow {
   flex: 0 0 auto;
   display: flex;
@@ -35,25 +264,30 @@
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 16px 16px;
-  background: var(--surface, #fff);
+  padding: 10px 16px 14px;
+  background: var(--surface);
   border-top: 1px solid var(--border-light);
   position: sticky;
   bottom: 0;
   z-index: 10;
 }
 
-/* 입력 영역 박스 */
 .inputWrap {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
+  box-sizing: border-box;
+}
+
+.inputShell {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border-light);
   border-radius: 12px;
-  background: var(--input-bg, #fff);
-  box-sizing: border-box;
+  background: var(--input-bg);
 }
 
 /* 플러스 버튼 */
@@ -61,22 +295,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
-  border: 1px solid var(--border-light);
-  background: var(--btn-bg, #f9fafb);
+  border: none;
+  background: var(--accent, #2563eb); /* 진한 파란색 */
+  color: #ffffff;                     /* 아이콘 색(=currentColor) */
   cursor: pointer;
   flex-shrink: 0;
 }
+
 .plusBtn:hover {
-  background: var(--btn-hover, #eef2ff);
+  background: #1d4ed8; /* hover 시 조금 더 진하게 */
 }
+
+/* 아이콘은 색 지정하지 말고, 버튼의 color를 따라가게 */
 .plusIcon {
   width: 16px;
   height: 16px;
-  color: var(--text-dark);
-  stroke: var(--text-dark);
+  flex-shrink: 0;
 }
 
 /* 태그칩 */
@@ -86,24 +323,27 @@
   gap: 4px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--chip-bg, #eef3ff);
-  color: var(--chip-text, #3730a3);
+  background: var(--chip-bg);
+  color: var(--chip-text);
   font-size: 12px;
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+.taskChipIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--chip-icon);
+  stroke: var(--chip-icon);
+}
+
 .taskChipLabel {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 35vw;
 }
-.taskChipIcon {
-  width: 14px;
-  height: 14px;
-  color: var(--chip-icon, #4c51bf);
-  stroke: var(--chip-icon, #4c51bf);
-}
+
 .taskChipClose {
   border: none;
   background: transparent;
@@ -123,72 +363,449 @@
   background: transparent;
   padding: 0;
 }
+
 .input::placeholder {
   color: var(--text-neutral);
 }
 
-/* 전송 버튼 */
+.inputHasChip {
+  /* 여유 공간만 살짝 확보 */
+}
+
+/* 파일 첨부 버튼 & 전송 버튼 */
+.attachBtn,
 .sendBtn {
-  padding: 8px;
-  border-radius: 10px;
-  background: var(--btn-bg, #EEF3FF);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 8px;
+  border-radius: 10px;
+  border: none;
+  background: var(--btn-bg);
   cursor: pointer;
 }
+
+.attachBtn:hover,
+.sendBtn:hover {
+  background: var(--btn-hover);
+}
+
+.iconMd {
+  width: 20px;
+  height: 20px;
+  color: var(--text-dark);
+}
+
 .iconMdAccent {
   width: 20px;
   height: 20px;
-  color: var(--accent, #2563eb);
+  color: var(--accent);
 }
 
-/* ====================== 다크모드 ====================== */
+/* ===== 첨부 파일 리스트 ===== */
+.attachList {
+  padding: 0 16px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--surface);
+}
+
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 12px;
+}
+
+.attachIcon {
+  width: 14px;
+  height: 14px;
+  color: #6b7280;
+}
+
+.attachName {
+  max-width: 160px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.attachRemove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* ===== 복사 토스트 ===== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.96);
+  color: #ffffff;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+}
+
+/* ===== 작업 선택 모달 ===== */
+.typeModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.taskModal {
+  position: relative;             /* ✅ 닫기 버튼 절대 위치 기준 */
+  width: min(420px, calc(100% - 32px));
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 16px 18px 18px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+}
+
+/* 제목은 오른쪽에 X 들어갈 공간 조금 확보 */
+.typeTitle {
+  margin: 0;
+  padding-right: 32px;            /* ✅ X 자리 여유 */
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+/* ✅ 닫기 버튼: 카드 오른쪽 위에 겹쳐서 올림 */
+.typeCloseBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;                     /* 카드 내용보다 위 */
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  /* background: transparent; */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.typeCloseBtn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* 아이콘은 크기만 잡고, 색/선 두께는 SVG 속성에서 처리 */
+.typeCloseIcon {
+  display: inline-block;
+  color: black;
+}
+
+/* 기존 typeHeader / taskGrid 는 필요 없으면 지우고,
+   taskGrid 만 아래처럼 그대로 써도 됨 */
+.taskGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.taskCard {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.taskCard:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.taskCardIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);   /* #2563eb */
+  stroke: var(--accent);  /* lucide 아이콘은 stroke 기준이라 같이 지정 */
+}
+
+.taskLabel {
+  font-size: 12px;
+  color: #111827;
+}
+
+.quickWrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 16px 24px;
+  gap: 24px;
+}
+
+.quickTitle {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+
+.quickSub {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-neutral);
+  margin-bottom: 10px;
+}
+
+.quickGrid {
+  display: grid;
+  width: 100%;
+  max-width: 840px;
+  justify-items: center;
+  column-gap: 18px;
+  row-gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));   /* 기본: 3열 */
+}
+
+
+.quickBtn {
+  width: 230px;              /* 가로 사이즈 통일 */
+  height: 56px;              /* 세로 사이즈 통일 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;        /* 연한 파랑 테두리 */
+  background: #e5f1ff;              /* 연 하늘색 배경 */
+  color: #0f172a;                   /* 글자색(짙은 남색) */
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 18px 40px rgba(148, 163, 184, 0.4);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.quickBtn:hover {
+  background: #dbeafe;              /* 살짝 진한 하늘색 */
+  box-shadow: 0 20px 46px rgba(148, 163, 184, 0.55);
+  transform: translateY(-1px);
+}
+
+.quickIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #60a5fa;
+  background: #eff6ff;
+}
+
+.quickIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.quickLabel {
+  line-height: 1;
+}
+
+.hintWrap {
+  margin: 0 0;
+  padding: 4px 0 8px;
+  max-width: 780px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* ✅ 가운데 → 왼쪽 정렬 */
+  gap: 8px;
+}
+
+.hintChip {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  background: rgba(248, 250, 252, 0.9);
+  color: #1f2933;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+
+body[data-theme='dark'] .hintChip {
+  background: rgba(15, 23, 42, 0.95);
+  color: #e5e7eb;
+  border-color: rgba(100, 116, 139, 0.8);
+}
+
+.hintChip:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  transform: translateY(-1px);
+}
+
+
+@media (max-width: 1200px) {
+  .quickGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ===== 다크모드 (CSS 변수만 변경) ===== */
 @media (prefers-color-scheme: dark) {
-  :global(:root) {
-    --bg: #0b1120;
-    --surface: #111827;
-    --input-bg: #1e293b;
-    --btn-bg: #1f2937;
-    --btn-hover: #374151;
-    --border-light: #374151;
+  .wrap {
+    --bg: #020617;
+    --surface: #020617;
+    --input-bg: #020617;
+    --btn-bg: #111827;
+    --btn-hover: #1f2937;
+    --border-light: #1f2937;
     --text-dark: #f9fafb;
-    --text-neutral: #94a3b8;
-    --chip-bg: #1e3a8a;
-    --chip-text: #dbeafe;
+    --text-neutral: #64748b;
+    --chip-bg: #1d2847;
+    --chip-text: #e0e7ff;
     --chip-icon: #60a5fa;
     --accent: #60a5fa;
   }
 
-  .wrap { background: var(--bg); }
-  .inputRow { background: var(--surface); }
-  .inputWrap { background: var(--input-bg); }
-  .plusBtn { background: var(--btn-bg); border-color: var(--border-light); }
-  .plusIcon { color: var(--text-dark); stroke: var(--text-dark); }
-  .taskChip { background: var(--chip-bg); color: var(--chip-text); }
-  .taskChipIcon { color: var(--chip-icon); stroke: var(--chip-icon); }
-  .sendBtn { background: var(--btn-bg); }
-  .input { color: var(--text-dark); }
-  .input::placeholder { color: var(--text-neutral); }
+  .aiBubble {
+    background: #020617;
+    border: 1px solid #1f2937;
+  }
+
+  .userBubble {
+    background: #2563eb;
+  }
+
+  .welcome {
+    background: #0f172a;
+    color: #e0f2fe;
+  }
+
+  .evidenceBtn {
+    background: #020617;
+    border: 1px solid #1d4ed8;
+  }
+
+  .loadingCard {
+    background: #020617;
+    border: 1px solid #1f2937;
+  }
+
+  .attachChip {
+    background: #020617;
+    border: 1px solid #1f2937;
+  }
+
+  .taskModal {
+    background: #020617;
+    border: 1px solid #1f2937;
+  }
+
+  .typeCloseBtn:hover {
+    background: rgba(148, 163, 184, 0.22);
+    color: #e5e7eb;
+  }
 }
 
-/* ====================== 모바일 ====================== */
+/* ===== 모바일 레이아웃 ===== */
 @media (max-width: 768px) {
   .wrap {
-    position: fixed;
-    inset: 0;
-    margin: 0;
     border-radius: 0;
-    height: auto;
+    border-left: none;
+    border-right: none;
+    height: 100vh;
+  }
+
+  .header {
+    padding: 8px 12px;
   }
 
   .stream {
-    padding-bottom: 100px; /* 입력창 높이만큼 여유 */
+    padding: 12px 12px 90px;
   }
 
   .inputRow {
-    position: sticky;
-    bottom: 0;
-    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+    padding: 8px 12px max(10px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .productName {
+    font-size: 11px;
+  }
+
+  .chatTitle {
+    font-size: 13px;
+  }
+
+  .userBubble,
+  .aiBubble {
+    font-size: 13px;
+  }
+
+  .taskGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quickWrap {
+    align-items: center;
+    padding-top: 40px;
+  }
+
+  .quickGrid {
+    max-width: 640px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quickBtn {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0 16px;
   }
 }
+
+/* 아주 작은 모바일(아이폰 SE급)에서 폰트 한 단계 더 줄이기 */
+@media (max-width: 480px) {
+  .quickTitle {
+    font-size: 20px;
+  }
+  .quickBtn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
+

@@ -405,8 +405,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const activeRoomId = stored.activeRoomId || rooms[0]?.id || null;
       set({
         rooms,
-        activeRoomId,
-        messages: rooms.find((r) => r.id === activeRoomId)?.messages || [],
+        // activeRoomId,
+        // messages: rooms.find((r) => r.id === activeRoomId)?.messages || [],
       });
     } catch (e) {
       console.warn('[loadFromCookies] failed:', e);

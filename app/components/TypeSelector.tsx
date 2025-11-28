@@ -54,8 +54,6 @@ const jobTypes = [
 
 export default function TypeSelector() {
   const router = useRouter();
-  const { messages, setMessages } = useChatStore(); // Zustand 사용
-
   useEffect(() => {
     const savedType = Cookies.get('selectedJobType');
     if (savedType) {
