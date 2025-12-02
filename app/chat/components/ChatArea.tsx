@@ -11,7 +11,8 @@ import {
   FileText,   
   AlertTriangle, 
   Paperclip,  
-  X
+  X,
+  Folder,
 } from 'lucide-react';
 
 import { Button } from '../../components/ui/button';
@@ -54,6 +55,7 @@ type QuickAction = {
   placeholder: string;
   taskType?: TaskType;
 };
+
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
@@ -130,6 +132,52 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
+type SafetyNewsResponse = {
+  id: string;
+  category?: string;
+  period?: string | null;
+  batch_date?: string;
+  digest: string;
+  source_count?: number | null;
+};
+
+type QuickActionGroup = {
+  id: string;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: QuickAction['id'][];
+};
+
+// id 는 QUICK_ACTIONS 의 id 를 써야 함
+const QUICK_ACTION_GROUPS: QuickActionGroup[] = [
+  {
+    id: 'practice',
+    title: '실무 해석',
+    icon: FileText,
+    items: ['guideline_interpret', 'law_interpret'],
+  },
+  {
+    id: 'accident_news',
+    title: '사고 · 뉴스',
+    icon: AlertTriangle,
+    items: ['accident_search', 'today_accident', 'notice_summary'],
+  },
+  {
+    id: 'docs_materials',
+    title: '문서 · 자료',
+    icon: Folder,
+    items: ['doc_create', 'doc_review', 'edu_material', 'risk_assess'],
+  },
+];
+
+// id -> QuickAction 빠르게 찾기용 맵
+const QUICK_ACTIONS_MAP: Record<string, QuickAction> = QUICK_ACTIONS.reduce(
+  (acc, cur) => {
+    acc[cur.id] = cur;
+    return acc;
+  },
+  {} as Record<string, QuickAction>,
+);
 
 export default function ChatArea() {
   const {
@@ -172,17 +220,27 @@ export default function ChatArea() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading, loadingMessageIndex]);
 
-  // 🔵 어떤 태스크(법령/실무지침)에 대한 힌트를 보여줄지
-  type HintTask = 'law_interpret' | 'guideline_interpret';
+  type HintTask =
+    | 'law_interpret'
+    | 'guideline_interpret'
+    | 'doc_create'
+    | 'edu_material';
 
   const [activeHintTask, setActiveHintTask] = useState<HintTask | null>(null);
   const [activeHints, setActiveHints] = useState<string[]>([]);
 
+  const DOC_REVIEW_INTRO_TEXT =
+  '법령 근거를 검토하여 보완사항을 확인할 안전문서를 업로드해주세요.';
+  
   const LAW_INTRO_TEXT =
     '법령과 규제사항을 학습한 REA AI가 내 사업장에 딱 맞는 실무지침을 안내해드려요! 무엇을 도와드릴까요?';
 
   const GUIDELINE_INTRO_TEXT =
     '현장의 작업절차, 점검표, 교육·훈련 등 실무지침을 REA AI가 법령에 맞게 정리해드려요! 무엇을 도와드릴까요?';
+
+  // ✅ 안전 문서 생성 인트로
+  const DOC_CREATE_INTRO_TEXT =
+    '법정 서식과 KOSHA 가이드를 참고해서 필요한 안전 문서를 템플릿으로 만들어드릴게요. 어떤 문서를 생성할까요?';
 
   // AI 법령 해석용 힌트 10개
   const LAW_INTERPRET_HINTS: string[] = [
@@ -210,6 +268,33 @@ export default function ChatArea() {
     '야간작업 시 조도관리, 교대제 운영, 피로도 관리 등을 포함한 실무지침을 정리해줘.',
     '작업중지권 보장과 재개 절차에 대해 현장 관리자용 실무지침을 만들어줘.',
     '산업재해 발생 시 응급조치, 보고, 재발방지 대책 수립까지 단계별 실무지침을 정리해줘.',
+  ];
+
+  // ✅ 안전 문서 생성용 힌트 10개 (칩에는 문서명만 노출 / 백엔드에서 분기)
+  const DOC_CREATE_HINTS: string[] = [
+    '위험성평가서',
+    '작업허가서(밀폐공간 작업)',
+    '지게차 작업 안전점검표',
+    '정기 안전보건교육 일지',
+    'TBM(작업 전 안전회의) 회의록',
+    '산업재해 발생 보고서',
+    '보호구 지급·관리대장',
+    '도급·하도급 안전보건협의체 회의록',
+    '위험성평가 결과 개선조치 관리대장',
+    '화학물질 취급 작업 표준작업지침서(SOP)',
+  ];
+
+  const EDU_INTRO_TEXT =
+  '신입·정기 교육에 쓸 수 있는 산업안전/보건 교육자료 개요를 REA AI가 만들어드려요. 어떤 교육이 필요하신가요?';
+
+  const EDU_MATERIAL_HINTS: string[] = [
+    '신입 직원 대상 기본 산업안전/보건 교육자료',
+    '위험성평가 방법과 절차를 설명하는 교육자료',
+    '지게차·크레인 작업자 안전수칙 교육자료',
+    '화학물질 취급 작업자를 위한 유해위험·보호구 교육자료',
+    '중대재해처벌법의 주요 내용과 경영책임자 의무를 설명하는 교육자료',
+    '도급·하도급 현장의 안전보건 책임과 의무를 설명하는 교육자료',
+    '밀폐공간 작업 안전수칙과 사고사례를 포함한 교육자료',
   ];
 
   // 힌트 랜덤 3개 뽑기
@@ -340,20 +425,119 @@ export default function ChatArea() {
     e.target.value = '';
   };
 
+   // 🔸 금주의 안전 뉴스 호출 → assistant 메시지로 추가
+  const fetchWeeklySafetyNews = async () => {
+    try {
+      const params = new URLSearchParams();
+
+      // 선택된 분야가 environment/infosec이면 category로 전달
+      if (
+        selectedJobType === 'environment' ||
+        selectedJobType === 'infosec'
+      ) {
+        params.set('category', selectedJobType);
+      }
+
+      const qs = params.toString();
+      const url = `/api/safety-news/latest${qs ? `?${qs}` : ''}`;
+
+      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+
+      if (!res.ok) {
+        console.error('[ChatArea] safety-news error status:', res.status);
+        const errorMsg: ChatMessage = {
+          role: 'assistant',
+          content:
+            '금주의 안전 뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        };
+        setMessages([...messages, errorMsg]);
+        setShowLanding(false);
+        return;
+      }
+
+      const data = (await res.json()) as SafetyNewsResponse;
+
+      // 제목/메타 구성
+      const periodText =
+        (data.period && data.period.trim()) ||
+        (data.batch_date && data.batch_date.slice(0, 10)) ||
+        '';
+
+      const titleHtml = periodText
+        ? `🔔 <strong>${periodText} 금주의 안전 뉴스</strong>`
+        : '🔔 <strong>금주의 안전 뉴스</strong>';
+
+      // 카테고리 / 기사 수 표시
+      const metaParts: string[] = [];
+
+      if (data.category && TYPE_META[data.category]) {
+        const meta = TYPE_META[data.category];
+        metaParts.push(`${meta.emoji} ${meta.label}`);
+      }
+
+      if (typeof data.source_count === 'number') {
+        metaParts.push(`기사 ${data.source_count}건 기준`);
+      }
+
+      const metaHtml = metaParts.length
+        ? `<div style="margin-top:4px; font-size:12px; opacity:0.8;">
+             ${metaParts.join(' · ')}
+           </div>`
+        : '';
+
+      // 본문 요약 (줄바꿈 → <br>)
+      const bodyHtml = (data.digest || '요약 본문이 비어 있습니다.')
+        .split('\n')
+        .map((line) => line.trim())
+        .join('<br />');
+
+      const html = `
+        <div>
+          <p>${titleHtml}</p>
+          ${metaHtml}
+          <div style="margin-top:8px;">${bodyHtml}</div>
+        </div>
+      `;
+
+      const newsMsg: ChatMessage = {
+        role: 'assistant',
+        content: html,
+      };
+
+      setMessages([...messages, newsMsg]);
+      setShowLanding(false);
+    } catch (e) {
+      console.error('[ChatArea] safety-news fetch error:', e);
+      const errorMsg: ChatMessage = {
+        role: 'assistant',
+        content:
+          '금주의 안전 뉴스를 불러오는 중 오류가 발생했습니다.',
+      };
+      setMessages([...messages, errorMsg]);
+      setShowLanding(false);
+    }
+  };
+
+
   const handleQuickActionClick = (action: QuickAction) => {
     // 작업 타입 미리 선택
     if (action.taskType) {
       setSelectedTask(action.taskType);
     }
 
-    // 🔵 AI 법령 해석 / 실무지침 해석은 인트로 + 힌트 모드
-    if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
-      const isLaw = action.id === 'law_interpret';
-      const hintTask: HintTask = isLaw ? 'law_interpret' : 'guideline_interpret';
+    // 🔸 금주의 안전 뉴스: LLM 안 쓰고 API 호출해서 바로 출력
+    if (action.id === 'today_accident') {
+      setActiveHintTask(null);
+      setActiveHints([]);
+      fetchWeeklySafetyNews();
+      return;
+    }
 
+    // 🟦 1) 안전 문서 검토: 인트로 메시지만, 힌트 없음
+    if (action.id === 'doc_review') {
       const intro: ChatMessage = {
         role: 'assistant',
-        content: isLaw ? LAW_INTRO_TEXT : GUIDELINE_INTRO_TEXT,
+        content: DOC_REVIEW_INTRO_TEXT,
       };
 
       if (messages.length === 0) {
@@ -362,20 +546,76 @@ export default function ChatArea() {
         setMessages([...messages, intro]);
       }
 
-      // 힌트 3개 랜덤 선택
-      const pool = isLaw ? LAW_INTERPRET_HINTS : GUIDELINE_HINTS;
-      setActiveHints(pickRandomHints(pool, 3));
-      setActiveHintTask(hintTask);
+      // 힌트 섹션 비우기 (아래 렌더링에서 아무것도 안 나오게)
+      setActiveHintTask(null);
+      setActiveHints([]);
 
-      // 인풋은 비우고 포커스만
+      // 인풋 비우고 포커스
       setInput('');
       const el = document.querySelector<HTMLInputElement>('.chat-input');
       if (el) el.focus();
 
-      return; // 다른 기본 동작은 수행하지 않고 종료
+      return; // 여기서 함수 종료 → 아래 힌트 로직 안 타게
     }
 
-    // 🔵 그 외 버튼은 placeholder 프리필 + 힌트 숨기기
+    // 🟦 2) 법령/실무지침/문서 생성/교육자료 생성은 기존 "인트로 + 힌트" 로직
+    if (
+      action.id === 'law_interpret' ||
+      action.id === 'guideline_interpret' ||
+      action.id === 'doc_create' ||
+      action.id === 'edu_material'
+    ) {
+      let hintTask: HintTask;
+      let introText: string;
+      let pool: string[];
+
+      if (action.id === 'law_interpret') {
+        hintTask = 'law_interpret';
+        introText = LAW_INTRO_TEXT;
+        pool = LAW_INTERPRET_HINTS;
+      } else if (action.id === 'guideline_interpret') {
+        hintTask = 'guideline_interpret';
+        introText = GUIDELINE_INTRO_TEXT;
+        pool = GUIDELINE_HINTS;
+      } else if (action.id === 'doc_create') {
+        hintTask = 'doc_create';
+        introText = DOC_CREATE_INTRO_TEXT;
+        pool = DOC_CREATE_HINTS;
+      } else {
+        // edu_material
+        hintTask = 'edu_material';
+        introText = EDU_INTRO_TEXT;
+        pool = EDU_MATERIAL_HINTS;
+      }
+
+      const intro: ChatMessage = {
+        role: 'assistant',
+        content: introText,
+      };
+
+      if (messages.length === 0) {
+        setMessages([intro]);
+      } else {
+        setMessages([...messages, intro]);
+      }
+
+      // 문서/교육은 전체, 법령/실무지침은 랜덤 3개
+      if (action.id === 'doc_create' || action.id === 'edu_material') {
+        setActiveHints(pool);
+      } else {
+        setActiveHints(pickRandomHints(pool, 3));
+      }
+
+      setActiveHintTask(hintTask);
+
+      setInput('');
+      const el = document.querySelector<HTMLInputElement>('.chat-input');
+      if (el) el.focus();
+
+      return;
+    }
+
+    // 🟦 3) 그 외 퀵액션은 기존처럼 placeholder만 프리필
     setActiveHintTask(null);
     setActiveHints([]);
 
@@ -384,17 +624,27 @@ export default function ChatArea() {
     if (el) el.focus();
   };
 
-  const handleHintClick = (hint: string, task: HintTask) => {
-    // 태그 강제 세팅
-    setSelectedTask(task);
 
-    // 바로 서버로 전송
+  const handleHintClick = (task: HintTask, hint: string) => {
+    // taskType 매핑: 문서 생성은 doc_review로 보내고, 나머지는 그대로
+    let mappedTaskType: TaskType;
+    if (task === 'doc_create') {
+      mappedTaskType = 'doc_review';
+    } else if (task === 'edu_material') {
+      mappedTaskType = 'edu_material';
+    } else if (task === 'guideline_interpret') {
+      mappedTaskType = 'guideline_interpret';
+    } else {
+      mappedTaskType = 'law_interpret';
+    }
+
+    setSelectedTask(mappedTaskType);
+
     sendMessage({
-      taskType: task,
+      taskType: mappedTaskType,
       overrideMessage: hint,
     });
 
-    // 한 번 클릭하면 힌트는 숨기기
     setActiveHintTask(null);
     setActiveHints([]);
   };
@@ -499,40 +749,60 @@ export default function ChatArea() {
         <div className={s.body}>
           <div className={s.stream}>
             <div className={s.streamInner}>
-            {messages.length === 0 && (
-              <div className={s.quickWrap}>
-                <div className={s.quickTitle}>무엇을 도와드릴까요?</div>
-                <div className={s.quickGrid}>
-                  {QUICK_ACTIONS.map((action) => {
-                    const Icon = action.icon;
+              {messages.length === 0 && (
+                <div className={s.quickWrap}>
+                  <div className={s.quickTitle}>무엇을 도와드릴까요?</div>
+
+                  {QUICK_ACTION_GROUPS.map((group) => {
+                    const GroupIcon = group.icon;
                     return (
-                      <button
-                        key={action.id}
-                        type="button"
-                        className={s.quickBtn}
-                        onClick={() => handleQuickActionClick(action)}
-                      >
-                        <span className={s.quickIconWrap}>
-                          <Icon className={s.quickIcon} />
-                        </span>
-                        <span className={s.quickLabel}>{action.label}</span>
-                      </button>
+                      <div key={group.id} className={s.quickSection}>
+                        {/* 섹션 헤더 (아이콘 + 제목) */}
+                        <div className={s.quickSectionHeader}>
+                          <GroupIcon className={s.quickSectionIcon} />
+                          <span className={s.quickSectionTitle}>{group.title}</span>
+                        </div>
+
+                        {/* 섹션 안 버튼들 */}
+                        <div className={s.quickGrid}>
+                          {group.items.map((id) => {
+                            const action = QUICK_ACTIONS_MAP[id];
+                            if (!action) return null;
+                            const Icon = action.icon;
+                            return (
+                              <button
+                                key={action.id}
+                                type="button"
+                                className={s.quickBtn}
+                                onClick={() => handleQuickActionClick(action)}
+                              >
+                                <span className={s.quickIconWrap}>
+                                  <Icon className={s.quickIcon} />
+                                </span>
+                                <span className={s.quickLabel}>{action.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
+              )}
+
               {messages.map((m, i) => {
                 const isUser = m.role === 'user';
+                const safeHtml = m.role === 'assistant'
+                ? cutHtmlBeforeEvidence(m.content)
+                : m.content;
                 const isIntro =
                   m.role === 'assistant' &&
                   (m.content === LAW_INTRO_TEXT ||
-                    m.content === GUIDELINE_INTRO_TEXT);
-
-                const safeHtml =
-                  m.role === 'assistant'
-                    ? cutHtmlBeforeEvidence(m.content)
-                    : m.content;
+                    m.content === GUIDELINE_INTRO_TEXT ||
+                    m.content === DOC_CREATE_INTRO_TEXT ||
+                    m.content === EDU_INTRO_TEXT ||
+                    m.content === DOC_REVIEW_INTRO_TEXT
+                  );
 
                 if (isUser) {
                   return (
@@ -597,14 +867,13 @@ export default function ChatArea() {
                       key={idx}
                       type="button"
                       className={s.hintChip}
-                      onClick={() => handleHintClick(hint, activeHintTask)}
+                      onClick={() => handleHintClick(activeHintTask, hint)}
                     >
                       {hint}
                     </button>
                   ))}
                 </div>
               )}
-
               {loading && (
                 <div className={s.loadingCard}>
                   <span>

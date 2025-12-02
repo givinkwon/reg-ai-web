@@ -674,8 +674,33 @@ body[data-theme='dark'] .hintChip {
 
 .hintChip:hover {
   border-color: #3b82f6;
+  color: white;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
   transform: translateY(-1px);
+}
+
+/* 예시 – 이미 있는 스타일과 비슷하게 조절하면 됨 */
+
+.quickSection {
+  margin-top: 16px;
+}
+
+.quickSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.quickSectionIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.quickSectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb; /* 기존 포인트 컬러에 맞춰서 */
 }
 
 
@@ -808,4 +833,5 @@ body[data-theme='dark'] .hintChip {
     font-size: 12px;
   }
 }
+
 
