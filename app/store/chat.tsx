@@ -10,10 +10,23 @@ export interface ChatMessage { role: string; content: string; } // content는 HT
 export type Room = { id: string; title: string; createdAt: number; messages: ChatMessage[]; };
 
 export type EvidenceItem = { title: string; href?: string; snippet?: string; };
+
+// 🔹 추가: 패널 모드 타입
+export type RightPanelMode = 'evidence' | 'news';
+
 export type RightPanelData = {
+  // 🔹 추가: 모드 (없으면 기본은 evidence로 취급)
+  mode?: RightPanelMode;
+
   evidence: EvidenceItem[];
   forms: EvidenceItem[];
+
+  // 원본 HTML (디버깅용)
   rawHtml?: string;
+
+  // 🔹 추가: 뉴스일 때 참고 기사 HTML
+  newsHtml?: string;
+
   debug?: {
     stripped: string;
     normalized: string;
@@ -23,6 +36,7 @@ export type RightPanelData = {
     formsPreview: string[];
   };
 };
+
 
 /* =========================
  * Const
@@ -180,12 +194,24 @@ const cutEvidenceBlock = (text: string) => {
   return block;
 };
 
+// "관련 별표/서식"이 있으면 그걸 우선 쓰고,
+// 없으면 "참고 기사 목록"을 forms 블록으로 사용한다.
 const cutFormsBlock = (text: string) => {
-  // "관련 별표/서식", "관련 별표/서식 링크", "관련 별표", "관련 서식" 모두 허용
-  const headerRe = /관련\s*(?:별표(?:\s*\/?\s*서식)?|서식)(?:\s*링크)?/iu;
+  // 1) 기존: 관련 별표/서식 섹션
+  const headerRe1 = /관련\s*(?:별표(?:\s*\/?\s*서식)?|서식)(?:\s*링크)?/iu;
   const nextRe = /\n\s*(?:###|답변\b|근거\b|\d+\))/iu;
-  return cutSection(text, headerRe, nextRe);
+
+  const block1 = cutSection(text, headerRe1, nextRe);
+  if (block1 && block1.trim().length > 0) {
+    return block1;
+  }
+
+  // 2) 신규: 참고 기사 목록 섹션 (요즘 나온 답변 형태)
+  const headerRe2 = /참고\s*기사\s*목록/iu;
+  const block2 = cutSection(text, headerRe2, nextRe);
+  return block2;
 };
+
 
 /* ── 근거 라인 파싱 ── */
 const parseEvidenceLine = (raw: string): EvidenceItem | null => {
@@ -350,7 +376,8 @@ interface ChatStore {
   setRightData: (d: RightPanelData | null) => void;
 
   // ✅ 여기서 파서를 호출하고 패널을 띄움
-  openRightFromHtml: (html: string) => void;
+  openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => void;
+
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -490,9 +517,35 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   rightData: null,
   setRightData: (d) => set({ rightData: d }),
 
-  openRightFromHtml: (html: string) => {
-    if (!html) { console.warn('[openRightFromHtml] empty html'); return; }
-    const data = parseRightDataFromHtml(html);
+  openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => {
+    if (!html) {
+      console.warn('[openRightFromHtml] empty html');
+      return;
+    }
+
+    const mode: RightPanelMode = opts?.mode ?? 'evidence';
+
+    // 🔹 1) 뉴스 모드: 파서 안 타고 그대로 오른쪽 패널에 HTML 뿌리기
+    if (mode === 'news') {
+      const data: RightPanelData = {
+        mode: 'news',
+        evidence: [],
+        forms: [],
+        rawHtml: html,
+        newsHtml: html,
+      };
+      set({ rightData: data, rightOpen: true });
+      return;
+    }
+
+    // 🔹 2) 기본 모드: 기존처럼 근거/서식 파서 사용
+    const parsed = parseRightDataFromHtml(html);
+    const data: RightPanelData = {
+      ...parsed,
+      mode: 'evidence',
+      newsHtml: undefined,
+    };
     set({ rightData: data, rightOpen: true });
   },
+
 }));

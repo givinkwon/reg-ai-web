@@ -49,3 +49,101 @@
 .typeCard:hover{ filter:brightness(.98); }
 .typeEmoji{ font-size:22px; }
 .typeLabel{ font-weight:600; }
+
+/* ===== 로그인 팝업 ===== */
+
+.loginOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 18, 36, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000; /* 사이드바/우측 패널보다 위 */
+}
+
+.loginCard {
+  width: min(360px, 92vw);
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  text-align: center;
+}
+
+.loginBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.loginTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d3a70;
+  margin-bottom: 4px;
+}
+
+.loginSub {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+/* 공통 버튼 베이스 */
+.loginBtnGoogle,
+.loginBtnKakao {
+  width: 100%;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.loginBtnGoogle:hover,
+.loginBtnKakao:hover {
+  background: #f3f4ff;
+  box-shadow: 0 4px 10px rgba(148, 163, 184, 0.25);
+}
+
+.loginBtnLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.loginBack {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.loginBack:hover {
+  text-decoration: underline;
+}
+
+/* 모바일에서 조금 더 여백 */
+@media (max-width: 768px) {
+  .loginCard {
+    border-radius: 20px;
+    padding: 20px 18px 16px;
+  }
+}

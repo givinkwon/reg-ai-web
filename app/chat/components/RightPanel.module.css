@@ -6,91 +6,215 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s ease;
-  z-index: 9998; /* ↑ 크게 올림 */
+  z-index: 9998;
 }
-
-.overlay.show{ opacity:1; pointer-events:auto; }
+.overlay.show{
+  opacity: 1;
+  pointer-events: auto;
+}
 
 /* sheet */
 .sheet{
-  position:fixed; top:0; right:0; height:100dvh; width:min(440px, 92vw);
-  background:#fff;
-  border-left:1px solid #EAEDF5;
-  box-shadow:0 10px 30px rgba(18,29,56,.18);
-  transform:translateX(100%);
-  transition:transform .25s ease;
-  z-index: 9999; /* ↑ 크게 올림 */
-  display:flex; flex-direction:column;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(440px, 92vw);
+  background: #fff;
+  border-left: 1px solid #EAEDF5;
+  box-shadow: 0 10px 30px rgba(18,29,56,.18);
+  transform: translateX(100%);
+  transition: transform .25s ease;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
 }
-.sheet.open{ transform:translateX(0); }
+.sheet.open{
+  transform: translateX(0);
+}
 
+/* header */
 .header{
-  height:56px; padding:0 14px; display:flex; align-items:center; gap:10px;
-  border-bottom:1px solid #EAEDF5;
+  height: 56px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #EAEDF5;
 }
-/* RightPanel.module.css */
+
+/* back button */
 .backBtn{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:32px; height:32px; border-radius:8px; background:#1f5ed6;
-  color:#fff;                     /* currentColor = 흰색 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #1f5ed6;
+  color: #fff;
 }
 
 .iconWhite{
-  width:18px; height:18px;
-  color:#fff;                     /* 혹시 상속이 안되면 직접 지정 */
+  width: 18px;
+  height: 18px;
+  color: #fff;
 }
 
 /* 혹시 전역 reset이 svg를 숨기는 경우 대비 */
 .backBtn svg{
-  display:block !important;
-  visibility:visible !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
-.iconGhost{ width:18px; height:18px; color:transparent; } /* 우측 균형 */
-.title{ font-weight:600; color:#303650; font-size:15px; }
+.iconGhost{
+  width: 18px;
+  height: 18px;
+  color: transparent;
+}
 
-.body{ flex:1; overflow:auto; padding:14px 16px 18px; }
+.title{
+  font-weight: 600;
+  color: #303650;
+  font-size: 16px;        /* 패널 제목 조금 크게 */
+}
 
-.groupTitle{ margin:6px 0 10px; font-weight:700; color:#303650; }
+/* body */
+.body{
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 18px;
+}
+
+/* 섹션 제목 */
+.groupTitle{
+  margin: 8px 0 10px;
+  font-weight: 700;
+  color: #303650;
+  font-size: 14px;
+}
+
 .emptyBox{
-  padding:14px; border:1px dashed #EAEDF5; border-radius:12px;
-  color:#6b7493; background:#fbfcff; margin-bottom:12px;
+  padding: 14px;
+  border: 1px dashed #EAEDF5;
+  border-radius: 12px;
+  color: #6b7493;
+  background: #fbfcff;
+  margin-bottom: 12px;
 }
 
 /* 근거 */
-.evList{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
-.evItem{
-  border:1px solid #EAEDF5; border-radius:12px; padding:10px 12px; background:#fff;
+.evList{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
 }
-.evTitle{ color:#303650; font-size:14px; line-height:1.45; }
-.evSnippet{ color:#6b7493; font-size:12px; margin-top:6px; }
 
-/* 서식(제목이 곧 하이퍼링크) */
-.linkList{ display:flex; flex-direction:column; gap:10px; }
+.evItem{
+  border: 1px solid #EAEDF5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.evTitle{
+  color: #303650;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.evSnippet{
+  color: #6b7493;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* 관련 서식 리스트 */
+.linkList{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .linkItem{
-  border:1px solid #EAEDF5; border-radius:12px; padding:10px 12px; background:#fff;
+  border: 1px solid #EAEDF5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
 }
 
 /* 공통 링크 스타일 */
 .linkA{
-  color:#1f5ed6;
-  text-decoration:underline;
-  text-underline-offset:2px;
-  word-break:break-word;
+  color: #1f5ed6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
 }
-.linkA:hover{ filter:brightness(.9); }
+.linkA:hover{
+  filter: brightness(.9);
+}
+
+/* =========================
+ * 뉴스(참고 기사 목록) 스타일
+ * ========================= */
+.newsList{
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+/* ✅ 근거 카드(evItem)랑 거의 동일한 스타일 */
+.newsItem{
+  border: 1px solid #EAEDF5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+/* 카드 안에서 제목 전체가 클릭 영역이 되도록 */
+.newsLink{
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  text-decoration: none;
+  color: #303650;
+}
+
+/* 번호는 살짝 흐리게 */
+.newsIndex{
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7493;
+  margin-top: 2px;
+}
+
+/* 제목은 근거 타이틀과 비슷하게 */
+.newsTitle{
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
 
 
-/* 모바일: 바텀시트로 */
+/* fallback 용도 (지금은 안 쓰지만 남겨둠) */
+.newsContent{
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* 모바일: 바텀 시트 */
 @media (max-width: 768px) {
   .overlay{
     background: rgba(12,18,36,.45);
   }
 
   .sheet{
-    left: 0; right: 0;
+    left: 0;
+    right: 0;
     width: 100vw;
-    /* 바텀시트 포지션을 명확히 지정 */
     top: auto;
     bottom: 0;
     height: auto;
@@ -98,9 +222,9 @@
     border-left: 0;
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
-    transform: translateY(100%);       /* 아래에서 위로 */
+    transform: translateY(100%);
     box-shadow: 0 -10px 30px rgba(18,29,56,.18);
-    will-change: transform;            /* 모바일 스크롤 튐 방지 */
+    will-change: transform;
   }
 
   .sheet.open{

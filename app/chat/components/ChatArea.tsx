@@ -390,6 +390,60 @@ export default function ChatArea() {
     return before.replace(/\n/g, '<br />');
   };
 
+  // 🔹 digest 문자열에서 "참고 기사 목록" 기준으로 요약/기사 분리
+  const splitDigestForArticles = (digest: string) => {
+    if (!digest) return { summaryText: '', articlesText: '' };
+
+    // ✅ 실제 텍스트 기준으로 수정: '## ' 빼고 그냥 찾기
+    const marker = '참고 기사 목록';
+    const idx = digest.indexOf(marker);
+
+    // 참고 기사 구분선이 없으면 전체를 요약으로 사용
+    if (idx === -1) {
+      return {
+        summaryText: digest.trim(),
+        articlesText: '',
+      };
+    }
+
+    const summaryPart = digest.slice(0, idx);   // "최근 동향 요약 + 1~9번" 부분
+    const articlesPart = digest.slice(idx);     // "참고 기사 목록 + 1~50번" 부분
+
+    return {
+      summaryText: summaryPart.trim(),
+      articlesText: articlesPart.trim(),
+    };
+  };
+
+
+
+  // 🔹 이 메시지가 안전 뉴스인지 판별 (fetch 쪽에서 data-msg-type 달아줌)
+  const isSafetyNewsHtml = (html: string) => {
+    return html.includes('data-msg-type="safety-news"');
+  };
+
+  // 🔹 안전 뉴스 HTML에서 summary 섹션만 추출
+  const extractSafetySummaryHtml = (html: string) => {
+    const match = html.match(
+      /<div[^>]+data-section="summary"[^>]*>([\s\S]*?)<\/div>/,
+    );
+    if (!match) {
+      // 혹시 못 찾으면 기존 로직으로
+      return cutHtmlBeforeEvidence(html);
+    }
+    return match[0];
+  };
+
+  // 🔹 안전 뉴스 HTML에서 기사 목록 섹션만 추출 (display:none 제거)
+  const extractSafetyArticlesHtml = (html: string) => {
+    const match = html.match(
+      /<div[^>]+data-section="articles"[^>]*>([\s\S]*?)<\/div>/,
+    );
+    if (!match) return '';
+    const cleaned = match[0].replace(/display\s*:\s*none\s*;?/i, '');
+    return `<div><h3>참고 기사 목록</h3>${cleaned}</div>`;
+  };
+
   const handleSend = () => {
     // 수동 전송 시 힌트는 감추기
     setActiveHintTask(null);
@@ -485,17 +539,42 @@ export default function ChatArea() {
            </div>`
         : '';
 
-      // 본문 요약 (줄바꿈 → <br>)
-      const bodyHtml = (data.digest || '요약 본문이 비어 있습니다.')
-        .split('\n')
-        .map((line) => line.trim())
-        .join('<br />');
+      // 🔸 digest 를 "요약" / "참고 기사 목록" 으로 분리
+      const digestText = data.digest || '';
+      const { summaryText, articlesText } = splitDigestForArticles(digestText);
 
+      // 줄바꿈 → <br> 로 변환
+      const summaryHtml = summaryText
+        ? summaryText
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join('<br />')
+        : '';
+
+      const articlesHtml = articlesText
+        ? articlesText
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join('<br />')
+        : '';
+
+      // 수정 버전 (여기만 바꾸면 됨)
       const html = `
-        <div>
+        <div data-msg-type="safety-news">
           <p>${titleHtml}</p>
           ${metaHtml}
-          <div style="margin-top:8px;">${bodyHtml}</div>
+          ${
+            summaryHtml
+              ? `<div style="margin-top:8px;" data-section="summary">${summaryHtml}</div>`
+              : ''
+          }
+          ${
+            articlesHtml
+              ? `<div style="margin-top:12px; display:none;" data-section="articles">${articlesHtml}</div>`
+              : ''
+          }
         </div>
       `;
 
@@ -790,11 +869,26 @@ export default function ChatArea() {
                 </div>
               )}
 
-              {messages.map((m, i) => {
+                {messages.map((m, i) => {
                 const isUser = m.role === 'user';
-                const safeHtml = m.role === 'assistant'
-                ? cutHtmlBeforeEvidence(m.content)
-                : m.content;
+
+                // 🔹 안전 뉴스 여부 및 요약/기사 분리
+                let isSafetyNews = false;
+                let safetyArticlesHtml: string | null = null;
+                let safeHtml: string;
+
+                if (m.role === 'assistant') {
+                  if (isSafetyNewsHtml(m.content)) {
+                    isSafetyNews = true;
+                    safeHtml = extractSafetySummaryHtml(m.content); // 말풍선에는 요약만
+                    safetyArticlesHtml = extractSafetyArticlesHtml(m.content); // 버튼용
+                  } else {
+                    safeHtml = cutHtmlBeforeEvidence(m.content);
+                  }
+                } else {
+                  safeHtml = m.content;
+                }
+
                 const isIntro =
                   m.role === 'assistant' &&
                   (m.content === LAW_INTRO_TEXT ||
@@ -832,27 +926,48 @@ export default function ChatArea() {
                     {!isIntro && (
                       <div className={s.actionRow}>
                         <div className={s.miniActions}>
-                          <button
-                            className={s.iconBtn}
-                            title="다시 생성"
-                            onClick={() => handleRegenerate(i)}
-                          >
-                            <RotateCcw className={s.iconAction} />
-                          </button>
-                          <button
-                            className={s.iconBtn}
-                            title="복사"
-                            onClick={() => handleCopy(i, m.content)}
-                          >
-                            <Copy className={s.iconAction} />
-                          </button>
+                          {/* ✅ 뉴스 메시지일 때는 다시 생성/복사 버튼 숨김 */}
+                          {!isSafetyNews && (
+                            <div className={s.miniActions}>
+                              <button
+                                className={s.iconBtn}
+                                title="다시 생성"
+                                onClick={() => handleRegenerate(i)}
+                              >
+                                <RotateCcw className={s.iconAction} />
+                              </button>
+                              <button
+                                className={s.iconBtn}
+                                title="복사"
+                                onClick={() => handleCopy(i, m.content)}
+                              >
+                                <Copy className={s.iconAction} />
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <button
-                          className={s.evidenceBtn}
-                          onClick={() => openRightFromHtml(m.content)}
-                        >
-                          근거 및 서식 확인하기
-                        </button>
+                          <button
+                            className={s.evidenceBtn}
+                            onClick={() => {
+                              if (isSafetyNews) {
+                                const htmlForRight =
+                                  (safetyArticlesHtml && safetyArticlesHtml.trim().length > 0)
+                                    ? safetyArticlesHtml
+                                    : extractSafetyArticlesHtml(m.content) || m.content;
+
+                                // 🔹 뉴스 모드로 호출
+                                openRightFromHtml(htmlForRight, { mode: 'news' });
+                              } else {
+                                // 🔹 명시하지 않으면 'evidence'지만, 타입 맞추기 위해 같이 넘겨줘도 됨
+                                openRightFromHtml(m.content, { mode: 'evidence' });
+                              }
+                            }}
+                          >
+                            {isSafetyNews
+                              ? '참고 기사 목록 확인하기'
+                              : '근거 및 서식 확인하기'}
+                          </button>
+
                       </div>
                     )}
                   </div>
