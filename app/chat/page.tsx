@@ -5,67 +5,13 @@ import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import RightPanel from './components/RightPannel';
+import LoginPromptModal from './components/LoginPromptModal';
 import { useChatStore } from '../store/chat';
 import { useUserStore } from '../store/user';
 import s from './page.module.css';
 
 const GUEST_Q_KEY = 'regai_guest_q_count_v1';
 const GUEST_MODAL_SHOWN_KEY = 'regai_guest_login_modal_shown_v1';
-
-/** 로그인 유도 팝업 */
-function LoginPromptModal({ onClose }: { onClose: () => void }) {
-  const handleGoogleLogin = () => {
-    // ✅ 실제 프로젝트 로그인 경로로 교체
-    // 예: window.location.href = '/api/auth/google';
-    window.location.href = '/auth/google';
-  };
-
-  const handleKakaoLogin = () => {
-    // ✅ 실제 프로젝트 로그인 경로로 교체
-    // 예: window.location.href = '/api/auth/kakao';
-    window.location.href = '/auth/kakao';
-  };
-
-  return (
-    <div className={s.loginOverlay}>
-      <div className={s.loginCard}>
-        <div className={s.loginBadge}>REG AI</div>
-
-        <h2 className={s.loginTitle}>REG AI와 함께 안전 시작</h2>
-        <p className={s.loginSub}>
-          5초만에 시작하세요.
-          <br />
-          더 정확한 응답을 받아보세요.
-        </p>
-
-        <button
-          type="button"
-          className={s.loginBtnGoogle}
-          onClick={handleGoogleLogin}
-        >
-          {/* 아이콘 넣고 싶으면 span 하나 더 추가해서 background-image 로 처리 가능 */}
-          <span className={s.loginBtnLabel}>구글로 시작하기</span>
-        </button>
-
-        <button
-          type="button"
-          className={s.loginBtnKakao}
-          onClick={handleKakaoLogin}
-        >
-          <span className={s.loginBtnLabel}>카카오로 시작하기</span>
-        </button>
-
-        <button
-          type="button"
-          className={s.loginBack}
-          onClick={onClose}
-        >
-          뒤로가기
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function ChatPage() {
   const { sidebarMobileOpen, setSidebarMobileOpen } = useChatStore();
@@ -97,10 +43,7 @@ export default function ChatPage() {
     const newCount = Math.max(prevCount, userMsgCount);
     window.localStorage.setItem(GUEST_Q_KEY, String(newCount));
 
-    // 이미 한 번 보여줬으면 다시 안 띄움
-    const alreadyShown = window.localStorage.getItem(GUEST_MODAL_SHOWN_KEY);
-
-    if (newCount >= 3 && !alreadyShown) {
+    if (newCount >= 3) {
       setShowLoginModal(true);
       window.localStorage.setItem(GUEST_MODAL_SHOWN_KEY, '1');
     }
