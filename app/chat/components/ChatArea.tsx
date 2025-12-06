@@ -6,21 +6,34 @@ import {
   Copy,
   RotateCcw,
   ArrowUp,
-  Plus,       
-  Search,     
-  FileText,   
-  AlertTriangle, 
-  Paperclip,  
+  Plus,
+  Search,
+  FileText,
+  AlertTriangle,
+  Paperclip,
   X,
   Folder,
+  User2,
+  LogOut,
 } from 'lucide-react';
 
 import { Button } from '../../components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '../../components/ui/dropdown-menu';
+
 import { useChatController } from '../useChatController';
 import { useChatStore, ChatMessage } from '../../store/chat';
 import { useUserStore } from '../../store/user';
 import Cookies from 'js-cookie';
 import s from './ChatArea.module.css';
+import LoginPromptModal from './LoginPromptModal';
+import { logoutFirebase } from '@/app/lib/firebase';
 
 const TYPE_META: Record<string, { label: string; emoji: string }> = {
   environment: { label: '환경/안전', emoji: '🌱' },
@@ -33,7 +46,7 @@ type TaskType =
   | 'risk_assessment'
   | 'law_interpret'
   | 'edu_material'
-  | 'guideline_interpret';   // ✅ 실무지침 해석
+  | 'guideline_interpret';
 
 const TASK_META: Record<TaskType, { label: string }> = {
   law_research: { label: '법령 조사' },
@@ -41,12 +54,8 @@ const TASK_META: Record<TaskType, { label: string }> = {
   risk_assessment: { label: '위험성 평가' },
   law_interpret: { label: 'AI 법령 해석' },
   edu_material: { label: '교육자료 생성' },
-  guideline_interpret: { label: '실무지침 해석' }, // ✅ 추가
+  guideline_interpret: { label: '실무지침 해석' },
 };
-
-
-// TaskType 이미 위에 있음
-// import 쪽은 그대로 두고, 아래 타입/상수만 추가
 
 type QuickAction = {
   id: string;
@@ -55,7 +64,6 @@ type QuickAction = {
   placeholder: string;
   taskType?: TaskType;
 };
-
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
@@ -120,8 +128,6 @@ const QUICK_ACTIONS: QuickAction[] = [
       '신입 직원 교육용 산업안전 교육자료 개요를 만들어줘.',
     taskType: 'edu_material',
   },
-
-  // ✅ 새로 추가: 실무지침 해석
   {
     id: 'guideline_interpret',
     label: '실무지침 해석',
@@ -148,7 +154,6 @@ type QuickActionGroup = {
   items: QuickAction['id'][];
 };
 
-// id 는 QUICK_ACTIONS 의 id 를 써야 함
 const QUICK_ACTION_GROUPS: QuickActionGroup[] = [
   {
     id: 'practice',
@@ -170,7 +175,6 @@ const QUICK_ACTION_GROUPS: QuickActionGroup[] = [
   },
 ];
 
-// id -> QuickAction 빠르게 찾기용 맵
 const QUICK_ACTIONS_MAP: Record<string, QuickAction> = QUICK_ACTIONS.reduce(
   (acc, cur) => {
     acc[cur.id] = cur;
@@ -179,46 +183,95 @@ const QUICK_ACTIONS_MAP: Record<string, QuickAction> = QUICK_ACTIONS.reduce(
   {} as Record<string, QuickAction>,
 );
 
+// 🔹 추가: 게스트 제한 상수 + 쿠키 키
+const GUEST_LIMIT = 3;
+const GUEST_LIMIT_COOKIE_KEY = 'regai_guest_msg_count';
+
+// 🔹 추가: 쿠키에서 카운트 읽기
+const getGuestMsgCountFromCookie = () => {
+  const raw = Cookies.get(GUEST_LIMIT_COOKIE_KEY);
+  if (!raw) return 0;
+  const n = parseInt(raw, 10);
+  if (Number.isNaN(n) || n < 0) return 0;
+  return n;
+};
+
+// 🔹 추가: 쿠키에 카운트 쓰기
+const setGuestMsgCountToCookie = (value: number) => {
+  Cookies.set(GUEST_LIMIT_COOKIE_KEY, String(value), {
+    // 며칠 동안 유지할지 원하는 값으로
+    expires: 7, // 7일 동안 유지
+  });
+};
+
 export default function ChatArea() {
   const {
-    messages, input, setInput,
-    loading, loadingMessageIndex, LOADING_MESSAGES, statusMessage,
-    sendMessage, regenerate,
+    messages,
+    input,
+    setInput,
+    loading,
+    loadingMessageIndex,
+    LOADING_MESSAGES,
+    statusMessage,
+    sendMessage,
+    regenerate,
   } = useChatController();
 
-  // 처음에는 무조건 "기능 화면" 모드
   const [showLanding, setShowLanding] = useState(true);
 
-  const { selectedJobType, setSelectedJobType } = useUserStore();
+  // ✅ user / clearFirebaseUser 도 같이 꺼내기
+  const { selectedJobType, setSelectedJobType, user, clearFirebaseUser } =
+    useUserStore();
   const [showTypeModal, setShowTypeModal] = useState(false);
 
-  // NEW: 작업 선택 모달 + 선택된 작업
+  // 작업 선택 모달 + 선택된 작업
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] =
-  useState<TaskType | null>('guideline_interpret');
+    useState<TaskType | null>('guideline_interpret');
 
-  // NEW: 첨부 파일
+  // ✅ 로그인 모달 on/off
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // 첨부 파일
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
 
   const setMessages = useChatStore((st) => st.setMessages);
   const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
 
-  // 공유 링크 초기 로딩 1회 보장
   const bootOnce = useRef(false);
 
-  // 복사 토스트
   const [copied, setCopied] = useState(false);
 
-  // 각 assistant 본문 엘리먼트 참조 (index -> element)
   const contentRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  // 하단 스크롤
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, loading, loadingMessageIndex]);
+
+  // ✅ 계정 버튼 클릭: 비로그인 → 로그인 모달 열기
+  const handleAccountButtonClick = () => {
+    if (!user) {
+      setShowLoginModal(true);
+    }
+  };
+
+  // ✅ 로그아웃 처리 (Google / Kakao 분기)
+  const handleLogout = async () => {
+    try {
+      const w = window as any;
+      if (user?.provider === 'kakao' && w?.Kakao?.Auth) {
+        w.Kakao.Auth.logout();
+      } else {
+        await logoutFirebase();
+      }
+    } catch (err) {
+      console.error('[ChatArea] logout error:', err);
+    } finally {
+      clearFirebaseUser?.();
+    }
+  };
 
   type HintTask =
     | 'law_interpret'
@@ -230,19 +283,17 @@ export default function ChatArea() {
   const [activeHints, setActiveHints] = useState<string[]>([]);
 
   const DOC_REVIEW_INTRO_TEXT =
-  '법령 근거를 검토하여 보완사항을 확인할 안전문서를 업로드해주세요.';
-  
+    '법령 근거를 검토하여 보완사항을 확인할 안전문서를 업로드해주세요.';
+
   const LAW_INTRO_TEXT =
     '법령과 규제사항을 학습한 REA AI가 내 사업장에 딱 맞는 실무지침을 안내해드려요! 무엇을 도와드릴까요?';
 
   const GUIDELINE_INTRO_TEXT =
     '현장의 작업절차, 점검표, 교육·훈련 등 실무지침을 REA AI가 법령에 맞게 정리해드려요! 무엇을 도와드릴까요?';
 
-  // ✅ 안전 문서 생성 인트로
   const DOC_CREATE_INTRO_TEXT =
     '법정 서식과 KOSHA 가이드를 참고해서 필요한 안전 문서를 템플릿으로 만들어드릴게요. 어떤 문서를 생성할까요?';
 
-  // AI 법령 해석용 힌트 10개
   const LAW_INTERPRET_HINTS: string[] = [
     '우리 사업장의 업종, 인원, 주요 공정을 알려줄테니 기본적으로 지켜야 할 안전보건 의무를 정리해줘.',
     '지게차·크레인 작업에 대해 법령 기준 필수 안전수칙과 보호구 착용 기준을 알려줘.',
@@ -256,7 +307,6 @@ export default function ChatArea() {
     '산업재해가 발생했을 때 신고, 조사, 재발방지 대책 수립까지 법에서 요구하는 절차를 정리해줘.',
   ];
 
-  // 실무지침 해석용 힌트 10개
   const GUIDELINE_HINTS: string[] = [
     '우리 사업장의 작업 공정별로 기본 안전보건 실무지침(작업 전·중·후 점검 사항)을 만들어줘.',
     '지게차·크레인 장비 점검 및 작업 전 TBM에서 안내할 체크리스트를 실무지침 형식으로 정리해줘.',
@@ -270,7 +320,6 @@ export default function ChatArea() {
     '산업재해 발생 시 응급조치, 보고, 재발방지 대책 수립까지 단계별 실무지침을 정리해줘.',
   ];
 
-  // ✅ 안전 문서 생성용 힌트 10개 (칩에는 문서명만 노출 / 백엔드에서 분기)
   const DOC_CREATE_HINTS: string[] = [
     '위험성평가서',
     '작업허가서(밀폐공간 작업)',
@@ -285,7 +334,7 @@ export default function ChatArea() {
   ];
 
   const EDU_INTRO_TEXT =
-  '신입·정기 교육에 쓸 수 있는 산업안전/보건 교육자료 개요를 REA AI가 만들어드려요. 어떤 교육이 필요하신가요?';
+    '신입·정기 교육에 쓸 수 있는 산업안전/보건 교육자료 개요를 REA AI가 만들어드려요. 어떤 교육이 필요하신가요?';
 
   const EDU_MATERIAL_HINTS: string[] = [
     '신입 직원 대상 기본 산업안전/보건 교육자료',
@@ -297,7 +346,6 @@ export default function ChatArea() {
     '밀폐공간 작업 안전수칙과 사고사례를 포함한 교육자료',
   ];
 
-  // 힌트 랜덤 3개 뽑기
   function pickRandomHints(source: string[], count: number): string[] {
     const arr = [...source];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -320,8 +368,9 @@ export default function ChatArea() {
     setShowTypeModal(false);
   };
 
-  const cur = TYPE_META[selectedJobType ?? ''] ?? { label: '분야 선택', emoji: '💼' };
-  
+  const cur =
+    TYPE_META[selectedJobType ?? ''] ?? { label: '분야 선택', emoji: '💼' };
+
   const currentTaskMeta = selectedTask ? TASK_META[selectedTask] : null;
 
   // HTML -> 텍스트 (백업용)
@@ -331,11 +380,13 @@ export default function ChatArea() {
       const doc = new DOMParser().parseFromString(clean, 'text/html');
       return (doc.body.textContent || '').replace(/\u00A0/g, ' ').trim();
     } catch {
-      return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+>/g, '').trim();
+      return html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/?[^>]+>/g, '')
+        .trim();
     }
   };
 
-  // 클립보드 복사 (navigator + textarea fallback)
   const copyToClipboard = async (text: string) => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -357,24 +408,26 @@ export default function ChatArea() {
     }
   };
 
-  // 복사: ref 우선, 실패 시 htmlToText 백업
   const handleCopy = async (idx: number, fallbackHtml: string) => {
     const el = contentRefs.current[idx];
     const text = el?.innerText?.trim() || htmlToText(fallbackHtml);
     if (text) await copyToClipboard(text);
   };
 
-  // 다시 생성: 해당 assistant 카드 제거 후, 위쪽의 최근 user 질문으로 재요청
   const handleRegenerate = (idx: number) => {
-    const upperUser = [...messages].slice(0, idx).reverse().find((m) => m.role === 'user');
-    const fallbackUser = [...messages].reverse().find((m) => m.role === 'user');
+    const upperUser = [...messages]
+      .slice(0, idx)
+      .reverse()
+      .find((m) => m.role === 'user');
+    const fallbackUser = [...messages]
+      .reverse()
+      .find((m) => m.role === 'user');
     const q = htmlToText(upperUser?.content || fallbackUser?.content || '');
     if (!q) return;
     setMessages(messages.filter((_, i) => i !== idx));
     regenerate(q);
   };
 
-  // "2) 근거" 이전까지만 보여주기 (2), 2. , ② 모두 허용)
   const cutHtmlBeforeEvidence = (html: string) => {
     if (!html) return html;
     const working = html.replace(/<(br|BR)\s*\/?>/g, '\n');
@@ -390,15 +443,12 @@ export default function ChatArea() {
     return before.replace(/\n/g, '<br />');
   };
 
-  // 🔹 digest 문자열에서 "참고 기사 목록" 기준으로 요약/기사 분리
   const splitDigestForArticles = (digest: string) => {
     if (!digest) return { summaryText: '', articlesText: '' };
 
-    // ✅ 실제 텍스트 기준으로 수정: '## ' 빼고 그냥 찾기
     const marker = '참고 기사 목록';
     const idx = digest.indexOf(marker);
 
-    // 참고 기사 구분선이 없으면 전체를 요약으로 사용
     if (idx === -1) {
       return {
         summaryText: digest.trim(),
@@ -406,8 +456,8 @@ export default function ChatArea() {
       };
     }
 
-    const summaryPart = digest.slice(0, idx);   // "최근 동향 요약 + 1~9번" 부분
-    const articlesPart = digest.slice(idx);     // "참고 기사 목록 + 1~50번" 부분
+    const summaryPart = digest.slice(0, idx);
+    const articlesPart = digest.slice(idx);
 
     return {
       summaryText: summaryPart.trim(),
@@ -415,26 +465,20 @@ export default function ChatArea() {
     };
   };
 
-
-
-  // 🔹 이 메시지가 안전 뉴스인지 판별 (fetch 쪽에서 data-msg-type 달아줌)
   const isSafetyNewsHtml = (html: string) => {
     return html.includes('data-msg-type="safety-news"');
   };
 
-  // 🔹 안전 뉴스 HTML에서 summary 섹션만 추출
   const extractSafetySummaryHtml = (html: string) => {
     const match = html.match(
       /<div[^>]+data-section="summary"[^>]*>([\s\S]*?)<\/div>/,
     );
     if (!match) {
-      // 혹시 못 찾으면 기존 로직으로
       return cutHtmlBeforeEvidence(html);
     }
     return match[0];
   };
 
-  // 🔹 안전 뉴스 HTML에서 기사 목록 섹션만 추출 (display:none 제거)
   const extractSafetyArticlesHtml = (html: string) => {
     const match = html.match(
       /<div[^>]+data-section="articles"[^>]*>([\s\S]*?)<\/div>/,
@@ -445,7 +489,22 @@ export default function ChatArea() {
   };
 
   const handleSend = () => {
-    // 수동 전송 시 힌트는 감추기
+    // 내용도 파일도 없으면 무시 (선택 사항)
+    if (!input.trim() && attachments.length === 0) return;
+  
+    // 🔒 1) 게스트 제한 체크 (쿠키 기준)
+    if (shouldBlockGuestByLimit()) {
+      setShowLoginModal(true);
+      return; // 여기서 바로 막아야 /api 요청 안 나감
+    }
+  
+    // 🔒 2) 실제로 보낼 거면 쿠키 카운트 증가 (게스트만)
+    if (!user) {
+      const prev = getGuestMsgCountFromCookie();
+      setGuestMsgCountToCookie(prev + 1);
+    }
+  
+    // 이하 기존 로직 그대로
     setActiveHintTask(null);
     setActiveHints([]);
   
@@ -458,8 +517,8 @@ export default function ChatArea() {
     setSelectedTask(null);
     setAttachments([]);
   };
+  
 
-  // NEW: 드래그&드롭
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   };
@@ -471,7 +530,6 @@ export default function ChatArea() {
     setAttachments((prev) => [...prev, ...files]);
   };
 
-  // NEW: 파일 input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     if (!files.length) return;
@@ -479,16 +537,11 @@ export default function ChatArea() {
     e.target.value = '';
   };
 
-   // 🔸 금주의 안전 뉴스 호출 → assistant 메시지로 추가
   const fetchWeeklySafetyNews = async () => {
     try {
       const params = new URLSearchParams();
 
-      // 선택된 분야가 environment/infosec이면 category로 전달
-      if (
-        selectedJobType === 'environment' ||
-        selectedJobType === 'infosec'
-      ) {
+      if (selectedJobType === 'environment' || selectedJobType === 'infosec') {
         params.set('category', selectedJobType);
       }
 
@@ -511,7 +564,6 @@ export default function ChatArea() {
 
       const data = (await res.json()) as SafetyNewsResponse;
 
-      // 제목/메타 구성
       const periodText =
         (data.period && data.period.trim()) ||
         (data.batch_date && data.batch_date.slice(0, 10)) ||
@@ -521,7 +573,6 @@ export default function ChatArea() {
         ? `🔔 <strong>${periodText} 금주의 안전 뉴스</strong>`
         : '🔔 <strong>금주의 안전 뉴스</strong>';
 
-      // 카테고리 / 기사 수 표시
       const metaParts: string[] = [];
 
       if (data.category && TYPE_META[data.category]) {
@@ -539,11 +590,9 @@ export default function ChatArea() {
            </div>`
         : '';
 
-      // 🔸 digest 를 "요약" / "참고 기사 목록" 으로 분리
       const digestText = data.digest || '';
       const { summaryText, articlesText } = splitDigestForArticles(digestText);
 
-      // 줄바꿈 → <br> 로 변환
       const summaryHtml = summaryText
         ? summaryText
             .split('\n')
@@ -560,7 +609,6 @@ export default function ChatArea() {
             .join('<br />')
         : '';
 
-      // 수정 버전 (여기만 바꾸면 됨)
       const html = `
         <div data-msg-type="safety-news">
           <p>${titleHtml}</p>
@@ -589,22 +637,18 @@ export default function ChatArea() {
       console.error('[ChatArea] safety-news fetch error:', e);
       const errorMsg: ChatMessage = {
         role: 'assistant',
-        content:
-          '금주의 안전 뉴스를 불러오는 중 오류가 발생했습니다.',
+        content: '금주의 안전 뉴스를 불러오는 중 오류가 발생했습니다.',
       };
       setMessages([...messages, errorMsg]);
       setShowLanding(false);
     }
   };
 
-
   const handleQuickActionClick = (action: QuickAction) => {
-    // 작업 타입 미리 선택
     if (action.taskType) {
       setSelectedTask(action.taskType);
     }
 
-    // 🔸 금주의 안전 뉴스: LLM 안 쓰고 API 호출해서 바로 출력
     if (action.id === 'today_accident') {
       setActiveHintTask(null);
       setActiveHints([]);
@@ -612,7 +656,6 @@ export default function ChatArea() {
       return;
     }
 
-    // 🟦 1) 안전 문서 검토: 인트로 메시지만, 힌트 없음
     if (action.id === 'doc_review') {
       const intro: ChatMessage = {
         role: 'assistant',
@@ -625,19 +668,16 @@ export default function ChatArea() {
         setMessages([...messages, intro]);
       }
 
-      // 힌트 섹션 비우기 (아래 렌더링에서 아무것도 안 나오게)
       setActiveHintTask(null);
       setActiveHints([]);
 
-      // 인풋 비우고 포커스
       setInput('');
       const el = document.querySelector<HTMLInputElement>('.chat-input');
       if (el) el.focus();
 
-      return; // 여기서 함수 종료 → 아래 힌트 로직 안 타게
+      return;
     }
 
-    // 🟦 2) 법령/실무지침/문서 생성/교육자료 생성은 기존 "인트로 + 힌트" 로직
     if (
       action.id === 'law_interpret' ||
       action.id === 'guideline_interpret' ||
@@ -661,7 +701,6 @@ export default function ChatArea() {
         introText = DOC_CREATE_INTRO_TEXT;
         pool = DOC_CREATE_HINTS;
       } else {
-        // edu_material
         hintTask = 'edu_material';
         introText = EDU_INTRO_TEXT;
         pool = EDU_MATERIAL_HINTS;
@@ -678,7 +717,6 @@ export default function ChatArea() {
         setMessages([...messages, intro]);
       }
 
-      // 문서/교육은 전체, 법령/실무지침은 랜덤 3개
       if (action.id === 'doc_create' || action.id === 'edu_material') {
         setActiveHints(pool);
       } else {
@@ -694,7 +732,6 @@ export default function ChatArea() {
       return;
     }
 
-    // 🟦 3) 그 외 퀵액션은 기존처럼 placeholder만 프리필
     setActiveHintTask(null);
     setActiveHints([]);
 
@@ -703,9 +740,19 @@ export default function ChatArea() {
     if (el) el.focus();
   };
 
-
   const handleHintClick = (task: HintTask, hint: string) => {
-    // taskType 매핑: 문서 생성은 doc_review로 보내고, 나머지는 그대로
+    // 🔒 1) 게스트 제한 체크
+    if (shouldBlockGuestByLimit()) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    // 🔒 2) 쿠키 카운트 +1
+    if (!user) {
+      const prev = getGuestMsgCountFromCookie();
+      setGuestMsgCountToCookie(prev + 1);
+    }
+  
     let mappedTaskType: TaskType;
     if (task === 'doc_create') {
       mappedTaskType = 'doc_review';
@@ -716,19 +763,36 @@ export default function ChatArea() {
     } else {
       mappedTaskType = 'law_interpret';
     }
-
+  
     setSelectedTask(mappedTaskType);
-
+  
     sendMessage({
       taskType: mappedTaskType,
       overrideMessage: hint,
     });
-
+  
     setActiveHintTask(null);
     setActiveHints([]);
+  };  
+
+  // ✅ 현재까지 user role 메시지 개수
+  const getUserMessageCount = () =>
+    messages.filter((m) => m.role === 'user').length;
+
+  // ✅ 게스트 제한 체크 (3개 이상이면 true)
+  const shouldBlockGuestByLimit = () => {
+    // 로그인 했으면 제한 없음
+    if (user) return false;
+  
+    const count = getGuestMsgCountFromCookie(); // 지금까지 쿠키에 저장된 횟수
+    const nextCount = count + 1;               // 이번에 보내려는 것까지 포함
+  
+    console.log('[guest-limit]', { count, nextCount });
+  
+    // 3번까지 허용, 4번째부터 막기
+    return nextCount > GUEST_LIMIT;
   };
 
-  // 쿠키 → 스토어 하이드레이션 & 미선택 시 팝업
   useEffect(() => {
     const saved = Cookies.get('selectedJobType') as string | undefined;
     if (saved) {
@@ -739,9 +803,8 @@ export default function ChatArea() {
     }
   }, [setSelectedJobType]);
 
-  // 공유 링크(id|job_id)로 들어온 경우, FastAPI /public/answer 직접 호출 → 로컬 채팅 주입
   useEffect(() => {
-    if (typeof window === 'undefined') return; // SSR/빌드 단계 보호
+    if (typeof window === 'undefined') return;
     if (bootOnce.current) return;
 
     const sp = new URLSearchParams(window.location.search);
@@ -752,16 +815,23 @@ export default function ChatArea() {
 
     (async () => {
       try {
-        const res = await fetch(`/api/public-answer?id=${encodeURIComponent(sharedId)}`, { cache: 'no-store' });
+        const res = await fetch(
+          `/api/public-answer?id=${encodeURIComponent(sharedId)}`,
+          { cache: 'no-store' },
+        );
 
         if (!res.ok) {
           setMessages([
-            { role: 'assistant', content: '공유된 답변을 불러오지 못했습니다. 링크가 만료되었거나 잘못된 ID일 수 있어요.' }
+            {
+              role: 'assistant',
+              content:
+                '공유된 답변을 불러오지 못했습니다. 링크가 만료되었거나 잘못된 ID일 수 있어요.',
+            },
           ]);
           return;
         }
 
-        const data = await res.json() as {
+        const data = (await res.json()) as {
           job_id: string;
           category?: 'environment' | 'infosec' | string;
           question?: string;
@@ -772,24 +842,42 @@ export default function ChatArea() {
         const question = (data.question || '').trim();
         const answerHtml = (data.answer_html || '').trim();
 
-        // 카테고리 동기화
-        if (data.category && (data.category === 'environment' || data.category === 'infosec')) {
+        if (
+          data.category &&
+          (data.category === 'environment' || data.category === 'infosec')
+        ) {
           Cookies.set('selectedJobType', data.category, { expires: 7 });
           setSelectedJobType(data.category);
         }
 
-        const initialMsgs: { role: 'user' | 'assistant'; content: string }[] = [];
-        if (question) initialMsgs.push({ role: 'user', content: question });
-        else initialMsgs.push({ role: 'user', content: '(공유 링크로 불러온 질문)' });
+        const initialMsgs: {
+          role: 'user' | 'assistant';
+          content: string;
+        }[] = [];
+        if (question)
+          initialMsgs.push({ role: 'user', content: question });
+        else
+          initialMsgs.push({
+            role: 'user',
+            content: '(공유 링크로 불러온 질문)',
+          });
 
-        if (answerHtml) initialMsgs.push({ role: 'assistant', content: answerHtml });
-        else initialMsgs.push({ role: 'assistant', content: '답변 본문이 비어 있습니다.' });
+        if (answerHtml)
+          initialMsgs.push({ role: 'assistant', content: answerHtml });
+        else
+          initialMsgs.push({
+            role: 'assistant',
+            content: '답변 본문이 비어 있습니다.',
+          });
 
         setMessages(initialMsgs);
       } catch (e) {
         console.error('[ChatArea] public/answer fetch error:', e);
         setMessages([
-          { role: 'assistant', content: '공유된 답변을 불러오는 중 오류가 발생했습니다.' }
+          {
+            role: 'assistant',
+            content: '공유된 답변을 불러오는 중 오류가 발생했습니다.',
+          },
         ]);
       }
     })();
@@ -816,11 +904,49 @@ export default function ChatArea() {
                 : '새 대화'}
             </div>
           </div>
+
           <div className={s.headerRight}>
-            <Button variant="outline" size="sm" className={s.settingsBtn}>
-              <Settings className={s.iconXs} />
-              계정
-            </Button>
+            {/* 로그인 시: 계정 드롭다운 / 비로그인 시: 로그인 버튼 */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={s.settingsBtn}
+                    onClick={handleAccountButtonClick}
+                  >
+                    <User2 className={s.iconXs} />
+                    <span className={s.accountLabel}>
+                      {user.email ?? '계정'}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>내 계정</DropdownMenuLabel>
+                  {user.email && (
+                    <DropdownMenuItem disabled>
+                      {user.email}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className={s.iconXs} />
+                    <span>로그아웃</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className={s.settingsBtn}
+                onClick={() => setShowLoginModal(true)}
+              >
+                <Settings className={s.iconXs} />
+                로그인
+              </Button>
+            )}
           </div>
         </div>
 
@@ -836,13 +962,13 @@ export default function ChatArea() {
                     const GroupIcon = group.icon;
                     return (
                       <div key={group.id} className={s.quickSection}>
-                        {/* 섹션 헤더 (아이콘 + 제목) */}
                         <div className={s.quickSectionHeader}>
                           <GroupIcon className={s.quickSectionIcon} />
-                          <span className={s.quickSectionTitle}>{group.title}</span>
+                          <span className={s.quickSectionTitle}>
+                            {group.title}
+                          </span>
                         </div>
 
-                        {/* 섹션 안 버튼들 */}
                         <div className={s.quickGrid}>
                           {group.items.map((id) => {
                             const action = QUICK_ACTIONS_MAP[id];
@@ -853,12 +979,16 @@ export default function ChatArea() {
                                 key={action.id}
                                 type="button"
                                 className={s.quickBtn}
-                                onClick={() => handleQuickActionClick(action)}
+                                onClick={() =>
+                                  handleQuickActionClick(action)
+                                }
                               >
                                 <span className={s.quickIconWrap}>
                                   <Icon className={s.quickIcon} />
                                 </span>
-                                <span className={s.quickLabel}>{action.label}</span>
+                                <span className={s.quickLabel}>
+                                  {action.label}
+                                </span>
                               </button>
                             );
                           })}
@@ -869,10 +999,9 @@ export default function ChatArea() {
                 </div>
               )}
 
-                {messages.map((m, i) => {
+              {messages.map((m, i) => {
                 const isUser = m.role === 'user';
 
-                // 🔹 안전 뉴스 여부 및 요약/기사 분리
                 let isSafetyNews = false;
                 let safetyArticlesHtml: string | null = null;
                 let safeHtml: string;
@@ -880,8 +1009,10 @@ export default function ChatArea() {
                 if (m.role === 'assistant') {
                   if (isSafetyNewsHtml(m.content)) {
                     isSafetyNews = true;
-                    safeHtml = extractSafetySummaryHtml(m.content); // 말풍선에는 요약만
-                    safetyArticlesHtml = extractSafetyArticlesHtml(m.content); // 버튼용
+                    safeHtml = extractSafetySummaryHtml(m.content);
+                    safetyArticlesHtml = extractSafetyArticlesHtml(
+                      m.content,
+                    );
                   } else {
                     safeHtml = cutHtmlBeforeEvidence(m.content);
                   }
@@ -895,8 +1026,7 @@ export default function ChatArea() {
                     m.content === GUIDELINE_INTRO_TEXT ||
                     m.content === DOC_CREATE_INTRO_TEXT ||
                     m.content === EDU_INTRO_TEXT ||
-                    m.content === DOC_REVIEW_INTRO_TEXT
-                  );
+                    m.content === DOC_REVIEW_INTRO_TEXT);
 
                 if (isUser) {
                   return (
@@ -911,7 +1041,6 @@ export default function ChatArea() {
                   );
                 }
 
-                // assistant
                 return (
                   <div key={i} className={s.aiRow}>
                     <div
@@ -922,11 +1051,9 @@ export default function ChatArea() {
                       dangerouslySetInnerHTML={{ __html: safeHtml }}
                     />
 
-                    {/* ✅ AI 법령 해석 인트로일 때는 액션 버튼 숨김 */}
                     {!isIntro && (
                       <div className={s.actionRow}>
                         <div className={s.miniActions}>
-                          {/* ✅ 뉴스 메시지일 때는 다시 생성/복사 버튼 숨김 */}
                           {!isSafetyNews && (
                             <div className={s.miniActions}>
                               <button
@@ -939,42 +1066,47 @@ export default function ChatArea() {
                               <button
                                 className={s.iconBtn}
                                 title="복사"
-                                onClick={() => handleCopy(i, m.content)}
+                                onClick={() =>
+                                  handleCopy(i, m.content)
+                                }
                               >
                                 <Copy className={s.iconAction} />
                               </button>
                             </div>
                           )}
                         </div>
-                          <button
-                            className={s.evidenceBtn}
-                            onClick={() => {
-                              if (isSafetyNews) {
-                                const htmlForRight =
-                                  (safetyArticlesHtml && safetyArticlesHtml.trim().length > 0)
-                                    ? safetyArticlesHtml
-                                    : extractSafetyArticlesHtml(m.content) || m.content;
+                        <button
+                          className={s.evidenceBtn}
+                          onClick={() => {
+                            if (isSafetyNews) {
+                              const htmlForRight =
+                                safetyArticlesHtml &&
+                                safetyArticlesHtml.trim().length > 0
+                                  ? safetyArticlesHtml
+                                  : extractSafetyArticlesHtml(
+                                      m.content,
+                                    ) || m.content;
 
-                                // 🔹 뉴스 모드로 호출
-                                openRightFromHtml(htmlForRight, { mode: 'news' });
-                              } else {
-                                // 🔹 명시하지 않으면 'evidence'지만, 타입 맞추기 위해 같이 넘겨줘도 됨
-                                openRightFromHtml(m.content, { mode: 'evidence' });
-                              }
-                            }}
-                          >
-                            {isSafetyNews
-                              ? '참고 기사 목록 확인하기'
-                              : '근거 및 서식 확인하기'}
-                          </button>
-
+                              openRightFromHtml(htmlForRight, {
+                                mode: 'news',
+                              });
+                            } else {
+                              openRightFromHtml(m.content, {
+                                mode: 'evidence',
+                              });
+                            }
+                          }}
+                        >
+                          {isSafetyNews
+                            ? '참고 기사 목록 확인하기'
+                            : '근거 및 서식 확인하기'}
+                        </button>
                       </div>
                     )}
                   </div>
                 );
               })}
 
-              {/* ✅ AI 법령 해석용 힌트 칩 */}
               {activeHintTask && activeHints.length > 0 && (
                 <div className={s.hintWrap}>
                   {activeHints.map((hint, idx) => (
@@ -982,7 +1114,9 @@ export default function ChatArea() {
                       key={idx}
                       type="button"
                       className={s.hintChip}
-                      onClick={() => handleHintClick(activeHintTask, hint)}
+                      onClick={() =>
+                        handleHintClick(activeHintTask, hint)
+                      }
                     >
                       {hint}
                     </button>
@@ -1008,7 +1142,6 @@ export default function ChatArea() {
             </div>
           </div>
 
-          {/* 첨부 파일 리스트 */}
           {attachments.length > 0 && (
             <div className={s.attachList}>
               {attachments.map((file, idx) => (
@@ -1032,7 +1165,6 @@ export default function ChatArea() {
             </div>
           )}
 
-          {/* Input */}
           <div
             className={s.inputRow}
             onDragOver={handleDragOver}
@@ -1079,7 +1211,6 @@ export default function ChatArea() {
               </div>
             </div>
 
-            {/* 파일 첨부 버튼 */}
             <button
               type="button"
               className={s.attachBtn}
@@ -1097,7 +1228,6 @@ export default function ChatArea() {
               <ArrowUp className={s.iconMdAccent} />
             </button>
 
-            {/* 숨겨진 파일 input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -1107,12 +1237,7 @@ export default function ChatArea() {
             />
           </div>
 
-          {/* 복사 토스트 */}
-          {copied && (
-            <div className={s.toast}>
-              복사되었습니다
-            </div>
-          )}
+          {copied && <div className={s.toast}>복사되었습니다</div>}
         </div>
       </section>
 
@@ -1143,7 +1268,6 @@ export default function ChatArea() {
               </button>
             </div>
 
-            {/* ✅ 여기서부터 QUICK_ACTIONS 8개 사용 */}
             <div className={s.taskGrid}>
               {QUICK_ACTIONS.map((action) => {
                 const Icon = action.icon;
@@ -1153,8 +1277,8 @@ export default function ChatArea() {
                     type="button"
                     className={s.taskCard}
                     onClick={() => {
-                      handleQuickActionClick(action); // 타입 + 프롬프트 세팅
-                      setShowTaskModal(false);        // 모달 닫기
+                      handleQuickActionClick(action);
+                      setShowTaskModal(false);
                     }}
                   >
                     <Icon className={s.taskCardIcon} />
@@ -1165,6 +1289,11 @@ export default function ChatArea() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ✅ 로그인 모달 (비로그인일 때 계정 버튼 누르면 표시) */}
+      {showLoginModal && (
+        <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
     </>
   );

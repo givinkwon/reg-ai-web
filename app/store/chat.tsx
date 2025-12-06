@@ -264,7 +264,6 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
 };
 
 /* ── 서식 파싱(번호줄 + 다음줄 URL) ── */
-/* ── 서식 파싱(번호줄 + 다음줄 URL) ── */
 const parseFormsList = (block: string): EvidenceItem[] => {
   const lines = block.split('\n').map((x) => x.trim()).filter(Boolean);
 
@@ -378,6 +377,9 @@ interface ChatStore {
   // ✅ 여기서 파서를 호출하고 패널을 띄움
   openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => void;
 
+  // ✅ 로그인 모달 전역 상태
+  showLoginModal: boolean;
+  setShowLoginModal: (open: boolean) => void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -548,4 +550,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ rightData: data, rightOpen: true });
   },
 
+  // ✅ 로그인 모달 전역 상태
+  showLoginModal: false,
+  setShowLoginModal: (open: boolean) => set({ showLoginModal: open }),
 }));

@@ -1,33 +1,87 @@
-// app/lib/firebase.ts
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
+'use client';
 
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import {
+  getAuth,
+  type Auth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  type User,
+} from 'firebase/auth';
+import {
+  getAnalytics,
+  isSupported,
+  type Analytics,
+} from 'firebase/analytics';
+
+/**
+ * Firebase 콘솔에서 복사한 설정값
+ * (원하면 나중에 .env로 옮겨도 됨)
+ */
 const firebaseConfig = {
-  apiKey: "AIzaSyCH5QlXIumRnMf8kBDVTd9yeU-a9s_Vam0",
-  authDomain: "sales-ai-d2e70.firebaseapp.com",
-  projectId: "sales-ai-d2e70",
-  storageBucket: "sales-ai-d2e70.appspot.com",
-  messagingSenderId: "582957914219",
-  appId: "1:582957914219:web:dd4aeca37296f4ffc0f92e",
-  measurementId: "G-ME5G8X31CK",
+  apiKey: "AIzaSyBTXlY0gPnRe_ES-YuZKuMc47U4N07qAKE",
+  authDomain: "regai-8b82f.firebaseapp.com",
+  projectId: "regai-8b82f",
+  storageBucket: "regai-8b82f.firebasestorage.app",
+  messagingSenderId: "88196231324",
+  appId: "1:88196231324:web:72870a19ca5acecbd8bd59",
+  measurementId: "G-2NCDDRVEDC"
 };
 
-export const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+/* =========================
+ * Firebase App / Auth / Analytics
+ * ========================= */
 
-// Google 로그인 프로바이더 (+ Gmail 읽기 스코프 예시)
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope("https://www.googleapis.com/auth/gmail.readonly");
-googleProvider.setCustomParameters({ prompt: "select_account" });
+// app 인스턴스 (중복 생성 방지)
+const app: FirebaseApp = !getApps().length
+  ? initializeApp(firebaseConfig)
+  : getApp();
 
-// (선택) Firebase Analytics – Next.js에서는 클라이언트에서만 초기화
-let _analytics: Analytics | null = null;
-export async function getFbAnalytics() {
-  if (typeof window === "undefined") return null;
-  if (_analytics) return _analytics;
-  const supported = await isSupported().catch(() => false);
-  if (!supported) return null;
-  _analytics = getAnalytics(app);
-  return _analytics;
+// Auth + Google Provider
+const auth: Auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+// 필요하면 프로필/이메일 scope 더 추가 가능
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+});
+
+// Analytics (선택)
+let analytics: Analytics | null = null;
+if (typeof window !== 'undefined') {
+  // SSR에서는 window 없음 주의
+  isSupported()
+    .then((ok) => {
+      if (ok) {
+        analytics = getAnalytics(app);
+      }
+    })
+    .catch(() => {
+      // analytics 미지원 브라우저면 그냥 무시
+    });
+}
+
+export { app, auth, analytics };
+
+/* =========================
+ * Auth Util 함수들
+ * ========================= */
+
+/** 팝업으로 구글 로그인 */
+export async function signInWithGoogle(): Promise<User> {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+}
+
+/** 로그아웃 */
+export async function logoutFirebase() {
+  await signOut(auth);
+}
+
+/** Firebase Auth 상태 변경 리스너 */
+export function onFirebaseAuthChanged(
+  callback: (user: User | null) => void,
+) {
+  return onAuthStateChanged(auth, callback);
 }

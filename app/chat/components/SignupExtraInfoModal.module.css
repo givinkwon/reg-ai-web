@@ -1,0 +1,122 @@
+/* 전체 오버레이 */
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.45); /* 슬레이트 계열 반투명 */
+  }
+  
+  /* 가운데 카드 */
+  .card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 360px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 18px 18px 16px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    font-family: inherit;
+  }
+  
+  /* 타이틀 */
+  .title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 4px;
+  }
+  
+  /* 서브 타이틀 (파란 글씨 “거의 다 왔어요!” 느낌) */
+  .subtitle {
+    margin: 0 0 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #3b82f6;
+  }
+  
+  /* 폼 전체 */
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  /* 각 필드 래퍼 (둥근 캡슐 형태) */
+  .field {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+  }
+  
+  /* 라벨 텍스트 */
+  .field > span {
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: #6b7280;
+    padding-left: 4px;
+  }
+  
+  /* 인풋 */
+  .field input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: #111827;
+    padding: 0 4px 2px;
+  }
+  
+  /* placeholder 색 */
+  .field input::placeholder {
+    color: #9ca3af;
+  }
+  
+  /* 제출 버튼 */
+  .submit {
+    margin-top: 12px;
+    width: 100%;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 0;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.05s ease;
+  }
+  
+  /* 버튼 hover */
+  .submit:hover:not(:disabled) {
+    background: #1d4ed8;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
+  }
+  
+  /* 비활성화 상태 */
+  .submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+    box-shadow: none;
+  }
+  
+  /* 모바일에서 살짝 위로 붙어 보이지 않게 여유 */
+  @media (max-width: 480px) {
+    .card {
+      max-width: 340px;
+      padding: 18px 16px 14px;
+    }
+  }
+  

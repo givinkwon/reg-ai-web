@@ -703,6 +703,16 @@ body[data-theme='dark'] .hintChip {
   color: #2563eb; /* 기존 포인트 컬러에 맞춰서 */
 }
 
+.accountLabel {
+  margin-left: 6px;
+  font-size: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
 
 @media (max-width: 1200px) {
   .quickGrid {
@@ -766,6 +776,7 @@ body[data-theme='dark'] .hintChip {
     color: #e5e7eb;
   }
 }
+
 
 /* ===== 모바일 레이아웃 ===== */
 @media (max-width: 768px) {

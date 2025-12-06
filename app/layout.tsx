@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 const GTM_ID = "GTM-MS4RQT3J"; // 필요시 env로 이동
+const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"
 
 export default function RootLayout({
   children,
@@ -29,15 +30,33 @@ export default function RootLayout({
         <meta name="supported-color-schemes" content="light dark" />
 
         {/* ✅ OS/브라우저 상단바 색상을 라이트/다크에 각각 명시 */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9fafb" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b1120" />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: light)"
+          content="#f9fafb"
+        />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: dark)"
+          content="#0b1120"
+        />
 
         {/* iOS 상태바 대비 명시 (선택) */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="default"
+        />
 
         {/* (선택) 파비콘 */}
         {/* <link rel="icon" href="/favicon.ico" /> */}
+
+        {/* ✅ Kakao JS SDK: onLoad 없이 스크립트만 로드 */}
+        <Script
+          id="kakao-sdk"
+          src="https://developers.kakao.com/sdk/js/kakao.min.js"
+          strategy="afterInteractive"
+        />
 
         {/* Google Tag Manager */}
         <Script id="gtm-base" strategy="afterInteractive">
