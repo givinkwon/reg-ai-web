@@ -6,16 +6,24 @@ import Cookies from 'js-cookie';
 /* =========================
  * Types
  * ========================= */
-export interface ChatMessage { role: string; content: string; } // content는 HTML
-export type Room = { id: string; title: string; createdAt: number; messages: ChatMessage[]; };
+export interface ChatMessage {
+  role: string;
+  content: string; // content는 HTML
+}
+export type Room = {
+  id: string;
+  title: string;
+  createdAt: number;
+  messages: ChatMessage[];
+};
 
-export type EvidenceItem = { title: string; href?: string; snippet?: string; };
+export type EvidenceItem = { title: string; href?: string; snippet?: string };
 
-// 🔹 추가: 패널 모드 타입
-export type RightPanelMode = 'evidence' | 'news';
+// 🔹 패널 모드 타입
+export type RightPanelMode = 'evidence' | 'news' | 'lawNotice' | 'accident';
 
 export type RightPanelData = {
-  // 🔹 추가: 모드 (없으면 기본은 evidence로 취급)
+  // 🔹 모드 (없으면 기본은 evidence로 취급)
   mode?: RightPanelMode;
 
   evidence: EvidenceItem[];
@@ -24,7 +32,7 @@ export type RightPanelData = {
   // 원본 HTML (디버깅용)
   rawHtml?: string;
 
-  // 🔹 추가: 뉴스일 때 참고 기사 HTML
+  // 🔹 뉴스/입법예고일 때 참고 섹션 HTML
   newsHtml?: string;
 
   debug?: {
@@ -36,7 +44,6 @@ export type RightPanelData = {
     formsPreview: string[];
   };
 };
-
 
 /* =========================
  * Const
@@ -79,7 +86,10 @@ const storage = {
       }));
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ rooms: safeRooms, activeRoomId: payload.activeRoomId })
+        JSON.stringify({
+          rooms: safeRooms,
+          activeRoomId: payload.activeRoomId,
+        }),
       );
     } catch (e) {
       console.warn('[storage.set] failed:', e);
@@ -113,12 +123,14 @@ const stripHtml = (html: string) => {
 // 2) 정규화(공백/문자 통일)
 const normalize = (t: string) =>
   t
-    .replace(/[–—‒－―]/g, '-')      // 대시 통일
-    .replace(/[·•∙◦]/g, '-')       // 불릿 통일
+    .replace(/[–—‒－―]/g, '-') // 대시 통일
+    .replace(/[·•∙◦]/g, '-') // 불릿 통일
     .replace(/\u00A0/g, ' ')
     .replace(/\t/g, ' ')
     .replace(/[ ]{2,}/g, ' ')
-    .split('\n').map((l) => l.trimEnd()).join('\n')
+    .split('\n')
+    .map((l) => l.trimEnd())
+    .join('\n')
     .trim();
 
 // ✅ 공통 URL 정리 유틸
@@ -165,8 +177,8 @@ const cutSection = (text: string, headerRe: RegExp, nextRe: RegExp): string => {
   const m = text.match(
     new RegExp(
       `^.*${headerRe.source}.*$`,
-      headerRe.flags.includes('m') ? headerRe.flags : headerRe.flags + 'm'
-    )
+      headerRe.flags.includes('m') ? headerRe.flags : headerRe.flags + 'm',
+    ),
   );
   if (!m) return '';
   const startIdx = text.indexOf(m[0]);
@@ -182,7 +194,7 @@ const cutEvidenceBlock = (text: string) => {
   const iconIdx = text.indexOf('🔗');
   const scope = iconIdx >= 0 ? text.slice(0, iconIdx) : text;
 
-  // 라인 전체가 정확히 "2) 근거" (필요시 2. / ②도 허용하고 싶으면 정규식 확장)
+  // 라인 전체가 정확히 "2) 근거"
   const headerLineRe = /^\s*2\)\s*근거\s*$/m;
 
   const m = scope.match(headerLineRe);
@@ -212,7 +224,6 @@ const cutFormsBlock = (text: string) => {
   return block2;
 };
 
-
 /* ── 근거 라인 파싱 ── */
 const parseEvidenceLine = (raw: string): EvidenceItem | null => {
   const url = urlOf(raw);
@@ -237,11 +248,14 @@ const parseEvidenceLine = (raw: string): EvidenceItem | null => {
 };
 
 const parseEvidenceLines = (block: string): EvidenceItem[] => {
-  const lines = block.split('\n').map((x) => x.trim()).filter(Boolean);
+  const lines = block
+    .split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean);
 
   // 후보 라인(불릿/번호/〔…〕/[…]/제n조…/부칙…)
   let candidates = lines.filter((x) =>
-    /^(-|\d+[\)\.]|〔.+?〕|\[.+?\]|제\d+조|부칙)/.test(x)
+    /^(-|\d+[\)\.]|〔.+?〕|\[.+?\]|제\d+조|부칙)/.test(x),
   );
 
   const items: EvidenceItem[] = [];
@@ -265,7 +279,10 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
 
 /* ── 서식 파싱(번호줄 + 다음줄 URL) ── */
 const parseFormsList = (block: string): EvidenceItem[] => {
-  const lines = block.split('\n').map((x) => x.trim()).filter(Boolean);
+  const lines = block
+    .split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean);
 
   const items: EvidenceItem[] = [];
   let cur: EvidenceItem | null = null;
@@ -279,13 +296,15 @@ const parseFormsList = (block: string): EvidenceItem[] => {
     }
 
     // 1) 번호 헤더만 새 아이템으로 (불릿 '-' 는 제외)
-    const head = ln.match(/^(\d+[.)])\s*(.+)$/);  // "1. " 또는 "1) " 허용
+    const head = ln.match(/^(\d+[.)])\s*(.+)$/); // "1. " 또는 "1) " 허용
     if (head) {
       if (cur) items.push(cur);
 
       // 헤더 텍스트에 URL이 섞여있으면 제거 후 title만 남기기
       const inlineUrl = urlOf(head[2]);
-      const titleOnly = inlineUrl ? head[2].replace(inlineUrl, '').trim() : head[2];
+      const titleOnly = inlineUrl
+        ? head[2].replace(inlineUrl, '').trim()
+        : head[2];
 
       cur = { title: cleanTitle(titleOnly) };
       if (inlineUrl) cur.href = normalizeUrl(inlineUrl);
@@ -305,10 +324,9 @@ const parseFormsList = (block: string): EvidenceItem[] => {
   return items;
 };
 
-
 /* ── 최종 파서 (디버그 로그 포함) ── */
 const parseRightDataFromHtml = (html: string): RightPanelData => {
-  console.groupCollapsed('%c[RightPanel Parser] START','color:#2388ff');
+  console.groupCollapsed('%c[RightPanel Parser] START', 'color:#2388ff');
   console.log('raw html:', html);
 
   const stripped = stripHtml(html);
@@ -323,8 +341,18 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
   console.log('step3.formsBlock:', formsBlock);
 
   // 라인 미리보기(디버깅용)
-  const evidencePreview = evBlock ? evBlock.split('\n').map((x)=>x.trim()).filter(Boolean) : [];
-  const formsPreview = formsBlock ? formsBlock.split('\n').map((x)=>x.trim()).filter(Boolean) : [];
+  const evidencePreview = evBlock
+    ? evBlock
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean)
+    : [];
+  const formsPreview = formsBlock
+    ? formsBlock
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean)
+    : [];
   console.log('evidencePreview:', evidencePreview);
   console.log('formsPreview:', formsPreview);
 
@@ -336,8 +364,17 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
   console.groupEnd();
 
   return {
-    evidence, forms, rawHtml: html,
-    debug: { stripped, normalized, evBlock, formsBlock, evidencePreview, formsPreview },
+    evidence,
+    forms,
+    rawHtml: html,
+    debug: {
+      stripped,
+      normalized,
+      evBlock,
+      formsBlock,
+      evidencePreview,
+      formsPreview,
+    },
   };
 };
 
@@ -352,8 +389,8 @@ interface ChatStore {
 
   rooms: Room[];
   activeRoomId: string | null;
-  loadFromCookies: () => void;     // 내부 구현은 localStorage 사용
-  saveToCookies: () => void;       // 내부 구현은 localStorage 사용 + 쿠키(접힘만)
+  loadFromCookies: () => void; // 내부 구현은 localStorage 사용
+  saveToCookies: () => void; // 내부 구현은 localStorage 사용 + 쿠키(접힘만)
   createRoom: () => string;
   setActiveRoom: (id: string) => void;
   deleteRoom: (id: string) => void;
@@ -392,14 +429,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const idx = rooms.findIndex((r) => r.id === activeRoomId);
     if (idx < 0) return;
     const next = [...rooms];
-    next[idx] = { ...next[idx], messages: msgs.slice(-MAX_MSG_PER_ROOM) };
+    next[idx] = {
+      ...next[idx],
+      messages: msgs.slice(-MAX_MSG_PER_ROOM),
+    };
     set({ rooms: next });
     get().saveToCookies();
   },
   addMessage: (msg) =>
     set((state) => {
       const last = state.messages[state.messages.length - 1];
-      if (last && last.role === msg.role && last.content === msg.content) return state;
+      if (last && last.role === msg.role && last.content === msg.content)
+        return state;
       return { messages: [...state.messages, msg] };
     }),
   clearMessages: () => {
@@ -447,13 +488,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     storage.set({ rooms, activeRoomId });
     // 2) 작은 플래그만 쿠키
     try {
-      Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', { expires: 365 });
+      Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', {
+        expires: 365,
+      });
     } catch {}
   },
   createRoom: () => {
-    const id = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const room: Room = { id, title: '새 대화', createdAt: Date.now(), messages: [] };
-    set((s) => ({ rooms: [room, ...s.rooms], activeRoomId: id, messages: [] }));
+    const id = `r_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    const room: Room = {
+      id,
+      title: '새 대화',
+      createdAt: Date.now(),
+      messages: [],
+    };
+    set((s) => ({
+      rooms: [room, ...s.rooms],
+      activeRoomId: id,
+      messages: [],
+    }));
     get().saveToCookies();
     return id;
   },
@@ -466,11 +520,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   deleteRoom: (id) => {
     set((s) => {
       const filtered = s.rooms.filter((r) => r.id !== id);
-      const nextActive = s.activeRoomId === id ? (filtered[0]?.id ?? null) : s.activeRoomId;
+      const nextActive =
+        s.activeRoomId === id ? filtered[0]?.id ?? null : s.activeRoomId;
       return {
         rooms: filtered,
         activeRoomId: nextActive,
-        messages: nextActive ? filtered.find((r) => r.id === nextActive)?.messages || [] : [],
+        messages: nextActive
+          ? filtered.find((r) => r.id === nextActive)?.messages || []
+          : [],
       };
     });
     get().saveToCookies();
@@ -482,7 +539,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const r = s.rooms[idx];
       if (r.title && r.title !== '새 대화') return s;
       const next = [...s.rooms];
-      next[idx] = { ...r, title: title.trim().slice(0, 15) || '새 대화' };
+      next[idx] = {
+        ...r,
+        title: title.trim().slice(0, 15) || '새 대화',
+      };
       return { ...s, rooms: next };
     });
     get().saveToCookies();
@@ -507,7 +567,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   /* 패널/데이터 */
   collapsed: false,
-  setCollapsed: (v) => { set({ collapsed: v }); get().saveToCookies(); },
+  setCollapsed: (v) => {
+    set({ collapsed: v });
+    get().saveToCookies();
+  },
   sidebarMobileOpen: false,
   setSidebarMobileOpen: (v) => set({ sidebarMobileOpen: v }),
 
@@ -519,6 +582,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   rightData: null,
   setRightData: (d) => set({ rightData: d }),
 
+  // 🔥 여기서 모드별로 분기 처리
   openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => {
     if (!html) {
       console.warn('[openRightFromHtml] empty html');
@@ -526,11 +590,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     const mode: RightPanelMode = opts?.mode ?? 'evidence';
+    console.log('[openRightFromHtml] mode =', mode);
 
-    // 🔹 1) 뉴스 모드: 파서 안 타고 그대로 오른쪽 패널에 HTML 뿌리기
-    if (mode === 'news') {
+    // 🔹 뉴스 / 입법예고 모드 → 파서 안 타고 그대로 newsHtml에 싣기
+    if (mode === 'news' || mode === 'lawNotice' || mode === 'accident') {
       const data: RightPanelData = {
-        mode: 'news',
+        mode,
         evidence: [],
         forms: [],
         rawHtml: html,
@@ -540,7 +605,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return;
     }
 
-    // 🔹 2) 기본 모드: 기존처럼 근거/서식 파서 사용
+    // 🔹 기본(evidence) 모드 → 기존 근거/서식 파서 사용
     const parsed = parseRightDataFromHtml(html);
     const data: RightPanelData = {
       ...parsed,

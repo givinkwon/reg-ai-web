@@ -72,6 +72,154 @@ function parseNewsItems(html: string | undefined | null): NewsItem[] {
 }
 
 /* =========================
+ * 입법예고(참고 입법예고 목록) 파서
+ * ========================= */
+
+function parseLawNoticeItems(html: string | undefined | null): NewsItem[] {
+  if (!html) return [];
+
+  const items: NewsItem[] = [];
+  const seen = new Set<string>();
+
+  // 1) 먼저 a 태그 기반으로 시도
+  const aRe = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+
+  while ((m = aRe.exec(html)) !== null) {
+    let href = m[1].trim();
+    if (!href || seen.has(href)) continue;
+    seen.add(href);
+
+    let title = m[2].replace(/<[^>]+>/g, '').trim();
+    if (!title) title = href;
+
+    items.push({ title, href });
+  }
+
+  if (items.length > 0) return items;
+
+  // 2) fallback: 텍스트 + URL 패턴
+  let text = html
+    .replace(/<(br|BR)\s*\/?>/g, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\r/g, '');
+
+  text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
+
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  for (const raw of lines) {
+    // "참고 입법예고 목록" 헤더는 스킵
+    if (/^#*\s*참고\s*입법예고\s*목록/.test(raw)) continue;
+
+    // 예시:
+    // 1. 제목 (입법예고기간: 2025-10-02~2025-11-11, URL: https://www.moleg.go.kr/....)
+    const m2 = raw.match(
+      /^\d+\.\s*(.+?)\s*\((?:입법예고기간:[^,]*,)?\s*URL:\s*([^)]+)\)/,
+    );
+    if (!m2) continue;
+
+    let title = m2[1].trim();
+    let href = m2[2].trim().replace(/[)\]\u3009>.,]+$/u, '');
+
+    if (!href || seen.has(href)) continue;
+    seen.add(href);
+
+    if (!title) title = href;
+
+    items.push({ title, href });
+  }
+
+  return items;
+}
+
+/* =========================
+ * 사고사례 파서
+ * ========================= */
+
+type AccidentCase = {
+  title: string;
+  body: string;
+};
+
+function parseAccidentCases(html: string | undefined | null): AccidentCase[] {
+  if (!html) return [];
+
+  // 1) HTML → 텍스트
+  let text = html
+    .replace(/<(br|BR)\s*\/?>/g, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\r/g, '');
+
+  text = text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .trim();
+
+  // 2) "5) 참고 사고사례" 섹션만 잘라내기
+  const idx = text.indexOf('5) 참고 사고사례');
+  if (idx === -1) return [];
+
+  const afterTitle = text.slice(idx).split('\n').slice(1); // 제목 줄 한 줄 스킵
+
+  const cases: AccidentCase[] = [];
+  let currentTitle = '';
+  let currentBody: string[] = [];
+
+  for (const rawLine of afterTitle) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // 6) ~, 7) ~ 같은 다음 번호 섹션이 나오면 종료
+    if (/^\d+\)\s/.test(line) && !line.startsWith('5)')) {
+      break;
+    }
+
+    // "- [사고사례 1] 제목: ..." 형태의 새 케이스 시작
+    if (/^[-•]\s*\[?사고사례\s*\d+\]?/.test(line)) {
+      // 이전 케이스 flush
+      if (currentTitle) {
+        cases.push({
+          title: currentTitle,
+          body: currentBody.join(' '),
+        });
+        currentBody = [];
+      }
+
+      // 제목 부분만 뽑기
+      // 예: "- [사고사례 1] 제목: 카고 크레인 붐이 고압전선과 접촉되면서 감전"
+      const m = line.match(/사고사례\s*\d+\]?\s*제목[:：]?\s*(.+)$/);
+      const titleText = m ? m[1].trim() : line.replace(/^[-•]\s*/, '');
+
+      currentTitle = titleText;
+    } else {
+      // 본문 라인
+      if (!currentTitle) continue;
+      currentBody.push(line);
+    }
+  }
+
+  // 마지막 케이스 flush
+  if (currentTitle) {
+    cases.push({
+      title: currentTitle,
+      body: currentBody.join(' '),
+    });
+  }
+
+  return cases;
+}
+
+
+/* =========================
  * 컴포넌트
  * ========================= */
 
@@ -81,6 +229,8 @@ export default function RightPanel() {
   const data         = useChatStore((st) => st.rightData);
 
   const isNewsMode = data?.mode === 'news';
+  const isLawNoticeMode  = data?.mode === 'lawNotice';
+  const isAccidentMode = data?.mode === 'accident';
 
   // SSR/CSR 불일치 방지용
   const [mounted, setMounted] = useState(false);
@@ -104,6 +254,24 @@ export default function RightPanel() {
     [isNewsMode, data?.newsHtml, data?.rawHtml],
   );
 
+  // ---- 입법예고용 데이터 (제목/링크 리스트)
+  const lawNoticeItems = useMemo(
+    () =>
+      isLawNoticeMode
+        ? parseLawNoticeItems(data?.newsHtml ?? data?.rawHtml ?? '')
+        : [],
+    [isLawNoticeMode, data?.newsHtml, data?.rawHtml],
+  );
+
+  // ---- 사고사례용 데이터
+  const accidentCases = useMemo(
+    () =>
+      isAccidentMode
+          ? parseAccidentCases(data?.newsHtml ?? data?.rawHtml ?? '')
+          : [],
+    [isAccidentMode, data?.newsHtml, data?.rawHtml],
+  );
+
   // ---- 기존 근거/서식용 데이터
   const forms = useMemo(() => {
     const raw = data?.forms ?? [];
@@ -122,8 +290,15 @@ export default function RightPanel() {
 
   if (!mounted) return null;
 
-  const panelTitle = isNewsMode ? '참고 기사 목록' : '답변 근거';
-
+  const panelTitle =
+  isNewsMode
+    ? '참고 기사 목록'
+    : isLawNoticeMode
+    ? '참고 입법예고 목록'
+    : isAccidentMode
+    ? '참고 사고사례'
+    : '답변 근거';
+  
   const panel = (
     <>
       {/* overlay */}
@@ -190,21 +365,103 @@ export default function RightPanel() {
                 </ul>
               )}
             </>
-          ) : (
+          ) : isLawNoticeMode ? (
             <>
               {/* =========================
-               * 2) 기본 모드 (근거 / 서식)
+               * 2) 입법예고 모드 (참고 입법예고 목록)
                * ========================= */}
-              <div className={s.groupTitle}>답변 근거</div>
-              {!evidence.length ? (
+              <div className={s.groupTitle}>참고 입법예고 목록</div>
+              {!lawNoticeItems.length ? (
                 <div className={s.emptyBox}>
-                  답변에서 근거를 찾지 못했습니다.
+                  참고 입법예고 목록을 불러오지 못했습니다.
                 </div>
               ) : (
-                <ul className={s.evList}>
-                  {evidence.map((it, i) => (
-                    <li key={`ev-${i}`} className={s.evItem}>
-                      <div className={s.evTitle}>
+                <ul className={s.newsList}>
+                  {lawNoticeItems.map((item, idx) => (
+                    <li key={item.href} className={s.newsItem}>
+                      <a
+                        href={item.href}
+                        className={s.newsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className={s.newsIndex}>{idx + 1}.</span>
+                        <span className={s.newsTitle}>{item.title}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : isAccidentMode ? (
+              <>
+                <div className={s.groupTitle}>참고 사고사례</div>
+                {!accidentCases.length ? (
+                  <div className={s.emptyBox}>
+                    참고 사고사례를 찾지 못했습니다.
+                  </div>
+                ) : (
+                  <ul className={s.newsList}>
+                    {accidentCases.map((item, idx) => (
+                      <li key={idx} className={s.newsItem}>
+                        <div className={s.newsLink}>
+                          <span className={s.newsIndex}>{idx + 1}.</span>
+                          <span className={s.newsTitle}>{item.title}</span>
+                        </div>
+                        {item.body && (
+                          <div className={s.evSnippet}>{item.body}</div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <>
+                {/* ✅ 기본 모드: 답변 근거 + 관련 별표/서식만 표시 */}
+                <div className={s.groupTitle}>답변 근거</div>
+                {!evidence.length ? (
+                  <div className={s.emptyBox}>
+                    답변에서 근거를 찾지 못했습니다.
+                  </div>
+                ) : (
+                  <ul className={s.evList}>
+                    {evidence.map((it, i) => (
+                      <li key={`ev-${i}`} className={s.evItem}>
+                        <div className={s.evTitle}>
+                          {it.href ? (
+                            <a
+                              href={it.href}
+                              className={s.linkA}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="새 탭으로 열기"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {it.title}
+                            </a>
+                          ) : (
+                            it.title
+                          )}
+                        </div>
+                        {it.snippet && (
+                          <div className={s.evSnippet}>{it.snippet}</div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+  
+                <div className={s.groupTitle}>관련 별표/서식</div>
+                {!forms.length ? (
+                  <div className={s.emptyBox}>
+                    항목을 선택하면 상세가 표시됩니다.
+                  </div>
+                ) : (
+                  <ul className={s.linkList}>
+                    {forms.map((it, i) => (
+                      <li key={`form-${i}`} className={s.linkItem}>
                         {it.href ? (
                           <a
                             href={it.href}
@@ -219,45 +476,13 @@ export default function RightPanel() {
                         ) : (
                           it.title
                         )}
-                      </div>
-                      {it.snippet && (
-                        <div className={s.evSnippet}>{it.snippet}</div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className={s.groupTitle}>관련 별표/서식</div>
-              {!forms.length ? (
-                <div className={s.emptyBox}>
-                  항목을 선택하면 상세가 표시됩니다.
-                </div>
-              ) : (
-                <ul className={s.linkList}>
-                  {forms.map((it, i) => (
-                    <li key={`form-${i}`} className={s.linkItem}>
-                      {it.href ? (
-                        <a
-                          href={it.href}
-                          className={s.linkA}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="새 탭으로 열기"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {it.title}
-                        </a>
-                      ) : (
-                        it.title
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
       </aside>
     </>
   );

@@ -15,7 +15,8 @@ type ServerTaskType =
 | 'risk_assessment'
 | 'law_interpret'
 | 'edu_material'
-| 'guideline_interpret';
+| 'guideline_interpret'
+| 'accident_search';
 
 // NEW: sendMessage 옵션 타입
 type SendOptions = {
@@ -183,7 +184,8 @@ export function useChatController() {
       taskType === 'risk_assessment' ||
       taskType === 'law_interpret' ||
       taskType === 'edu_material' ||
-      taskType === 'guideline_interpret'
+      taskType === 'guideline_interpret' ||
+      taskType === 'accident_search'   
     ) {
       return taskType;
     }

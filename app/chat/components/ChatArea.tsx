@@ -46,7 +46,8 @@ type TaskType =
   | 'risk_assessment'
   | 'law_interpret'
   | 'edu_material'
-  | 'guideline_interpret';
+  | 'guideline_interpret'
+  | 'accident_search';
 
 const TASK_META: Record<TaskType, { label: string }> = {
   law_research: { label: '법령 조사' },
@@ -55,6 +56,7 @@ const TASK_META: Record<TaskType, { label: string }> = {
   law_interpret: { label: 'AI 법령 해석' },
   edu_material: { label: '교육자료 생성' },
   guideline_interpret: { label: '실무지침 해석' },
+  accident_search: { label: '사고사례 검색' },
 };
 
 type QuickAction = {
@@ -71,7 +73,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     label: '사고사례 검색',
     icon: Search,
     placeholder: '지게차, 크레인 등 특정 설비와 관련된 사고사례를 찾아줘.',
-    taskType: 'law_research',
+    taskType: 'accident_search',  
   },
   {
     id: 'today_accident',
@@ -145,6 +147,25 @@ type SafetyNewsResponse = {
   batch_date?: string;
   digest: string;
   source_count?: number | null;
+};
+type LawNoticeSummaryResponse = {
+  id?: string | null;
+  run_date?: string | null;
+  cutoff_date?: string | null;
+  months_back?: number | null;
+  item_count?: number | null;
+
+  // 예전 safety-news 스타일
+  digest?: string | null;
+
+  // 혹시 백엔드가 평탄화해서 줄 수도 있음
+  summary_kor?: string | null;
+
+  // 지금 실제로 오는 구조(text.summary_kor)
+  text?: {
+    summary_kor?: string;
+    [key: string]: any;
+  } | null;
 };
 
 type QuickActionGroup = {
@@ -274,10 +295,11 @@ export default function ChatArea() {
   };
 
   type HintTask =
-    | 'law_interpret'
-    | 'guideline_interpret'
-    | 'doc_create'
-    | 'edu_material';
+  | 'law_interpret'
+  | 'guideline_interpret'
+  | 'doc_create'
+  | 'edu_material'
+  | 'accident_search';
 
   const [activeHintTask, setActiveHintTask] = useState<HintTask | null>(null);
   const [activeHints, setActiveHints] = useState<string[]>([]);
@@ -345,6 +367,33 @@ export default function ChatArea() {
     '도급·하도급 현장의 안전보건 책임과 의무를 설명하는 교육자료',
     '밀폐공간 작업 안전수칙과 사고사례를 포함한 교육자료',
   ];
+
+  const ACCIDENT_INTRO_TEXT =
+  'KOSHA 사고사례 DB에서 원하는 설비·공정과 관련된 사고사례를 찾아 개요와 재발방지대책까지 정리해드려요. 어떤 사고사례를 찾고 싶으신가요?';
+
+  const ACCIDENT_HINTS: string[] = [
+    '지게차 작업 중 전도·끼임 사고사례를 찾아주고 사고개요와 재발방지대책을 정리해줘.',
+    '타워크레인 설치·해체 작업에서 발생한 사고사례를 찾아주고 주요 원인과 예방대책을 정리해줘.',
+    '밀폐공간(맨홀, 탱크 내부 등) 질식 사고사례를 찾아주고 작업 전·중·후 안전대책을 정리해줘.',
+    '컨베이어 라인 협착 사고사례를 찾아주고 설비개선 및 작업절차 개선방안을 제안해줘.',
+    '고소작업대 사용 중 추락 사고사례를 찾아주고 보호구·작업발판·안전대 관련 예방대책을 정리해줘.',
+    '비계(동바리 포함) 붕괴·추락 사고사례를 찾아주고 구조적 결함, 작업발판 설치 불량 등 주요 원인과 관리대책을 정리해줘.',
+    '전기판넬·분전반 작업 중 감전 사고사례를 찾아주고 잠금·표시(LOTO), 절연보호구, 점검절차 중심으로 예방대책을 정리해줘.',
+    '도장·세척 작업장에서의 화재·폭발 사고사례를 찾아주고 인화성 물질 관리, 통풍·환기, 점화원 관리 대책을 정리해줘.',
+    '프레스·전단기 등 기계에 의한 절단·끼임 사고사례를 찾아주고 방호장치, 양수조작, 작업표준서 개선방안을 정리해줘.',
+    '천장크레인·호이스트 사용 중 충돌·낙하 사고사례를 찾아주고 와이어로프 점검, 정격하중 준수, 신호수 배치 등 예방대책을 정리해줘.',
+    '이동식 사다리 사용 중 추락 사고사례를 찾아주고 설치 각도, 미끄럼 방지, 상부 지지 방법 등 안전수칙 중심으로 예방대책을 정리해줘.',
+    '굴착(흙막이·트렌치) 작업 중 토사 붕괴 사고사례를 찾아주고 흙막이 구조, 붕괴 징후 관리, 출입통제 대책을 정리해줘.',
+    '휴대용 절단기·그라인더 사용 중 비산·베임 사고사례를 찾아주고 연마석 파손, 보호구 착용, 작업자세 개선대책을 정리해줘.',
+    '용접·용단 작업 중 화재·폭발 사고사례를 찾아주고 가연물 관리, 불티비산 방지, 가스누출 점검 절차 등을 정리해줘.',
+    '산·알칼리 등 화학물질 누출·피부·눈 화상 사고사례를 찾아주고 보관·이송·주입 작업 단계별 예방대책과 비상조치 방안을 정리해줘.',
+    '산업용 로봇·자동화설비 주변에서 발생한 협착·충돌 사고사례를 찾아주고 안전펜스, 인터록, 안전센서 적용방안을 정리해줘.',
+    '하역작업(상·하차, 팔레트 이동 등) 중 끼임·추락 사고사례를 찾아주고 작업동선 정리, 하역장 구조개선, 신호·유도체계 대책을 정리해줘.',
+    '이동식 크레인(카고크레인 포함) 전도·접촉 사고사례를 찾아주고 지반침하, 아웃트리거 설치, 전선 접촉 위험 중심으로 예방대책을 정리해줘.',
+    '집수정·폐수처리장 등에서 황화수소·유해가스에 의한 질식 사고사례를 찾아주고 가스농도 측정, 환기, 감시인 배치 대책을 정리해줘.',
+    '겨울철 결빙된 작업장 바닥에서 미끄러짐·넘어짐 사고사례를 찾아주고 제설·제빙, 배수 개선, 미끄럼 방지구 설치 등 예방대책을 정리해줘.',
+  ];
+  
 
   function pickRandomHints(source: string[], count: number): string[] {
     const arr = [...source];
@@ -430,43 +479,86 @@ export default function ChatArea() {
 
   const cutHtmlBeforeEvidence = (html: string) => {
     if (!html) return html;
+
+    // <br> → 줄바꿈으로 바꿔서 줄 단위로 헤더를 찾기 쉽게
     const working = html.replace(/<(br|BR)\s*\/?>/g, '\n');
-    const headerRe = /^\s*(?:2\)|2\.|②)\s*근거\s*$/m;
-    const m = working.match(headerRe);
-    let cutIdx = m?.index ?? -1;
+
+    // 1) "2) 근거" 위치
+    const evidenceRe = /^\s*(?:2\)|2\.|②)\s*근거\s*$/m;
+    const evidenceMatch = working.match(evidenceRe);
+
+    // 2) "5) 참고 사고사례" 위치
+    const accidentRe = /^\s*5\)\s*참고\s*사고사례\s*$/m;
+    const accidentMatch = working.match(accidentRe);
+
+    let cutIdx = -1;
+
+    if (evidenceMatch?.index != null) {
+      cutIdx = evidenceMatch.index;
+    }
+    if (accidentMatch?.index != null) {
+      // 근거/사고사례 둘 다 있으면 더 앞에 나오는 쪽에서 자르기
+      cutIdx =
+        cutIdx === -1
+          ? accidentMatch.index
+          : Math.min(cutIdx, accidentMatch.index);
+    }
+
+    // 3) 혹시 정규식이 안 먹히는 경우를 대비한 fallback
+    if (cutIdx < 0) {
+      const accIdx = working.indexOf('5) 참고 사고사례');
+      if (accIdx >= 0) cutIdx = accIdx;
+    }
+
+    // 4) 예전처럼 🔗 아이콘 기준 fallback 유지
     if (cutIdx < 0) {
       const altIconIdx = working.indexOf('🔗');
       if (altIconIdx >= 0) cutIdx = altIconIdx;
     }
+
+    // 자를 위치가 없으면 원본 그대로
     if (cutIdx <= 0) return html;
+
     const before = working.slice(0, cutIdx);
     return before.replace(/\n/g, '<br />');
   };
 
-  const splitDigestForArticles = (digest: string) => {
+  const splitDigestForArticles = (digest: string, marker = '참고 기사 목록') => {
     if (!digest) return { summaryText: '', articlesText: '' };
-
-    const marker = '참고 기사 목록';
+  
     const idx = digest.indexOf(marker);
-
+  
     if (idx === -1) {
       return {
         summaryText: digest.trim(),
         articlesText: '',
       };
     }
-
+  
     const summaryPart = digest.slice(0, idx);
     const articlesPart = digest.slice(idx);
-
+  
     return {
       summaryText: summaryPart.trim(),
       articlesText: articlesPart.trim(),
     };
   };
+  
 
   const isSafetyNewsHtml = (html: string) => {
     return html.includes('data-msg-type="safety-news"');
+  };
+
+  // 🔹 추가: 사고사례 섹션이 있는지 체크
+  const hasAccidentCasesInHtml = (html: string) => {
+    if (!html) return false;
+
+    // 대표 패턴들
+    if (html.includes('5) 참고 사고사례')) return true;
+    if (html.includes('참고 사고사례')) return true;
+    if (/\[사고사례\s*\d+\]/.test(html)) return true;
+
+    return false;
   };
 
   const extractSafetySummaryHtml = (html: string) => {
@@ -487,6 +579,75 @@ export default function ChatArea() {
     const cleaned = match[0].replace(/display\s*:\s*none\s*;?/i, '');
     return `<div><h3>참고 기사 목록</h3>${cleaned}</div>`;
   };
+
+  // 🔹 새로 추가: 입법예고 요약 메시지인지 판별
+  const isNoticeSummaryHtml = (html: string) => {
+    return html.includes('data-msg-type="notice-summary"');
+  };
+
+  // 🔹 새로 추가: 입법예고 메시지에서 "참고 입법예고 목록" 섹션만 제거한 본문
+  const extractNoticeSummaryHtml = (html: string) => {
+    // data-section="articles" 블록만 날리고 나머지는 그대로 유지
+    return html.replace(
+      /<div[^>]+data-section="articles"[^>]*>[\s\S]*?<\/div>/,
+      '',
+    );
+  };
+
+  // 🔹 새로 추가: "참고 입법예고 목록"을 제목 + URL 링크 리스트로 변환
+  const extractNoticeArticlesHtml = (html: string) => {
+    const match = html.match(
+      /<div[^>]+data-section="articles"[^>]*>([\s\S]*?)<\/div>/,
+    );
+    if (!match) return '';
+
+    // 안쪽 HTML -> 텍스트 라인
+    const inner = match[1]
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/?[^>]+>/g, '')
+      .trim();
+
+    if (!inner) return '';
+
+    const lines = inner
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const items: { title: string; url: string }[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith('참고 입법예고 목록')) continue;
+
+      // 예:
+      // 1. 제목 (입법예고기간: 2025-10-02~2025-11-11, URL: https://www.moleg....)
+      const m = line.match(
+        /^\d+\.\s*(.+?)\s*\((?:입법예고기간:[^,]*,)?\s*URL:\s*([^)]+)\)/,
+      );
+      if (m) {
+        items.push({
+          title: m[1].trim(),
+          url: m[2].trim(),
+        });
+      }
+    }
+
+    // 파싱 실패하면 그냥 원문이라도 보여주기
+    if (!items.length) {
+      const fallback = lines.join('<br />');
+      return `<div><h3>참고 입법예고 목록</h3><div>${fallback}</div></div>`;
+    }
+
+    const listHtml = items
+      .map(
+        (it) =>
+          `<li><a href="${it.url}" target="_blank" rel="noopener noreferrer">${it.title}</a></li>`,
+      )
+      .join('');
+
+    return `<div><h3>참고 입법예고 목록</h3><ul>${listHtml}</ul></div>`;
+  };
+
 
   const handleSend = () => {
     // 내용도 파일도 없으면 무시 (선택 사항)
@@ -644,6 +805,114 @@ export default function ChatArea() {
     }
   };
 
+  const fetchLawNoticeSummary = async () => {
+    try {
+      const res = await fetch('/api/expect-law/latest');
+  
+      if (!res.ok) {
+        console.error('[ChatArea] law-notice-summary error status:', res.status);
+        const errorMsg: ChatMessage = {
+          role: 'assistant',
+          content:
+            '입법 예고 요약을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        };
+        setMessages([...messages, errorMsg]);
+        setShowLanding(false);
+        return;
+      }
+  
+      const data = (await res.json()) as LawNoticeSummaryResponse;
+      console.log('[ChatArea] expect-law data =', data);
+  
+      const cutoff = data.cutoff_date?.slice(0, 10);
+      const run = data.run_date?.slice(0, 10);
+  
+      const periodText =
+        cutoff && run ? `${cutoff} ~ ${run}` : run || cutoff || '';
+  
+      const titleHtml = periodText
+        ? `📜 <strong>${periodText} 입법 예고 요약</strong>`
+        : '📜 <strong>입법 예고 요약</strong>';
+  
+      const metaParts: string[] = [];
+  
+      if (typeof data.months_back === 'number') {
+        metaParts.push(`최근 ${data.months_back}개월 기준`);
+      }
+  
+      if (typeof data.item_count === 'number') {
+        metaParts.push(`입법예고 ${data.item_count}건 기준`);
+      }
+  
+      const metaHtml = metaParts.length
+        ? `<div style="margin-top:4px; font-size:12px; opacity:0.8;">
+             ${metaParts.join(' · ')}
+           </div>`
+        : '';
+  
+      const digestText =
+        data.digest || data.summary_kor || data.text?.summary_kor || '';
+  
+      // ✅ 여기서 marker 를 '참고 입법예고 목록' 으로
+      const { summaryText, articlesText } = splitDigestForArticles(
+        digestText,
+        '참고 입법예고 목록',
+      );
+  
+      const summaryHtml = summaryText
+        ? summaryText
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join('<br />')
+        : '';
+  
+      const articlesHtml = articlesText
+        ? articlesText
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join('<br />')
+        : '';
+  
+      // 🔥 summary / articles 를 data-section 으로 나누고
+      //    articles 는 display:none 으로 숨겨둔다 (우측 패널용)
+      const html = `
+        <div data-msg-type="notice-summary">
+          <p>${titleHtml}</p>
+          ${metaHtml}
+          ${
+            summaryHtml
+              ? `<div style="margin-top:8px;" data-section="summary">${summaryHtml}</div>`
+              : ''
+          }
+          ${
+            articlesHtml
+              ? `<div style="margin-top:12px; display:none;" data-section="articles">${articlesHtml}</div>`
+              : ''
+          }
+        </div>
+      `;
+  
+      const msg: ChatMessage = {
+        role: 'assistant',
+        content: html,
+      };
+  
+      setMessages([...messages, msg]);
+      setShowLanding(false);
+    } catch (e) {
+      console.error('[ChatArea] expect-law-summary fetch error:', e);
+      const errorMsg: ChatMessage = {
+        role: 'assistant',
+        content: '입법 예고 요약을 불러오는 중 오류가 발생했습니다.',
+      };
+      setMessages([...messages, errorMsg]);
+      setShowLanding(false);
+    }
+  };
+  
+
   const handleQuickActionClick = (action: QuickAction) => {
     if (action.taskType) {
       setSelectedTask(action.taskType);
@@ -653,6 +922,36 @@ export default function ChatArea() {
       setActiveHintTask(null);
       setActiveHints([]);
       fetchWeeklySafetyNews();
+      return;
+    }
+
+    // 🔹 추가: 입법 예고 요약
+    if (action.id === 'notice_summary') {
+      setActiveHintTask(null);
+      setActiveHints([]);
+      fetchLawNoticeSummary();
+      return;
+    }
+
+    if (action.id === 'accident_search') {
+      const intro: ChatMessage = {
+        role: 'assistant',
+        content: ACCIDENT_INTRO_TEXT,
+      };
+  
+      if (messages.length === 0) {
+        setMessages([intro]);
+      } else {
+        setMessages([...messages, intro]);
+      }
+  
+      setActiveHintTask('accident_search');
+      setActiveHints(pickRandomHints(ACCIDENT_HINTS, 3)); // 🔹 랜덤 3개
+  
+      setInput('');
+      const el = document.querySelector<HTMLInputElement>('.chat-input');
+      if (el) el.focus();
+  
       return;
     }
 
@@ -760,6 +1059,8 @@ export default function ChatArea() {
       mappedTaskType = 'edu_material';
     } else if (task === 'guideline_interpret') {
       mappedTaskType = 'guideline_interpret';
+    } else if (task === 'accident_search') {   
+      mappedTaskType = 'accident_search';
     } else {
       mappedTaskType = 'law_interpret';
     }
@@ -1003,18 +1304,29 @@ export default function ChatArea() {
                 const isUser = m.role === 'user';
 
                 let isSafetyNews = false;
+                let isNoticeSummary = false;
+                let isAccidentCases = false;              // 🔹 추가
                 let safetyArticlesHtml: string | null = null;
+                let noticeArticlesHtml: string | null = null;
                 let safeHtml: string;
 
                 if (m.role === 'assistant') {
-                  if (isSafetyNewsHtml(m.content)) {
+                  const rawHtml = m.content || '';
+
+                  // 🔹 사고사례 섹션 있는지 먼저 체크
+                  isAccidentCases = hasAccidentCasesInHtml(rawHtml);
+
+                  if (isSafetyNewsHtml(rawHtml)) {
                     isSafetyNews = true;
-                    safeHtml = extractSafetySummaryHtml(m.content);
-                    safetyArticlesHtml = extractSafetyArticlesHtml(
-                      m.content,
-                    );
+                    safeHtml = extractSafetySummaryHtml(rawHtml);
+                    safetyArticlesHtml = extractSafetyArticlesHtml(rawHtml);
+                  } else if (isNoticeSummaryHtml(rawHtml)) {
+                    // ✅ 입법예고 요약
+                    isNoticeSummary = true;
+                    safeHtml = extractNoticeSummaryHtml(rawHtml); // 본문(제목+요약)만
+                    noticeArticlesHtml = extractNoticeArticlesHtml(rawHtml); // 우측 패널용
                   } else {
-                    safeHtml = cutHtmlBeforeEvidence(m.content);
+                    safeHtml = cutHtmlBeforeEvidence(rawHtml);
                   }
                 } else {
                   safeHtml = m.content;
@@ -1026,7 +1338,8 @@ export default function ChatArea() {
                     m.content === GUIDELINE_INTRO_TEXT ||
                     m.content === DOC_CREATE_INTRO_TEXT ||
                     m.content === EDU_INTRO_TEXT ||
-                    m.content === DOC_REVIEW_INTRO_TEXT);
+                    m.content === DOC_REVIEW_INTRO_TEXT ||
+                    m.content === ACCIDENT_INTRO_TEXT);
 
                 if (isUser) {
                   return (
@@ -1054,7 +1367,7 @@ export default function ChatArea() {
                     {!isIntro && (
                       <div className={s.actionRow}>
                         <div className={s.miniActions}>
-                          {!isSafetyNews && (
+                          {(!isSafetyNews && !isNoticeSummary) && (
                             <div className={s.miniActions}>
                               <button
                                 className={s.iconBtn}
@@ -1080,16 +1393,27 @@ export default function ChatArea() {
                           onClick={() => {
                             if (isSafetyNews) {
                               const htmlForRight =
-                                safetyArticlesHtml &&
-                                safetyArticlesHtml.trim().length > 0
+                                safetyArticlesHtml && safetyArticlesHtml.trim().length > 0
                                   ? safetyArticlesHtml
-                                  : extractSafetyArticlesHtml(
-                                      m.content,
-                                    ) || m.content;
+                                  : extractSafetyArticlesHtml(m.content) || m.content;
 
                               openRightFromHtml(htmlForRight, {
                                 mode: 'news',
                               });
+                            } else if (isNoticeSummary) {
+                              // ✅ 입법예고용: 제목만 + 링크 리스트
+                              const htmlForRight =
+                                noticeArticlesHtml && noticeArticlesHtml.trim().length > 0
+                                  ? noticeArticlesHtml
+                                  : extractNoticeArticlesHtml(m.content) || m.content;
+
+                              openRightFromHtml(htmlForRight, {
+                                mode: 'lawNotice',
+                              });
+                            } else if (isAccidentCases) {
+                              openRightFromHtml(m.content, {
+                                mode: 'accident'
+                              })
                             } else {
                               openRightFromHtml(m.content, {
                                 mode: 'evidence',
@@ -1099,8 +1423,14 @@ export default function ChatArea() {
                         >
                           {isSafetyNews
                             ? '참고 기사 목록 확인하기'
+                            : isNoticeSummary
+                            ? '참고 입법예고 목록 확인하기'
+                            : isAccidentCases                    // 🔹 여기 추가
+                            ? '참고 사고사례 확인하기'
                             : '근거 및 서식 확인하기'}
                         </button>
+
+
                       </div>
                     )}
                   </div>
