@@ -712,6 +712,144 @@ body[data-theme='dark'] .hintChip {
   white-space: nowrap;
 }
 
+.docWrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 12px 24px;
+}
+
+.docTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.docSubtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.docCategoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.docCategoryCard {
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.docCategoryCardOpen {
+  border-color: #2563eb33;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
+}
+
+.docCategoryHeader {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+}
+
+.docCategoryText {
+  flex: 1;
+  min-width: 0;
+}
+
+.docCategoryTitle {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 4px;
+}
+
+.docCategoryDesc {
+  display: block;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.docCategoryArrow {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  padding: 3px;
+  transition: transform 0.18s ease;
+}
+
+.docCategoryArrowOpen {
+  transform: rotate(180deg);
+}
+
+.docList {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.docChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 0.78rem;
+  color: #374151;
+}
+
+.docChip:hover {
+  border-color: #2563eb55;
+  background: #eff6ff;
+}
+
+.docChipIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.docChipLabel {
+  white-space: nowrap;
+}
+
+.docEmpty {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.aiBubble .safety-doc-download-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #e0e5ff;
+  font-size: 12px;
+  line-height: 1;
+  background: #f8f9ff;
+  color: #3068ff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.aiBubble .safety-doc-download-chip:hover {
+  background: #e7edff;
+}
+
 
 
 @media (max-width: 1200px) {
