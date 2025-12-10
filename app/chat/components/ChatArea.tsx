@@ -34,7 +34,11 @@ import Cookies from 'js-cookie';
 import s from './ChatArea.module.css';
 import LoginPromptModal from './LoginPromptModal';
 import { logoutFirebase } from '@/app/lib/firebase';
-import MakeSafetyDocs from './MakeSafetyDocs';
+import MakeSafetyDocs, {
+  SafetyDoc,
+  SafetyDocCategory,
+} from './MakeSafetyDocs';
+import DocReviewUploadPane from './DocReviewUploadPane';
 
 const TYPE_META: Record<string, { label: string; emoji: string }> = {
   environment: { label: '환경/안전', emoji: '🌱' },
@@ -146,6 +150,15 @@ type SafetyDocGuide = {
   fields: string[];
   downloadLabel?: string;
   downloadUrl?: string;
+};
+
+// 어떤 모드인지: 생성 / 검토 / 없음
+type SafetyDocMode = 'create' | 'review' | null;
+
+// 검토 모드에서 선택된 문서(카테고리 + 문서)
+type SelectedReviewDoc = {
+  category: SafetyDocCategory;
+  doc: SafetyDoc;
 };
 
 export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
@@ -725,6 +738,7 @@ export default function ChatArea() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const setMessages = useChatStore((st) => st.setMessages);
+  const addMessage = useChatStore((st) => st.addMessage);
   const openRightFromHtml = useChatStore((st) => st.openRightFromHtml);
 
   const bootOnce = useRef(false);
@@ -887,10 +901,6 @@ export default function ChatArea() {
     TYPE_META[selectedJobType ?? ''] ?? { label: '분야 선택', emoji: '💼' };
 
   const currentTaskMeta = selectedTask ? TASK_META[selectedTask] : null;
-
-  const [isDocCreateMode, setIsDocCreateMode] = useState(false);
-
-  const isSafetyDocTask = isDocCreateMode;
 
   // HTML -> 텍스트 (백업용)
   const htmlToText = (html: string) => {
@@ -1154,20 +1164,6 @@ export default function ChatArea() {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!e.dataTransfer?.files?.length) return;
-    const files = Array.from(e.dataTransfer.files);
-    setAttachments((prev) => [...prev, ...files]);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    if (!files.length) return;
-    setAttachments((prev) => [...prev, ...files]);
-    e.target.value = '';
-  };
-
   const fetchWeeklySafetyNews = async () => {
     try {
       const params = new URLSearchParams();
@@ -1384,7 +1380,9 @@ export default function ChatArea() {
   
 
   const handleQuickActionClick = (action: QuickAction) => {
-    setIsDocCreateMode(false);
+    // ✅ 문서 모드 초기화
+    setDocMode(null);
+    setReviewDoc(null);
 
     if (action.taskType) {
       setSelectedTask(action.taskType);
@@ -1428,38 +1426,30 @@ export default function ChatArea() {
     }
 
     if (action.id === 'doc_review') {
-      const intro: ChatMessage = {
-        role: 'assistant',
-        content: DOC_REVIEW_INTRO_TEXT,
-      };
-
-      if (messages.length === 0) {
-        setMessages([intro]);
-      } else {
-        setMessages([...messages, intro]);
-      }
-
+      // ✅ 말풍선 안 넣고, 문서 선택 + 업로드 화면만 띄우도록
       setActiveHintTask(null);
       setActiveHints([]);
-
+      setDocMode('review');   // ⬅️ 검토 모드 ON
+  
       setInput('');
       const el = document.querySelector<HTMLInputElement>('.chat-input');
       if (el) el.focus();
-
+  
       return;
     }
-
+  
     // ✅ 안전 문서 생성: 말풍선/칩 없이 패널만 보여주기
     if (action.id === 'doc_create') {
       setActiveHintTask(null);
       setActiveHints([]);
-      setIsDocCreateMode(true);          // <-- 여기서 패널 ON
-
+      setDocMode('create');   // ⬅️ 생성 모드 ON
+  
       setInput('');
       const el = document.querySelector<HTMLInputElement>('.chat-input');
       if (el) el.focus();
       return;
     }
+  
 
     if (
       action.id === 'law_interpret' ||
@@ -1532,9 +1522,7 @@ export default function ChatArea() {
     }
   
     let mappedTaskType: TaskType;
-    if (task === 'doc_create') {
-      mappedTaskType = 'doc_review';
-    } else if (task === 'edu_material') {
+    if (task === 'edu_material') {
       mappedTaskType = 'edu_material';
     } else if (task === 'guideline_interpret') {
       mappedTaskType = 'guideline_interpret';
@@ -1559,13 +1547,14 @@ export default function ChatArea() {
   const handleSelectSafetyDoc = (category: any, doc: any) => {
     // 작업 타입을 문서 생성/검토 쪽으로 설정
     setSelectedTask('doc_review');
-    // 문서 선택 패널 닫기
-    setIsDocCreateMode(false);
-
-    // 1) 사용자 말풍선: 문서 이름만 깔끔하게
+  
+    // 선택이 끝났으니 모드를 초기화하고 싶으면 옵션으로
+    setDocMode(null);
+  
+    // 1) 사용자 말풍선
     const userMsg: ChatMessage = {
       role: 'user',
-      content: doc.label, // 예: "비상사태 대응훈련 결과보고서"
+      content: doc.label,
     };
 
     // 2) 문서별 안내 가이드 찾기
@@ -1641,6 +1630,41 @@ export default function ChatArea() {
   
     // 3번까지 허용, 4번째부터 막기
     return nextCount > GUEST_LIMIT;
+  };
+
+  // 문서 생성/검토 모드 상태
+  const [docMode, setDocMode] = useState<'create' | 'review' | null>(null);
+
+  // 검토 대상 문서 (카테고리 + 문서)
+  const [reviewDoc, setReviewDoc] = useState<{
+    category: SafetyDocCategory;
+    doc: SafetyDoc;
+  } | null>(null);
+
+  const isSafetyDocTask = docMode === 'create' || docMode === 'review';
+
+  // 실제로 파일을 상태에 추가하는 공통 함수
+  const addAttachments = (files: File[]) => {
+    if (!files || files.length === 0) return;
+    setAttachments(prev => [...prev, ...files]);
+  };
+
+  const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+  
+    const files = Array.from(e.target.files);
+    addAttachments(files);
+  
+    // 같은 파일 다시 선택 가능하도록 초기화
+    e.target.value = '';
+  };
+
+  const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!e.dataTransfer.files) return;
+  
+    const files = Array.from(e.dataTransfer.files);
+    addAttachments(files);
   };
 
   useEffect(() => {
@@ -1804,16 +1828,60 @@ export default function ChatArea() {
         <div className={s.body}>
           <div className={s.stream}>
             <div className={s.streamInner}>
-              {messages.length === 0 && (
-                <>
-                  {isSafetyDocTask ? (
-                    // ✅ "안전 문서 생성" 선택 시: 첫 번째 스샷처럼 카테고리/드롭다운 UI
-                    <MakeSafetyDocs
-                      onSelectDoc={(category, doc) => {
+            {messages.length === 0 && (
+              <>
+                {isSafetyDocTask ? (
+                  <MakeSafetyDocs
+                    mode={docMode === 'review' ? 'review' : 'create'}
+                    onSelectDoc={(category, doc) => {
+                      if (docMode === 'create') {
+                        // ✅ 생성 모드: 선택 → 바로 프롬프트 안내
                         handleSelectSafetyDoc(category, doc);
-                      }}
-                    />
-                  ) : (
+                      } else if (docMode === 'review') {
+                        // ✅ 검토 모드: 어떤 문서인지 상태만 저장
+                        setReviewDoc({ category, doc });
+                      }
+                    }}
+                    // ✅ 어떤 문서가 선택됐는지 (검토 모드에서만)
+                    selectedDocId={
+                      docMode === 'review' && reviewDoc ? reviewDoc.doc.id : null
+                    }
+                    // ✅ 선택된 문서 아래에 표시할 업로드 영역 (드롭다운)
+                    renderSelectedDocPane={(category, doc) =>
+                      docMode === 'review' ? (
+                        <DocReviewUploadPane
+                          category={category}     // ← 인자로 받은 category / doc 그대로 사용
+                          doc={doc}
+                          onUploadAndAsk={async ({ category, doc, files }) => {
+                            // (선택) 화면에만 보일 간단한 메시지
+                            // 실제 GPT 프롬프트는 FastAPI에서 생성함
+                            addMessage({
+                              role: 'user',
+                              content: `[문서 검토 요청] "${doc.label}" 문서를 업로드했습니다. 검토 결과를 알려주세요.`,
+                            });
+                    
+                            // 👉 여기서는 값만 묶어서 API로 전송
+                            const form = new FormData();
+                            files.forEach((f) => form.append('files', f));
+                    
+                            // 백엔드에서 프롬프트 만들 때 쓸 메타 정보들
+                            form.append('task_type', 'safety_doc_review');
+                            form.append('safety_doc_id', doc.id);
+                            form.append('safety_doc_label', doc.label);
+                            form.append('category_id', category.id);
+                            form.append('category_title', category.title);
+                    
+                            // Next.js API → FastAPI로 job 생성 요청
+                            await fetch('/api/start-doc-review', {
+                              method: 'POST',
+                              body: form,
+                            });
+                          }}
+                        />
+                      ) : null
+                    }
+                  />
+                ) : (
                     // 그 외 작업들은 기존 "무엇을 도와드릴까요?" 퀵 액션 노출
                     <div className={s.quickWrap}>
                       <div className={s.quickTitle}>무엇을 도와드릴까요?</div>
@@ -2063,7 +2131,7 @@ export default function ChatArea() {
           <div
             className={s.inputRow}
             onDragOver={handleDragOver}
-            onDrop={handleDrop}
+            onDrop={handleDropFiles}
           >
             <div className={s.inputWrap}>
               <div className={s.inputShell}>
@@ -2128,7 +2196,7 @@ export default function ChatArea() {
               type="file"
               multiple
               style={{ display: 'none' }}
-              onChange={handleFileChange}
+              onChange={handleAddFiles}
             />
           </div>
 
