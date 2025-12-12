@@ -386,6 +386,7 @@ interface ChatStore {
   setMessages: (msgs: ChatMessage[]) => void;
   addMessage: (msg: ChatMessage) => void;
   clearMessages: () => void;
+  updateLastAssistant: (content: string) => void; 
 
   rooms: Room[];
   activeRoomId: string | null;
@@ -455,6 +456,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     get().saveToCookies();
   },
 
+  // 마지막 assistant 말풍선의 content만 교체
+  updateLastAssistant: (content: string) =>
+    set((state) => {
+      const msgs = [...state.messages];
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role === 'assistant') {
+          msgs[i] = { ...msgs[i], content };
+          break;
+        }
+      }
+      return { messages: msgs };
+    }),
+    
   /* 방/저장 */
   rooms: [],
   activeRoomId: null,

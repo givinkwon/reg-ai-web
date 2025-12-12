@@ -1,4 +1,3 @@
-// DocReviewUploadPane.tsx
 'use client';
 
 import { useRef } from 'react';
@@ -8,11 +7,12 @@ import s from './DocReviewUploadPane.module.css';
 type DocReviewUploadPaneProps = {
   category: SafetyDocCategory;
   doc: SafetyDoc;
-  onUploadAndAsk: (args: {
+  // ✅ 업로드 + 질의까지 한 번에 진행하는 콜백
+  onUploadAndAsk: (params: {
     category: SafetyDocCategory;
     doc: SafetyDoc;
     files: File[];
-  }) => void;
+  }) => void | Promise<void>;
 };
 
 export default function DocReviewUploadPane({
@@ -32,6 +32,8 @@ export default function DocReviewUploadPane({
     if (files.length === 0) return;
 
     onUploadAndAsk({ category, doc, files });
+
+    // 같은 파일을 다시 선택할 수 있게 초기화
     e.target.value = '';
   };
 
@@ -70,7 +72,8 @@ export default function DocReviewUploadPane({
         </div>
 
         <p className={s.sub}>
-          이 영역에 파일을 드래그해서 놓거나, 클릭해서 파일을 선택할 수 있어요.
+          이 영역에 파일을 드래그해서 놓거나, 클릭해서 파일을 선택하면
+          REG AI가 바로 문서 내용을 분석해서 검토 결과를 알려드려요.
         </p>
 
         <div className={s.illustration}>
