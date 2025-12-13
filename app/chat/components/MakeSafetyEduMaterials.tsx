@@ -1,10 +1,6 @@
 // MakeSafetyEduMaterials.tsx
 'use client';
 
-import { useState } from 'react';
-
-
-
 export type SafetyEduMaterial = {
   id: string;
   title: string;
@@ -482,181 +478,119 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
 };
 
 import { ChevronDown, ChevronUp, FileText, Download } from 'lucide-react';
-import s from './MakeSafetyEduMaterials.module.css';
-import Button from '@/app/components/ui/button';
+import s from './ChatArea.module.css'; // ✅ 문서생성과 동일한 스타일 재사용
 
-type MakeSafetyEduMaterialsProps = {
-  /**
-   * 사용자가 특정 교육자료를 선택하고
-   * "이 내용으로 교육자료 생성하기" 버튼을 눌렀을 때 호출되는 콜백
-   */
+import { useState, type ReactNode } from 'react';
+
+
+export type MakeSafetyEduMaterialsProps = {
+  // 문서랑 동일하게 “선택 콜백”
   onSelectMaterial?: (params: {
     category: SafetyEduCategory;
     material: SafetyEduMaterial;
     guide: SafetyEduGuide;
   }) => void;
+
+  // (선택) 선택된 항목 표시/드롭다운 표시용
+  selectedMaterialId?: string | null;
+
+  // (선택) 선택된 항목 아래에 렌더링할 패널 (가이드/다운로드 등을 여기로 넣을 수도 있음)
+  renderSelectedMaterialPane?: (
+    category: SafetyEduCategory,
+    material: SafetyEduMaterial,
+    guide: SafetyEduGuide,
+  ) => ReactNode;
 };
 
 export default function MakeSafetyEduMaterials({
   onSelectMaterial,
+  selectedMaterialId,
+  renderSelectedMaterialPane,
 }: MakeSafetyEduMaterialsProps) {
-  // 기본으로 첫 번째 카테고리 open
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(
     SAFETY_EDU_CATEGORIES_RAW[0]?.id ?? null,
   );
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
-    null,
-  );
 
-  const selectedCategory =
-    SAFETY_EDU_CATEGORIES_RAW.find((c) => c.id === openCategoryId) ?? null;
-
-  const selectedMaterial: SafetyEduMaterial | null =
-    selectedCategory?.materials.find((m) => m.id === selectedMaterialId) ??
-    null;
-
-  const selectedGuide: SafetyEduGuide | null =
-    selectedMaterial != null
-      ? SAFETY_EDU_GUIDES_RAW[selectedMaterial.guideKey]
-      : null;
-
-  const handleCategoryClick = (id: string) => {
-    // 같은 카테고리를 다시 누르면 접기
-    setOpenCategoryId((prev) => (prev === id ? null : id));
-    setSelectedMaterialId(null);
-  };
-
-  const handleMaterialClick = (
-    category: SafetyEduCategory,
-    material: SafetyEduMaterial,
-  ) => {
-    setOpenCategoryId(category.id);
-    setSelectedMaterialId(material.id);
-  };
-
-  const handleGenerateClick = () => {
-    if (!selectedCategory || !selectedMaterial || !selectedGuide) return;
-    if (!onSelectMaterial) return;
-
-    onSelectMaterial({
-      category: selectedCategory,
-      material: selectedMaterial,
-      guide: selectedGuide,
-    });
-  };
+  const titleText = 'REG AI가 필요한 교육자료를 생성해드릴게요.';
+  const subtitleText = '어떤 교육 주제를 선택할까요?';
 
   return (
-    <div className={s.root}>
-      {/* 왼쪽 영역: 카테고리 + 드랍다운 리스트 */}
-      <div className={s.leftPane}>
-        <div className={s.header}>
-          <div className={s.badge}>교육 자료 생성</div>
-          <div className={s.title}>공정별 안전교육 주제 선택</div>
-          <p className={s.sub}>
-            먼저 공정·작업 종류를 선택한 뒤, 안에서 필요한 교육 주제를
-            골라주세요. 선택된 주제에 맞게 교육 구성 항목과 기본 템플릿을
-            보여드려요.
-          </p>
-        </div>
+    <div className={s.docWrap}>
+      <h2 className={s.docTitle}>{titleText}</h2>
+      <p className={s.docSubtitle}>{subtitleText}</p>
 
-        <div className={s.categoryList}>
-          {SAFETY_EDU_CATEGORIES_RAW.map((category) => {
-            const isOpen = category.id === openCategoryId;
-            return (
-              <div key={category.id} className={s.categoryItem}>
-                <button
-                  type="button"
-                  className={s.categoryHeader}
-                  onClick={() => handleCategoryClick(category.id)}
-                >
-                  <div>
-                    <div className={s.categoryTitle}>{category.title}</div>
-                    <div className={s.categoryDesc}>
-                      {category.description}
-                    </div>
-                  </div>
-                  {isOpen ? (
-                    <ChevronUp className={s.chevron} />
+      <div className={s.docCategoryList}>
+        {SAFETY_EDU_CATEGORIES_RAW.map((cat) => {
+          const isOpen = cat.id === openCategoryId;
+
+          return (
+            <div
+              key={cat.id}
+              className={`${s.docCategoryCard} ${
+                isOpen ? s.docCategoryCardOpen : ''
+              }`}
+            >
+              {/* 카테고리 헤더 */}
+              <button
+                type="button"
+                className={s.docCategoryHeader}
+                onClick={() => setOpenCategoryId(isOpen ? null : cat.id)}
+              >
+                <div className={s.docCategoryText}>
+                  <span className={s.docCategoryTitle}>{cat.title}</span>
+                  <span className={s.docCategoryDesc}>{cat.description}</span>
+                </div>
+                <ChevronDown
+                  className={`${s.docCategoryArrow} ${
+                    isOpen ? s.docCategoryArrowOpen : ''
+                  }`}
+                />
+              </button>
+
+              {/* 펼쳐진 상태의 주제(칩) 리스트 */}
+              {isOpen && (
+                <div className={s.docList}>
+                  {cat.materials.length > 0 ? (
+                    cat.materials.map((m) => {
+                      const guide = SAFETY_EDU_GUIDES_RAW[m.guideKey];
+                      const isSelected = selectedMaterialId === m.id;
+
+                      return (
+                        <div key={m.id} className={s.docRow}>
+                          <button
+                            type="button"
+                            className={`${s.docChip} ${
+                              isSelected ? s.docChipActive : ''
+                            }`}
+                            onClick={() => {
+                              if (!guide) return;
+                              // ✅ 문서 생성과 동일: “칩 클릭 즉시” 부모에게 알림
+                              onSelectMaterial?.({ category: cat, material: m, guide });
+                            }}
+                          >
+                            <FileText className={s.docChipIcon} />
+                            <span className={s.docChipLabel}>{m.title}</span>
+                          </button>
+
+                          {/* (선택) 문서 검토 업로드처럼, 선택된 항목 아래에 드롭다운 패널을 붙이고 싶으면 */}
+                          {isSelected && renderSelectedMaterialPane && guide && (
+                            <div className={s.docDropdownPane}>
+                              {renderSelectedMaterialPane(cat, m, guide)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   ) : (
-                    <ChevronDown className={s.chevron} />
+                    <div className={s.docEmpty}>
+                      아직 등록된 교육 주제가 없습니다. 필요한 주제를 추가해 주세요.
+                    </div>
                   )}
-                </button>
-
-                {isOpen && (
-                  <div className={s.materialRow}>
-                    {category.materials.map((material) => (
-                      <button
-                        key={material.id}
-                        type="button"
-                        className={
-                          material.id === selectedMaterialId
-                            ? `${s.materialChip} ${s.materialChipActive}`
-                            : s.materialChip
-                        }
-                        onClick={() => handleMaterialClick(category, material)}
-                      >
-                        <FileText className={s.materialIcon} />
-                        <span>{material.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 오른쪽 영역: 선택된 교육자료 상세 안내 + 다운로드/생성 버튼 */}
-      <div className={s.rightPane}>
-        {selectedCategory && selectedMaterial && selectedGuide ? (
-          <div className={s.inner}>
-            <div className={s.docName}>
-              <strong>{selectedMaterial.title}</strong>
-              <span className={s.docTag}>{selectedCategory.title}</span>
-            </div>
-
-            <p className={s.guideIntro}>{selectedGuide.intro}</p>
-
-            <p className={s.guideHint}>
-              아래 항목들을 중심으로 PPT/교안을 구성하면, 실제 산업현장에서
-              바로 활용 가능한 교육자료를 만들 수 있어요.
-            </p>
-
-            <ul className={s.bulletList}>
-              {selectedGuide.bulletPoints.map((line, idx) => (
-                <li key={idx}>{line.replace(/^·\s?/, '')}</li>
-              ))}
-            </ul>
-
-            <div className={s.actions}>
-              {/* 템플릿 다운로드 */}
-                <Button variant="outline" size="sm" type="button">
-                <a
-                    href={selectedGuide.downloadUrl}
-                    download
-                    className={s.downloadLink}
-                >
-                    <Download className={s.actionIcon} />
-                    {selectedGuide.downloadLabel}
-                </a>
-                </Button>
-
-              {/* 이 주제로 바로 생성 시작 */}
-              {onSelectMaterial && (
-                <Button size="sm" onClick={handleGenerateClick}>
-                  이 내용으로 교육자료 생성하기
-                </Button>
+                </div>
               )}
             </div>
-          </div>
-        ) : (
-          <div className={s.empty}>
-            공정과 교육 주제를 선택하면 이 영역에
-            <br />
-            교육 구성 항목과 템플릿 다운로드 버튼을 보여드릴게요.
-          </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );

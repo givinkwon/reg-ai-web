@@ -1857,6 +1857,12 @@ export default function ChatArea() {
     }
   };
   
+  const [noticeToast, setNoticeToast] = useState<string | null>(null);
+
+  const showNotice = (msg: string) => {
+    setNoticeToast(msg);
+    window.setTimeout(() => setNoticeToast(null), 2500);
+  };
 
   const handleQuickActionClick = (action: QuickAction) => {
     // ✅ 문서 모드 초기화
@@ -1865,6 +1871,12 @@ export default function ChatArea() {
 
     if (action.taskType) {
       setSelectedTask(action.taskType);
+    }
+
+    // ✅ 위험성평가 기능 준비중 알림
+    if (action.id === 'risk_assess') {
+      showNotice('준비중입니다. 26년 1월 기능 배포 예정입니다.');
+      return; // ✅ 여기서 끝내서 태스크 선택/메시지 추가 안되게
     }
 
     if (action.id === 'today_accident') {
@@ -2375,6 +2387,69 @@ export default function ChatArea() {
 
   const updateLastAssistant = useChatStore((s) => s.updateLastAssistant);
 
+  const [selectedEduMaterialId, setSelectedEduMaterialId] = useState<string | null>(null);
+
+  type EduSelectParams = {
+    category: SafetyEduCategory;
+    material: SafetyEduMaterial;
+    guide: SafetyEduGuide;
+  };
+
+  const buildEduGuideHtml = ({ category, material, guide }: EduSelectParams) => { 
+    const bullets = guide.bulletPoints
+      .map((b) => b.replace(/^·\s?/, ''))
+      .map((b) => `<li>${b}</li>`)
+      .join('');
+
+    return `
+      <div data-ai-kind="edu-material">
+        <div style="font-weight:700; margin-bottom:6px;">
+          ${material.title}
+          <span style="color:#9ca3af; font-weight:600; margin-left:6px;">
+            ${category.title}
+          </span>
+        </div>
+
+        <div style="margin-bottom:10px;">${guide.intro}</div>
+
+        <ul style="margin:0 0 12px 18px;">
+          ${bullets}
+        </ul>
+
+        <a href="${guide.downloadUrl}" target="_blank" rel="noopener noreferrer"
+          style="display:inline-block; padding:10px 12px; border:1px solid #334155; border-radius:12px; text-decoration:none;">
+          ⬇️ ${guide.downloadLabel}
+        </a>
+      </div>
+    `;
+  };
+
+
+  const handleSelectSafetyEduMaterial = ({
+    category,
+    material,
+    guide,
+  }: {
+    category: any;
+    material: any;
+    guide: any;
+  }) => {
+    // 선택 표시(옵션)
+    setSelectedEduMaterialId(material.id);
+
+    // ✅ 1) 유저 메시지 추가 (이게 “유저가 선택했다”처럼 보이게 함)
+    addMessage({
+      role: 'user',
+      content: `[교육자료 생성] ${material.title}`,
+    });
+
+    // ✅ 2) assistant 메시지 추가 (이게 “시스템이 답변”처럼 보이게 함)
+    addMessage({
+      role: 'assistant',
+      content: buildEduGuideHtml({ category, material, guide }),
+    });
+  };
+
   return (
     <>
       <section className={s.wrap}>
@@ -2512,8 +2587,10 @@ export default function ChatArea() {
                     }
                   />
                 ) : isEduTask ? (
-                  // ✅ 교육자료 생성 모드: 공정별 교육자료 패널
-                  <MakeSafetyEduMaterials />
+                    <MakeSafetyEduMaterials
+                      onSelectMaterial={handleSelectSafetyEduMaterial}
+                      selectedMaterialId={selectedEduMaterialId} // 선택 하이라이트 원하면
+                    />
                 ) : (
                   // 그 외 작업들은 기존 "무엇을 도와드릴까요?" 퀵 액션 노출
                   <div className={s.quickWrap}>
@@ -2601,8 +2678,10 @@ export default function ChatArea() {
                 const isSafetyDocDownload =
                   m.role === 'assistant' && m.content.includes('양식 다운로드');
 
-                // 인트로이거나, 문서 양식 다운로드 안내면 액션 숨김
-                const hideActionRow = isIntro || isSafetyDocDownload;
+                const isEduMaterial =
+                  m.role === 'assistant' && m.content.includes('data-ai-kind="edu-material"');
+
+                const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial;
 
                 if (isUser) {
                   return (
@@ -2888,6 +2967,7 @@ export default function ChatArea() {
       {showLoginModal && (
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
+      {noticeToast && <div className={s.toast}>{noticeToast}</div>}
     </>
   );
 }
