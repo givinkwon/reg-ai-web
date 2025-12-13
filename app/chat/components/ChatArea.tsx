@@ -146,21 +146,39 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
-type SafetyDocGuide = {
+export type SafetyDocDownload = {
+  label: string;
+  url: string;
+  icon?: string;
+  filename?: string;
+};
+
+export type SafetyDocGuide = {
   intro: string;
   fields: string[];
+
+  // ✅ 신규(권장): 여러 개 다운로드 지원
+  downloads?: SafetyDocDownload[];
+
+  // ✅ 기존 호환(남겨둬도 됨)
   downloadLabel?: string;
   downloadUrl?: string;
 };
 
-// 어떤 모드인지: 생성 / 검토 / 없음
-type SafetyDocMode = 'create' | 'review' | null;
-
-// 검토 모드에서 선택된 문서(카테고리 + 문서)
-type SelectedReviewDoc = {
-  category: SafetyDocCategory;
-  doc: SafetyDoc;
-};
+const makeDownloads = (id: string, baseLabel: string): SafetyDocDownload[] => [
+  {
+    label: `${baseLabel} (HWP) 다운로드`,
+    url: `/templates/${id}.hwp`,
+    icon: '📝',
+    filename: `${baseLabel}.hwp`,      // ✅ 저장 파일명
+  },
+  {
+    label: `${baseLabel} (XLSX) 다운로드`,
+    url: `/templates/${id}.xlsx`,
+    icon: '📊',
+    filename: `${baseLabel}.xlsx`,     // ✅ 저장 파일명
+  },
+];
 
 export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
   /* =========================
@@ -180,8 +198,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 필요한 예산·인력·설비 등 자원 계획',
       '· 계획 이행 상황을 점검·보고하는 방법(회의, 보고서 등)',
     ],
-    downloadLabel: '추진계획(안) 기본 양식 다운로드',
-    downloadUrl: '/templates/goal-plan.docx',
+    downloads: makeDownloads('goal-plan', '추진계획(안) 기본 양식'),
   },
 
   'edu-plan-result': {
@@ -196,8 +213,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 외부 위탁·온라인 교육 등 특이사항',
       '· 향후 미실시/미이수 인원에 대한 보완 계획',
     ],
-    downloadLabel: '계획대비 실적 결과표 양식 다운로드',
-    downloadUrl: '/templates/edu-plan-result.docx',
+    downloads: makeDownloads('edu-plan-result', '계획대비 실적 결과표 양식'),
   },
 
   'disaster-drill-report': {
@@ -213,8 +229,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 재난 대응체계 개선사항 및 후속 조치 계획',
       '· 첨부할 사진, 체크리스트, 참석부 등 자료 목록',
     ],
-    downloadLabel: '비상재난 훈련 결과보고서 양식 다운로드',
-    downloadUrl: '/templates/disaster-drill-report.docx',
+    downloads: makeDownloads('disaster-drill-report', '비상재난 훈련 결과보고서 양식'),
   },
 
   'safety-cost-plan': {
@@ -229,8 +244,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 예산 집행·관리 책임 부서와 담당자',
       '· 예산 집행 결과를 점검·보고하는 주기와 방법',
     ],
-    downloadLabel: '안전보건비용계획서 양식 다운로드',
-    downloadUrl: '/templates/safety-cost-plan.docx',
+    downloads: makeDownloads('safety-cost-plan', '안전보건비용계획서 양식'),
   },
 
   'law-compliance-eval': {
@@ -244,8 +258,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 부적합 사항의 내용, 원인, 개선 계획',
       '· 평가 참여 인원(평가자·참석자) 및 확인·서명 방식',
     ],
-    downloadLabel: '법규준수평가 양식 다운로드',
-    downloadUrl: '/templates/law-compliance-eval.docx',
+    downloads: makeDownloads('law-compliance-eval', '법규준수평가 양식'),
   },
 
   'safety-system-eval': {
@@ -261,8 +274,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 관리체계 전반에 대한 종합평가(등급, 코멘트 등)',
       '· 향후 개선이 필요한 핵심 과제와 일정',
     ],
-    downloadLabel: '관리체계 평가표 양식 다운로드',
-    downloadUrl: '/templates/safety-system-eval.docx',
+    downloads: makeDownloads('safety-system-eval', '관리체계 평가표 양식'),
   },
 
   'safety-edu-result-report': {
@@ -278,14 +290,12 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 이해도·만족도 평가 결과(설문, 퀴즈 등)',
       '· 추가로 필요한 보완 교육이나 후속 조치 계획',
     ],
-    downloadLabel: '교육 결과보고서 양식 다운로드',
-    downloadUrl: '/templates/safety-edu-result-report.docx',
+    downloads: makeDownloads('safety-edu-result-report', '교육 결과보고서 양식'),
   },
 
   'emergency-drill-report': {
     intro:
       '비상사태 대응 훈련 결과 보고서 작성을 위해 다음의 내용을 알려주세요.',
-    // 👉 스샷에 나온 문구 그대로
     fields: [
       '· 훈련 참가자 명단',
       '· 훈련 실시 부서',
@@ -294,8 +304,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 훈련 이미지 2개 이상 첨부',
       '· 그 외 보고서 내 작성해야 할 정보',
     ],
-    downloadLabel: '결과보고서 기본 양식 다운로드',
-    downloadUrl: '/templates/emergency-drill-report.docx',
+    downloads: makeDownloads('emergency-drill-report', '결과보고서 기본 양식'),
   },
 
   /* =========================
@@ -313,8 +322,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 합의된 조치 사항, 담당자, 완료 예정일',
       '· 차기 회의 일정 및 후속 관리 계획',
     ],
-    downloadLabel: '근로자 참여협의록 양식 다운로드',
-    downloadUrl: '/templates/worker-participation-minutes.docx',
+    downloads: makeDownloads('worker-participation-minutes', '근로자 참여협의록 양식'),
   },
 
   'safety-council-minutes': {
@@ -327,8 +335,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 결정된 사항과 이행 책임 부서·기한',
       '· 미해결 안건 및 차기 회의에서 다룰 사항',
     ],
-    downloadLabel: '안전보건 협의체 회의록 양식 다운로드',
-    downloadUrl: '/templates/safety-council-minutes.docx',
+    downloads: makeDownloads('safety-council-minutes', '안전보건 협의체 회의록 양식'),
   },
 
   'safety-fair-meeting-minutes': {
@@ -341,8 +348,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 필요한 추가 안전조치, 인력·장비 지원 사항',
       '· 회의에서 합의된 follow-up 조치와 담당자',
     ],
-    downloadLabel: '안전공정회의 회의록 양식 다운로드',
-    downloadUrl: '/templates/safety-fair-meeting-minutes.docx',
+    downloads: makeDownloads('safety-fair-meeting-minutes', '안전공정회의 회의록 양식'),
   },
 
   'suggestion-hearing-form': {
@@ -356,8 +362,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 검토 결과(수용/보완/보류 등)와 그 사유',
       '· 실제 실행 여부와 후속 조치 내용',
     ],
-    downloadLabel: '건의사항 청취표 양식 다운로드',
-    downloadUrl: '/templates/suggestion-hearing-form.docx',
+    downloads: makeDownloads('suggestion-hearing-form', '건의사항 청취표 양식'),
   },
 
   /* =========================
@@ -374,8 +379,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 작업자 의견·질문, 특이사항',
       '· 당일 안전 강조 메시지 또는 슬로건',
     ],
-    downloadLabel: 'TBM 활동일지 양식 다운로드',
-    downloadUrl: '/templates/tbm-log.docx',
+    downloads: makeDownloads('tbm-log', 'TBM 활동일지 양식'),
   },
 
   'heat-illness-control-sheet': {
@@ -388,8 +392,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 냉방·환기·음료 제공 등의 보호 조치 내용',
       '· 온열질환 의심 증상 발생 여부와 조치 내용',
     ],
-    downloadLabel: '온열질환 관리표 양식 다운로드',
-    downloadUrl: '/templates/heat-illness-control-sheet.docx',
+    downloads: makeDownloads('heat-illness-control-sheet', '온열질환 관리표 양식'),
   },
 
   'ppe-issue-ledger': {
@@ -402,8 +405,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 교체 예정일 또는 사용 기한',
       '· 근로자 서명·수령 확인 방법',
     ],
-    downloadLabel: '보호구 지급 대장 양식 다운로드',
-    downloadUrl: '/templates/ppe-issue-ledger.docx',
+    downloads: makeDownloads('ppe-issue-ledger', '보호구 지급 대장 양식'),
   },
 
   'work-plan': {
@@ -416,8 +418,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 단계별 잠재 위험요인과 안전조치 계획',
       '· 필요한 작업허가, 교육, 자격요건 등',
     ],
-    downloadLabel: '작업계획서 양식 다운로드',
-    downloadUrl: '/templates/work-plan.docx',
+    downloads: makeDownloads('work-plan', '작업계획서 양식'),
   },
 
   'work-permit': {
@@ -430,8 +431,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 필요 자격·교육 이수 여부 확인 내용',
       '· 허가 발행자·감독자·작업자 서명/확인 절차',
     ],
-    downloadLabel: '작업허가서 양식 다운로드',
-    downloadUrl: '/templates/work-permit.docx',
+    downloads: makeDownloads('work-permit', '작업허가서 양식'),
   },
 
   'daily-safety-council-minutes': {
@@ -445,8 +445,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 논의된 위험요인과 개선조치 내용',
       '· 조치 담당자, 완료 목표일, follow-up 계획',
     ],
-    downloadLabel: '일상 협의체 회의록 양식 다운로드',
-    downloadUrl: '/templates/daily-safety-council-minutes.docx',
+    downloads: makeDownloads('daily-safety-council-minutes', '일상 협의체 회의록 양식'),
   },
 
   'msds-list': {
@@ -460,8 +459,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 위험·유해성 분류와 주요 위험요인',
       '· 보유 중인 MSDS 발행처, 개정 일자, 언어 등',
     ],
-    downloadLabel: 'MSDS 목록표 양식 다운로드',
-    downloadUrl: '/templates/msds-list.docx',
+    downloads: makeDownloads('msds-list', 'MSDS 목록표 양식'),
   },
 
   'work-stop-request-log': {
@@ -475,8 +473,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 작업 재개 승인 일시와 승인자',
       '· 추가 개선조치 및 재발방지 계획',
     ],
-    downloadLabel: '작업중지요청 기록대장 양식 다운로드',
-    downloadUrl: '/templates/work-stop-request-log.docx',
+    downloads: makeDownloads('work-stop-request-log', '작업중지요청 기록대장 양식'),
   },
 
   'work-stop-request-form': {
@@ -489,8 +486,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 작업 중지 범위(공정·설비·구역 등)',
       '· 요청자의 의견 및 긴급 개선이 필요한 사항',
     ],
-    downloadLabel: '작업중지 요청서 양식 다운로드',
-    downloadUrl: '/templates/work-stop-request-form.docx',
+    downloads: makeDownloads('work-stop-request-form', '작업중지 요청서 양식'),
   },
 
   /* =========================
@@ -508,8 +504,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 즉시 조치 내용(응급조치, 작업중지 등)',
       '· 재발방지 대책(공정 개선, 교육, 보호구 등)',
     ],
-    downloadLabel: '산업재해조사표 양식 다운로드',
-    downloadUrl: '/templates/industrial-accident-investigation.docx',
+    downloads: makeDownloads('industrial-accident-investigation', '산업재해조사표 양식'),
   },
 
   'accident-report': {
@@ -523,8 +518,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 관계 기관 신고 여부 및 처리 현황',
       '· 향후 재발방지를 위한 주요 개선사항',
     ],
-    downloadLabel: '재해보고서 양식 다운로드',
-    downloadUrl: '/templates/accident-report.docx',
+    downloads: makeDownloads('accident-report', '재해보고서 양식'),
   },
 
   'near-miss-investigation-report': {
@@ -537,8 +531,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 유사 사고 재발 가능성이 높은 공정·조건',
       '· 재발방지를 위한 개선조치와 관리방안',
     ],
-    downloadLabel: '아차사고 조사 보고서 양식 다운로드',
-    downloadUrl: '/templates/near-miss-investigation-report.docx',
+    downloads: makeDownloads('near-miss-investigation-report', '아차사고 조사 보고서 양식'),
   },
 
   /* =========================
@@ -556,8 +549,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 주요 강점과 개선이 필요한 부분에 대한 코멘트',
       '· 종합 평가 의견과 향후 교육·지원 계획',
     ],
-    downloadLabel: '안전보건관계자 평가표 양식 다운로드',
-    downloadUrl: '/templates/safety-person-eval.docx',
+    downloads: makeDownloads('safety-person-eval', '안전보건관계자 평가표 양식'),
   },
 
   'supervisor-eval': {
@@ -571,8 +563,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 사고·아차사고 발생 시 대응 및 재발방지 노력',
       '· 종합 평가 등급과 향후 육성 계획',
     ],
-    downloadLabel: '관리 감독자 평가표 양식 다운로드',
-    downloadUrl: '/templates/supervisor-eval.docx',
+    downloads: makeDownloads('supervisor-eval', '관리 감독자 평가표 양식'),
   },
 
   'safety-qualification-register': {
@@ -586,8 +577,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 자격과 연관된 담당 업무 또는 역할',
       '· 향후 취득 예정인 자격 및 계획',
     ],
-    downloadLabel: '자격등록 목록부 양식 다운로드',
-    downloadUrl: '/templates/safety-qualification-register.docx',
+    downloads: makeDownloads('safety-qualification-register', '자격등록 목록부 양식'),
   },
 
   'safety-person-appointment-report': {
@@ -601,8 +591,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 겸직 여부, 이전 선임자와의 인수인계 내용',
       '· 보고 대상 기관(관할 지방고용노동관서 등)과 보고 방법',
     ],
-    downloadLabel: '선임 등 보고서 양식 다운로드',
-    downloadUrl: '/templates/safety-person-appointment-report.docx',
+    downloads: makeDownloads('safety-person-appointment-report', '선임 등 보고서 양식'),
   },
 
   'safety-person-appointment-doc': {
@@ -616,8 +605,7 @@ export const SAFETY_DOC_GUIDES: Record<string, SafetyDocGuide> = {
       '· 보고·협의·결재 라인 등 의사소통 체계',
       '· 대표자 또는 권한대행자의 서명·날인 정보',
     ],
-    downloadLabel: '선임 및 지정서 양식 다운로드',
-    downloadUrl: '/templates/safety-person-appointment-doc.docx',
+    downloads: makeDownloads('safety-person-appointment-doc', '선임 및 지정서 양식'),
   },
 };
 
@@ -2040,68 +2028,95 @@ export default function ChatArea() {
     setActiveHints([]);
   };  
 
-  
   const handleSelectSafetyDoc = (category: any, doc: any) => {
-    // 작업 타입을 문서 생성/검토 쪽으로 설정
     setSelectedTask('doc_review');
-  
-    // 선택이 끝났으니 모드를 초기화하고 싶으면 옵션으로
     setDocMode(null);
-  
-    // 1) 사용자 말풍선
-    const userMsg: ChatMessage = {
-      role: 'user',
-      content: doc.label,
-    };
 
-    // 2) 문서별 안내 가이드 찾기
+    const userMsg: ChatMessage = { role: 'user', content: doc.label };
+
     const guide = SAFETY_DOC_GUIDES[doc.id];
 
     const intro =
-      guide?.intro ||
-      `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
+      guide?.intro || `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
 
     const fields =
-      guide?.fields && guide.fields.length > 0
+      guide?.fields?.length
         ? guide.fields
         : [
-            '문서의 목적과 작성 배경',
-            '적용 대상(사업장, 공정, 인원 등)',
-            '문서에 포함하고 싶은 주요 항목',
+            '· 문서의 목적과 작성 배경',
+            '· 적용 대상(사업장, 공정, 인원 등)',
+            '· 문서에 포함하고 싶은 주요 항목',
           ];
 
     const fieldsHtml = fields.map((f) => `<li>${f}</li>`).join('');
 
-    const downloadHtml =
-      guide?.downloadLabel
+    // ✅ downloads 배열 우선, 없으면 기존 downloadLabel/downloadUrl 호환
+    const downloads =
+      guide?.downloads?.length
+        ? guide.downloads
+        : guide?.downloadLabel && guide?.downloadUrl
+          ? [{ label: guide.downloadLabel, url: guide.downloadUrl, icon: '📄' }]
+          : [];
+
+    const getExt = (url: string) => {
+      const m = url.split('?')[0].match(/\.([a-z0-9]+)$/i);
+      return (m?.[1] || '').toUpperCase();
+    };
+
+    const getSubLabel = (ext: string) => {
+      if (ext === 'DOCX') return 'Word 문서';
+      if (ext === 'XLSX') return 'Excel 시트';
+      if (ext === 'PDF') return 'PDF 문서';
+      return '파일 다운로드';
+    };
+
+    const downloadsHtml =
+      downloads.length > 0
         ? `
-        <div style="margin-top:12px;">
-          <a
-            href="${guide.downloadUrl || '#'}"
-            target="_blank"
-            rel="noopener"
-            class="safety-doc-download-chip"
-          >
-            📄 ${guide.downloadLabel}
-          </a>
-        </div>
-      `
+          <div data-ai-kind="safety-doc-download" class="safety-doc-download-box">
+            <div class="safety-doc-download-title">서식 다운로드</div>
+
+            <div class="safety-doc-download-grid">
+              ${downloads
+                .map((d) => {
+                  const ext = getExt(d.url);
+                  const sub = getSubLabel(ext);
+                  return `
+                    <a
+                      class="safety-doc-download-card"
+                      href="${d.url}"
+                      ${d.filename ? `download="${d.filename}"` : 'download'}
+                      rel="noopener"
+                    >
+                      <div class="safety-doc-download-left">
+                        <span class="safety-doc-download-icon">${d.icon ?? '📄'}</span>
+                        <div class="safety-doc-download-meta">
+                          <div class="safety-doc-download-name">${d.label}</div>
+                          <div class="safety-doc-download-sub">${sub}</div>
+                        </div>
+                      </div>
+
+                      <div class="safety-doc-download-right">
+                        ${ext ? `<span class="safety-doc-download-badge">${ext}</span>` : ''}
+                        <span class="safety-doc-download-arrow">⬇</span>
+                      </div>
+                    </a>
+                  `;
+                })
+                .join('')}
+            </div>
+          </div>
+        `
         : '';
 
     const assistantHtml = `
       <p>${intro}</p>
-      <ul>
-        ${fieldsHtml}
-      </ul>
-      ${downloadHtml}
+      <ul>${fieldsHtml}</ul>
+      ${downloadsHtml}
     `;
 
-    const aiMsg: ChatMessage = {
-      role: 'assistant',
-      content: assistantHtml,
-    };
+    const aiMsg: ChatMessage = { role: 'assistant', content: assistantHtml };
 
-    // 3) 메시지 스택에 user → assistant 순서로 추가
     setMessages([...messages, userMsg, aiMsg]);
 
     setInput('');
@@ -2675,8 +2690,11 @@ export default function ChatArea() {
                     m.content === DOC_REVIEW_INTRO_TEXT ||
                     m.content === ACCIDENT_INTRO_TEXT);
                 
+                const plain = m.role === 'assistant' ? htmlToText(m.content || '') : '';
+
                 const isSafetyDocDownload =
-                  m.role === 'assistant' && m.content.includes('양식 다운로드');
+                  m.role === 'assistant' &&
+                  /양식\s*\((DOCX|XLSX)\)\s*다운로드/.test(plain);
 
                 const isEduMaterial =
                   m.role === 'assistant' && m.content.includes('data-ai-kind="edu-material"');
