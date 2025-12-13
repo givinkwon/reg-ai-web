@@ -42,10 +42,6 @@ export default function LogoMarquee() {
             ))}
           </div>
         </div>
-
-        <div className={s.sub}>
-          * 로고 이미지는 <code>public/landing/logos/</code>에 넣으면 자동으로 표시됩니다.
-        </div>
       </div>
     </section>
   );
