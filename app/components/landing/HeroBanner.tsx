@@ -152,7 +152,7 @@ export default function HeroBanner() {
           </div>
 
           <div className={s.sideNote}>
-            ※ 실제 화면에서는 파일 업로드/템플릿 다운로드까지 지원합니다.
+            ※ 실제 화면에서는 답변의 근거가 되는 규제사항을 확인할 수 있습니다.
           </div>
         </div>
       </div>
