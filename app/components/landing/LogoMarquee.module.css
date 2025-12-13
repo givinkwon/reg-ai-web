@@ -1,0 +1,68 @@
+.wrap {
+  padding: 34px 20px;
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 18px;
+  color: rgba(238,242,255,0.92);
+  margin-bottom: 14px;
+}
+
+.marquee {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(15,23,42,0.45);
+}
+
+.track {
+  display: flex;
+  gap: 18px;
+  padding: 14px 18px;
+  width: max-content;
+  animation: scroll 18s linear infinite;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.logoBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+}
+
+.logoImg {
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+.logoPill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: rgba(238,242,255,0.82);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+}
+
+.sub {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(238,242,255,0.65);
+}
