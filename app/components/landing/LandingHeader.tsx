@@ -25,9 +25,9 @@ export default function LandingHeader() {
 
         {/* Center: Nav */}
         <nav className={s.nav}>
-          <a className={s.navLink} href="#features">
+          {/* <a className={s.navLink} href="#features">
             기능
-          </a>
+          </a> */}
           {/* <a className={s.navLink} href="#contact">
             도입문의
           </a> */}
