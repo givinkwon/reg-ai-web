@@ -11,7 +11,7 @@ type Review = {
 
 const REVIEWS: Review[] = [
   {
-    company: 'S-Manufacturing',
+    company: '(주)볼트앤너트',
     logoSrc: '/landing/logos/logo-2.png',
     person: '김OO',
     role: '안전보건팀 / 팀장',
@@ -19,7 +19,7 @@ const REVIEWS: Review[] = [
       '현장 질문이 들어오면 예전엔 법 조항 찾고 서식 뒤져보느라 시간이 많이 걸렸는데, RegAI는 “체크리스트+근거”를 같이 줘서 바로 실행으로 연결됩니다.',
   },
   {
-    company: 'D-Logistics',
+    company: '(주)컬리',
     logoSrc: '/landing/logos/logo-4.png',
     person: '박OO',
     role: '물류센터 / 안전관리자',
@@ -27,7 +27,7 @@ const REVIEWS: Review[] = [
       '지게차, 통행관리, TBM 같은 반복 업무가 빨라졌어요. 특히 교육자료(PPT) 초안이 바로 나오니까 매달 교육 준비 시간이 크게 줄었습니다.',
   },
   {
-    company: 'K-Plant',
+    company: '(주)신우ENG',
     logoSrc: '/landing/logos/logo-3.png',
     person: '이OO',
     role: '플랜트 현장 / 관리감독자',
