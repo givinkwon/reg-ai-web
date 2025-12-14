@@ -44,7 +44,6 @@ export default function ReviewsBanner() {
           <h2 className={s.h2}>현장에서 먼저 검증된 RegAI</h2>
           <p className={s.p}>
             안전관리자는 “답변”이 아니라 “바로 쓸 수 있는 결과물”이 필요합니다.
-            실제 사용자 관점으로 UI/출력 형식을 계속 다듬고 있습니다.
           </p>
         </div>
 

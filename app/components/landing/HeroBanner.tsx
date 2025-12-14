@@ -87,9 +87,9 @@ export default function HeroBanner() {
           </h1>
 
           <p className={s.desc}>
-            법정 기준·KOSHA 가이드·현장 관행을 한 화면에서 정리합니다.
+            모든 규제사항을 실시간 학습한 RegAI로 안전관리 실무 한 번에!
             <br />
-            문서 템플릿, 교육자료, 사고사례까지 업무 시간을 확 줄여보세요.
+            안전 문서 생성부터 검토까지 업무 시간을 확 줄여보세요.
           </p>
 
           <div className={s.ctaRow}>

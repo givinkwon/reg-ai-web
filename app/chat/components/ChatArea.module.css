@@ -128,7 +128,7 @@
   word-break: break-word;
 }
 
-.userContent :global(p) {
+.userContent p {
   margin: 0;
 }
 
@@ -151,11 +151,11 @@
   word-break: break-word;
 }
 
-.aiBubble :global(p) {
+.aiBubble p {
   margin: 0 0 4px;
 }
 
-.aiBubble :global(p:last-child) {
+.aiBubble p:last-child {
   margin-bottom: 0;
 }
 
@@ -851,7 +851,7 @@ body[data-theme='dark'] .hintChip {
 }
 
 /* 카드형 다운로드 UI */
-:global(.safety-doc-download-box) {
+.safety-doc-download-box {
   margin-top: 12px;
   padding: 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -859,26 +859,26 @@ body[data-theme='dark'] .hintChip {
   background: rgba(255, 255, 255, 0.7);
 }
 
-:global(.safety-doc-download-title) {
+.safety-doc-download-title {
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 10px;
   opacity: 0.85;
 }
 
-:global(.safety-doc-download-grid) {
+.safety-doc-download-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 @media (max-width: 720px) {
-  :global(.safety-doc-download-grid) {
+  .safety-doc-download-grid {
     grid-template-columns: 1fr;
   }
 }
 
-:global(.safety-doc-download-card) {
+.safety-doc-download-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -892,28 +892,28 @@ body[data-theme='dark'] .hintChip {
   text-decoration: none;
 }
 
-:global(.safety-doc-download-card:hover) {
+.safety-doc-download-card:hover {
   border-color: rgba(0, 0, 0, 0.16);
 }
 
-:global(.safety-doc-download-left) {
+.safety-doc-download-left {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
 
-:global(.safety-doc-download-icon) {
+.safety-doc-download-icon {
   font-size: 18px;
   line-height: 1;
   flex-shrink: 0;
 }
 
-:global(.safety-doc-download-meta) {
+.safety-doc-download-meta {
   min-width: 0;
 }
 
-:global(.safety-doc-download-name) {
+.safety-doc-download-name {
   font-size: 13px;
   font-weight: 650;
   white-space: nowrap;
@@ -921,20 +921,20 @@ body[data-theme='dark'] .hintChip {
   text-overflow: ellipsis;
 }
 
-:global(.safety-doc-download-sub) {
+.safety-doc-download-sub {
   margin-top: 2px;
   font-size: 12px;
   opacity: 0.7;
 }
 
-:global(.safety-doc-download-right) {
+.safety-doc-download-right {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
-:global(.safety-doc-download-badge) {
+.safety-doc-download-badge {
   font-size: 11px;
   font-weight: 800;
   padding: 4px 8px;
@@ -944,7 +944,7 @@ body[data-theme='dark'] .hintChip {
   opacity: 0.85;
 }
 
-:global(.safety-doc-download-arrow) {
+.safety-doc-download-arrow {
   opacity: 0.7;
 }
 
