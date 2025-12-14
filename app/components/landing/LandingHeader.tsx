@@ -20,7 +20,7 @@ export default function LandingHeader() {
         {/* Left: Logo */}
         <Link href="/" className={s.logoArea} aria-label="RegAI Home">
           <div className={s.logo}>REG AI</div>
-          <div className={s.logoSub}>산업안전 · 보건 실무 AI</div>
+          {/* <div className={s.logoSub}>산업안전 · 보건 실무 AI</div> */}
         </Link>
 
         {/* Center: Nav */}

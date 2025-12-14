@@ -78,7 +78,7 @@ export default function HeroBanner() {
       <div className={s.inner}>
         {/* Left */}
         <div className={s.left}>
-          <div className={s.kicker}>산업안전 · 보건 실무 AI</div>
+          {/* <div className={s.kicker}>산업안전 · 보건 실무 AI</div> */}
 
           <h1 className={s.title}>
             손이 많이 가는 업무는
