@@ -69,7 +69,7 @@ export default function ReviewsBanner() {
 
               <div className={s.companyLine}>
                 <span className={s.company}>{r.company}</span>
-                <span className={s.tag}>도입 후 업무시간 절감</span>
+                {/* <span className={s.tag}>도입 후 업무시간 절감</span> */}
               </div>
             </div>
           ))}
