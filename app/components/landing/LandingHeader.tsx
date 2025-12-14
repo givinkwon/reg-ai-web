@@ -28,16 +28,16 @@ export default function LandingHeader() {
           <a className={s.navLink} href="#features">
             기능
           </a>
-          <a className={s.navLink} href="#contact">
+          {/* <a className={s.navLink} href="#contact">
             도입문의
-          </a>
+          </a> */}
         </nav>
 
         {/* Right: Actions */}
         <div className={s.actions}>
-          <button className={s.loginBtn} onClick={goLogin}>
+          {/* <button className={s.loginBtn} onClick={goLogin}>
             로그인
-          </button>
+          </button> */}
 
           <button className={s.primaryBtn} onClick={goChat}>
             바로 사용하기
