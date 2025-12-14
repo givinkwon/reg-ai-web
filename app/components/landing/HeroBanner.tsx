@@ -81,31 +81,31 @@ export default function HeroBanner() {
           <div className={s.kicker}>산업안전 · 보건 실무 AI</div>
 
           <h1 className={s.title}>
-            손 많이 가는 안전 관리
+            손이 많이 가는 업무는
             <br />
-            <span className={s.titleAccent}>RegAI로 한 번에 해결!</span>
+            <span className={s.titleAccent}>RegAI가 할게요.</span>
           </h1>
 
           <p className={s.desc}>
-            모든 규제사항을 실시간 학습한 RegAI로 안전관리 실무 한 번에!
+            모든 규제사항을 실시간 학습한 RegAI로 안전관리 한 번에!
             <br />
-            안전 문서 생성부터 검토까지 업무 시간을 확 줄여보세요.
+            안전 문서 생성부터 검토까지, 업무 생산을 높여보세요.
           </p>
 
           <div className={s.ctaRow}>
             <button className={s.primaryBtn} onClick={goChat}>
               바로 사용하기
             </button>
-            <button className={s.ghostBtn} onClick={() => router.push('#features')}>
+            {/* <button className={s.ghostBtn} onClick={() => router.push('#features')}>
               기능 보기
-            </button>
+            </button> */}
           </div>
 
           <div className={s.miniBadges}>
-            <span className={s.badge}>문서 자동 생성</span>
-            <span className={s.badge}>교육자료/PPT</span>
-            <span className={s.badge}>사고사례 요약</span>
-            <span className={s.badge}>실무지침 정리</span>
+            <span className={s.badge}>#문서 자동생성</span>
+            <span className={s.badge}>#교육자료/PPT</span>
+            <span className={s.badge}>#사고사례 요약</span>
+            <span className={s.badge}>#실무지침 정리</span>
           </div>
         </div>
 
