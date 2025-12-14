@@ -70,7 +70,7 @@ export default function ProductBanners() {
           {FEATURES.map((f, idx) => (
             <div key={f.id} className={`${s.card} ${idx % 2 === 1 ? s.reverse : ''}`}>
               <div className={s.text}>
-                <div className={s.kicker}>기능 0{idx + 1}</div>
+                {/* <div className={s.kicker}>기능 0{idx + 1}</div> */}
 
                 {/* ✅ 섹션 카테고리 (title) */}
                 <div className={s.title}>{f.title}</div>

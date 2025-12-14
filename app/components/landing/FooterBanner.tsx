@@ -8,7 +8,7 @@ export default function FooterBanner() {
           <div className={s.brand}>
             <div className={s.logo}>REG AI</div>
             <div className={s.tagline}>
-              산업안전/보건 실무를 빠르고 정확하게.
+              안전 관리를 한 번에.
             </div>
           </div>
 
@@ -29,16 +29,16 @@ export default function FooterBanner() {
           <div className={s.col}>
             <div className={s.colTitle}>사업자 정보</div>
             <div className={s.line}>상호: (주)레그에이아이</div>
-            <div className={s.line}>대표자: 홍길동</div>
-            <div className={s.line}>사업자등록번호: 000-00-00000</div>
-            <div className={s.line}>통신판매업 신고번호: 제2025-서울-0000호</div>
+            <div className={s.line}>대표자: 권기빈</div>
+            {/* <div className={s.line}>사업자등록번호: 000-00-00000</div> */}
+            {/* <div className={s.line}>통신판매업 신고번호: 제2025-서울-0000호</div> */}
           </div>
 
           <div className={s.col}>
             <div className={s.colTitle}>고객센터</div>
             <div className={s.line}>이메일: contact@regai.ai</div>
             <div className={s.line}>운영시간: 평일 10:00 ~ 18:00</div>
-            <div className={s.line}>주소: 서울특별시 ○○구 ○○로 00</div>
+            <div className={s.line}>주소: 서울 영등포구 국제금융로 10, 17F</div>
           </div>
 
           <div className={s.col}>
