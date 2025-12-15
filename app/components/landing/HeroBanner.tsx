@@ -89,7 +89,7 @@ export default function HeroBanner() {
           <p className={s.desc}>
             모든 규제사항을 실시간 학습한 RegAI로 안전관리 한 번에!
             <br />
-            안전 문서 생성부터 검토까지, 업무 생산을 높여보세요.
+            안전 문서 생성부터 검토까지, 업무 생산성을 높여보세요.
           </p>
 
           <div className={s.ctaRow}>
