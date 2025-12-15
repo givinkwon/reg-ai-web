@@ -1,4 +1,7 @@
+'use client';
+
 import Image from 'next/image';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import s from './ProductBanners.module.css';
 
 type Feature = {
@@ -7,8 +10,13 @@ type Feature = {
   headline: string;
   desc: string;
   bullets: string[];
+
   imageSrc?: string;
   imageAlt?: string;
+
+  videoMp4?: string;
+  videoWebm?: string;
+  videoPoster?: string;
 };
 
 const FEATURES: Feature[] = [
@@ -16,14 +24,15 @@ const FEATURES: Feature[] = [
     id: 'docs',
     title: 'AI 규제정보 해석',
     headline: '근거 없이 답하지 않는 “규제 특화” 답변',
-    desc: '5600개 법령, 38,000개 행정규칙, 73,000개 유권 및 법령해석, 8,000개 사고사례, KOSHA 가이드 등 실무 규제 데이터를 학습해 답변합니다.',
+    desc: '5510개 법령, 81,200개 행정규칙, 53,800개 유권 및 법령해석, 41,100개 사고사례, KOSHA 가이드 등 실무 규제 데이터를 학습해 답변합니다.',
     bullets: [
       '답변마다 근거를 즉시 확인(법령/행정규칙/유권해석/사고사례)',
       '근거 없는 추정형 답변을 막도록 설계',
       '매일 업데이트된 규제 데이터를 반영해 최신 기준 유지',
     ],
-    imageSrc: '/landing/features/feature-1.png',
-    imageAlt: '필수 안전문서 자동생성 예시',
+    videoMp4: '/landing/features/feature-1.mp4',
+    videoWebm: '/landing/features/feature-1.webm',
+    videoPoster: '/landing/features/feature-1.png',
   },
   {
     id: 'monitoring',
@@ -35,8 +44,9 @@ const FEATURES: Feature[] = [
       'TBM, 위험성평가, 안전교육에 바로 활용 가능한 포맷',
       '중요 변화만 빠르게 파악하도록 핵심만 정리',
     ],
-    imageSrc: '/landing/features/feature-2.png',
-    imageAlt: '법령 모니터링 예시',
+    videoMp4: '/landing/features/feature-2.mp4',
+    videoWebm: '/landing/features/feature-2.webm',
+    videoPoster: '/landing/features/feature-2.png',
   },
   {
     id: 'riskedu',
@@ -46,13 +56,119 @@ const FEATURES: Feature[] = [
     bullets: [
       '필수 안전서류를 사업장 맞춤으로 자동 생성',
       '작성한 문서의 규제 준수 여부 자동 검토',
-      '공정 + 유해·위험요인 2개 선택만으로 위험성평가 생성',
+      '공정 + 유해·위험요인 선택만으로 위험성평가 생성',
       '근로자 교육자료(교육안/슬라이드/퀴즈)까지 자동 생성',
     ],
-    imageSrc: '/landing/features/feature-3.png',
-    imageAlt: '위험성평가 및 교육자료 자동화 예시',
+    videoMp4: '/landing/features/feature-3.mp4',
+    videoWebm: '/landing/features/feature-3.webm',
+    videoPoster: '/landing/features/feature-3.png',
   },
 ];
+
+type LazyVideoProps = {
+  mp4Src: string;
+  webmSrc?: string;
+  poster?: string;
+  className?: string;
+};
+
+function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const [enabled, setEnabled] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  // ✅ “동작 줄이기”면 자동재생 X
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!mq) return;
+
+    const update = () => setReduceMotion(!!mq.matches);
+    update();
+
+    if (mq.addEventListener) mq.addEventListener('change', update);
+    else mq.addListener(update);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', update);
+      else mq.removeListener(update);
+    };
+  }, []);
+
+  // ✅ 뷰포트 들어오면 enabled = true (한 번만)
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (e?.isIntersecting) {
+          setEnabled(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // ✅ enabled 후 재생 시도(autoplay 실패 대비)
+  useEffect(() => {
+    if (!enabled) return;
+    if (reduceMotion) return;
+
+    const v = videoRef.current;
+    if (!v) return;
+
+    try {
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch {}
+  }, [enabled, reduceMotion]);
+
+  // ✅ 핵심: source가 바뀌면 video DOM을 새로 마운트 (HMR/재사용 꼬임 방지)
+  const videoKey = useMemo(() => `${webmSrc ?? ''}|${mp4Src}`, [webmSrc, mp4Src]);
+
+  return (
+    <div ref={wrapRef} className={s.videoWrap}>
+      {!enabled ? (
+        // ✅ enabled 전엔 poster만 보여줌(가볍고, 꼬임 없음)
+        poster ? (
+          <Image
+            src={poster}
+            alt="feature video poster"
+            fill
+            className={s.posterImg}
+            priority={false}
+            sizes="(max-width: 900px) 100vw, 920px"
+          />
+        ) : (
+          <div className={s.posterFallback} />
+        )
+      ) : (
+        <video
+          key={videoKey}
+          ref={videoRef}
+          className={className}
+          poster={poster}
+          muted
+          playsInline
+          loop
+          autoPlay={!reduceMotion}
+          preload="metadata"
+        >
+          {webmSrc ? <source src={webmSrc} type="video/webm" /> : null}
+          <source src={mp4Src} type="video/mp4" />
+          브라우저가 비디오를 지원하지 않습니다.
+        </video>
+      )}
+    </div>
+  );
+}
 
 export default function ProductBanners() {
   return (
@@ -70,15 +186,8 @@ export default function ProductBanners() {
           {FEATURES.map((f, idx) => (
             <div key={f.id} className={`${s.card} ${idx % 2 === 1 ? s.reverse : ''}`}>
               <div className={s.text}>
-                {/* <div className={s.kicker}>기능 0{idx + 1}</div> */}
-
-                {/* ✅ 섹션 카테고리 (title) */}
                 <div className={s.title}>{f.title}</div>
-
-                {/* ✅ headline 렌더링 추가 */}
                 <div className={s.headline}>{f.headline}</div>
-
-                {/* ✅ 기존 desc */}
                 <div className={s.desc}>{f.desc}</div>
 
                 <ul className={s.bullets}>
@@ -89,7 +198,15 @@ export default function ProductBanners() {
               </div>
 
               <div className={s.media}>
-                {f.imageSrc ? (
+                {f.videoMp4 ? (
+                  <LazyVideo
+                    key={f.videoMp4} // ✅ 컴포넌트 자체도 고유 키(안전장치)
+                    mp4Src={f.videoMp4}
+                    webmSrc={f.videoWebm}
+                    poster={f.videoPoster}
+                    className={s.video}
+                  />
+                ) : f.imageSrc ? (
                   <Image
                     src={f.imageSrc}
                     alt={f.imageAlt || f.title}
@@ -98,12 +215,7 @@ export default function ProductBanners() {
                     className={s.img}
                   />
                 ) : (
-                  <div className={s.placeholder}>
-                    <div className={s.placeholderTitle}>이미지 영역</div>
-                    <div className={s.placeholderSub}>
-                      /public/landing/features/ 에 넣고 경로만 바꾸면 됩니다.
-                    </div>
-                  </div>
+                  <div className={s.placeholder}>...</div>
                 )}
               </div>
             </div>

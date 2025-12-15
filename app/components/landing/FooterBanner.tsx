@@ -17,8 +17,8 @@ export default function FooterBanner() {
             <div className={s.ctaDesc}>
               데모/요금/PoC(파일럿) 상담이 필요하시면 연락 주세요.
             </div>
-            <a className={s.mail} href="mailto:contact@regai.ai">
-              contact@regai.ai
+            <a className={s.mail} href="mailto:rlqls505@kaist.ac.kr">
+              rlqls505@kaist.ac.kr
             </a>
           </div>
         </div>
@@ -36,7 +36,7 @@ export default function FooterBanner() {
 
           <div className={s.col}>
             <div className={s.colTitle}>고객센터</div>
-            <div className={s.line}>이메일: contact@regai.ai</div>
+            <div className={s.line}>이메일: rlqls505@kaist.ac.kr</div>
             <div className={s.line}>운영시간: 평일 10:00 ~ 18:00</div>
             <div className={s.line}>주소: 서울 영등포구 국제금융로 10, 17F</div>
           </div>

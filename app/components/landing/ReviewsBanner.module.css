@@ -23,15 +23,24 @@
 
 .top { display: flex; align-items: center; gap: 12px; }
 .logoBox {
-  width: 132px; height: 52px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(15,23,42,0.45);
+  position: relative;
+  width: 160px;   /* 원하는 고정 폭 */
+  height: 64px;   /* 원하는 고정 높이 */
+  padding: 10px 12px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  background: #fff;          /* 로고 배경 통일(특히 투명 png) */
+  border-radius: 16px;
+  overflow: hidden;
 }
-.logo { object-fit: contain; opacity: 0.9; }
+
+.logo {
+  object-fit: contain;       /* ✅ 안 찌그러지고, 박스 안에 맞춤 */
+  object-position: center;
+}
 
 .logoPill {
   padding: 8px 12px;

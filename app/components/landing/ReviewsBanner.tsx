@@ -12,7 +12,7 @@ type Review = {
 const REVIEWS: Review[] = [
   {
     company: '(주)볼트앤너트',
-    logoSrc: '/landing/logos/logo-2.png',
+    logoSrc: '/landing/logos/logo-1.png',
     person: '김OO',
     role: '안전보건팀 / 팀장',
     quote:
@@ -20,15 +20,15 @@ const REVIEWS: Review[] = [
   },
   {
     company: '(주)컬리',
-    logoSrc: '/landing/logos/logo-4.png',
+    logoSrc: '/landing/logos/logo-2.png',
     person: '박OO',
     role: '물류센터 / 안전관리자',
     quote:
       '지게차, 통행관리, TBM 같은 반복 업무가 빨라졌어요. 특히 교육자료(PPT) 초안이 바로 나오니까 매달 교육 준비 시간이 크게 줄었습니다.',
   },
   {
-    company: '(주)신우ENG',
-    logoSrc: '/landing/logos/logo-3.png',
+    company: '(주)한양ENG',
+    logoSrc: '/landing/logos/logo-3.jpg',
     person: '이OO',
     role: '플랜트 현장 / 관리감독자',
     quote:
@@ -51,13 +51,19 @@ export default function ReviewsBanner() {
           {REVIEWS.map((r) => (
             <div key={`${r.company}-${r.person}`} className={s.card}>
               <div className={s.top}>
-                <div className={s.logoBox}>
-                  {r.logoSrc ? (
-                    <Image src={r.logoSrc} alt={r.company} width={120} height={40} className={s.logo} />
-                  ) : (
-                    <div className={s.logoPill}>{r.company}</div>
-                  )}
-                </div>
+              <div className={s.logoBox}>
+                {r.logoSrc ? (
+                  <Image
+                    src={r.logoSrc}
+                    alt={r.company}
+                    fill
+                    sizes="140px"
+                    className={s.logo}
+                  />
+                ) : (
+                  <div className={s.logoPill}>{r.company}</div>
+                )}
+              </div>
 
                 <div className={s.person}>
                   <div className={s.name}>{r.person}</div>
