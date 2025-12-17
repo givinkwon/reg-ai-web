@@ -78,8 +78,8 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
 
   const [enabled, setEnabled] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [needsUserGesture, setNeedsUserGesture] = useState(false);
 
-  // ✅ “동작 줄이기”면 자동재생 X
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     if (!mq) return;
@@ -87,24 +87,23 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
     const update = () => setReduceMotion(!!mq.matches);
     update();
 
-    if (mq.addEventListener) mq.addEventListener('change', update);
-    else mq.addListener(update);
-
-    return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', update);
-      else mq.removeListener(update);
-    };
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
   }, []);
 
-  // ✅ 뷰포트 들어오면 enabled = true (한 번만)
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
 
+    // ✅ IntersectionObserver 미지원 환경 fallback
+    if (!('IntersectionObserver' in window)) {
+      setEnabled(true);
+      return;
+    }
+
     const io = new IntersectionObserver(
       (entries) => {
-        const e = entries[0];
-        if (e?.isIntersecting) {
+        if (entries[0]?.isIntersecting) {
           setEnabled(true);
           io.disconnect();
         }
@@ -116,59 +115,90 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
     return () => io.disconnect();
   }, []);
 
-  // ✅ enabled 후 재생 시도(autoplay 실패 대비)
-  useEffect(() => {
-    if (!enabled) return;
-    if (reduceMotion) return;
+  const videoKey = useMemo(() => `${webmSrc ?? ''}|${mp4Src}`, [webmSrc, mp4Src]);
 
+  const tryPlay = async () => {
     const v = videoRef.current;
     if (!v) return;
 
-    try {
-      const p = v.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch {}
-  }, [enabled, reduceMotion]);
+    // ✅ 일부 브라우저는 "속성"만으로 부족해서 property도 세팅해줘야 안정적
+    v.muted = true;
+    // @ts-ignore
+    v.defaultMuted = true;
+    v.playsInline = true;
 
-  // ✅ 핵심: source가 바뀌면 video DOM을 새로 마운트 (HMR/재사용 꼬임 방지)
-  const videoKey = useMemo(() => `${webmSrc ?? ''}|${mp4Src}`, [webmSrc, mp4Src]);
+    try {
+      await v.play();
+      setNeedsUserGesture(false);
+    } catch {
+      // autoplay 정책/환경 문제 → 유저 클릭 필요
+      setNeedsUserGesture(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (reduceMotion) return; // 자동재생은 하지 않음(접근성)
+    void tryPlay();
+    // source 변경 시에도 재시도
+  }, [enabled, reduceMotion, videoKey]);
 
   return (
-    <div ref={wrapRef} className={s.videoWrap}>
+    <div
+      ref={wrapRef}
+      className={s.videoWrap}
+      // ✅ 클릭 시 항상 재생 시도 (reduceMotion / autoplay 실패 모두 대응)
+      onClick={() => void tryPlay()}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && void tryPlay()}
+    >
       {!enabled ? (
-        // ✅ enabled 전엔 poster만 보여줌(가볍고, 꼬임 없음)
         poster ? (
           <Image
             src={poster}
             alt="feature video poster"
             fill
             className={s.posterImg}
-            priority={false}
             sizes="(max-width: 900px) 100vw, 920px"
           />
         ) : (
           <div className={s.posterFallback} />
         )
       ) : (
-        <video
-          key={videoKey}
-          ref={videoRef}
-          className={className}
-          poster={poster}
-          muted
-          playsInline
-          loop
-          autoPlay={!reduceMotion}
-          preload="metadata"
-        >
-          {webmSrc ? <source src={webmSrc} type="video/webm" /> : null}
-          <source src={mp4Src} type="video/mp4" />
-          브라우저가 비디오를 지원하지 않습니다.
-        </video>
+        <>
+          <video
+            key={videoKey}
+            ref={videoRef}
+            className={className}
+            poster={poster}
+            muted
+            playsInline
+            loop
+            // ✅ reduceMotion이면 자동재생 X, 대신 컨트롤 제공
+            autoPlay={!reduceMotion}
+            controls={reduceMotion || needsUserGesture}
+            preload="metadata"
+            onCanPlay={() => {
+              // ✅ 로드 완료 시에도 한 번 더 시도(브라우저별 타이밍 이슈 완화)
+              if (!reduceMotion) void tryPlay();
+            }}
+          >
+            {webmSrc ? <source src={webmSrc} type="video/webm" /> : null}
+            <source src={mp4Src} type="video/mp4" />
+          </video>
+
+          {(reduceMotion || needsUserGesture) && (
+            <button className={s.playBtn} type="button" onClick={() => void tryPlay()}>
+              ▶︎
+            </button>
+          )}
+        </>
       )}
     </div>
   );
 }
+
 
 export default function ProductBanners() {
   return (
