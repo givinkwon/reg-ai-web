@@ -70,16 +70,33 @@ type LazyVideoProps = {
   webmSrc?: string;
   poster?: string;
   className?: string;
+
+  /** mp4와 같은 베이스 네임의 animated webp를 폴백으로 사용 (예: feature-1.mp4 -> feature-1.webp) */
+  animatedWebpFallbackSrc?: string;
 };
 
-function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
+function LazyVideo({
+  mp4Src,
+  webmSrc,
+  poster,
+  className,
+  animatedWebpFallbackSrc,
+}: LazyVideoProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [enabled, setEnabled] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [needsUserGesture, setNeedsUserGesture] = useState(false);
 
+  // poster(정지) / video / anim(움직이는 webp)
+  const [mode, setMode] = useState<'poster' | 'video' | 'anim'>('poster');
+  const [pendingPlay, setPendingPlay] = useState(false);
+
+  // animated webp 폴백 경로(네가 "같은 이름"으로 넣었다고 했으니 기본 계산)
+  const animSrc =
+    animatedWebpFallbackSrc ?? mp4Src.replace(/\.mp4$/i, '.webp');
+
+  // ✅ “동작 줄이기”
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     if (!mq) return;
@@ -87,15 +104,20 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
     const update = () => setReduceMotion(!!mq.matches);
     update();
 
-    mq.addEventListener?.('change', update);
-    return () => mq.removeEventListener?.('change', update);
+    if (mq.addEventListener) mq.addEventListener('change', update);
+    else mq.addListener(update);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', update);
+      else mq.removeListener(update);
+    };
   }, []);
 
+  // ✅ 뷰포트 들어오면 enabled = true (한 번만)
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
 
-    // ✅ IntersectionObserver 미지원 환경 fallback
     if (!('IntersectionObserver' in window)) {
       setEnabled(true);
       return;
@@ -115,13 +137,27 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
     return () => io.disconnect();
   }, []);
 
+  // ✅ source 변경 시 video DOM 재마운트
   const videoKey = useMemo(() => `${webmSrc ?? ''}|${mp4Src}`, [webmSrc, mp4Src]);
+
+  // enabled가 되면: reduceMotion이면 poster 유지, 아니면 video로 전환 후 재생 시도
+  useEffect(() => {
+    if (!enabled) return;
+
+    if (reduceMotion) {
+      setMode('poster');
+      setPendingPlay(false);
+    } else {
+      setMode('video');
+      setPendingPlay(true);
+    }
+  }, [enabled, reduceMotion, videoKey]);
 
   const tryPlay = async () => {
     const v = videoRef.current;
     if (!v) return;
 
-    // ✅ 일부 브라우저는 "속성"만으로 부족해서 property도 세팅해줘야 안정적
+    // autoplay 성공률 올리기: property도 확실히 세팅
     v.muted = true;
     // @ts-ignore
     v.defaultMuted = true;
@@ -129,35 +165,47 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
 
     try {
       await v.play();
-      setNeedsUserGesture(false);
+      // 성공하면 video 유지
+      setMode('video');
     } catch {
-      // autoplay 정책/환경 문제 → 유저 클릭 필요
-      setNeedsUserGesture(true);
+      // autoplay가 정책으로 막히면 → animated webp로 폴백 (자동으로 움직이게)
+      if (animSrc) setMode('anim');
+      else setMode('poster');
     }
   };
 
+  // mode가 video로 렌더된 뒤에 재생 시도
   useEffect(() => {
-    if (!enabled) return;
-    if (reduceMotion) return; // 자동재생은 하지 않음(접근성)
+    if (!pendingPlay) return;
+    if (reduceMotion) return;
+    if (mode !== 'video') return;
+
+    setPendingPlay(false);
     void tryPlay();
-    // source 변경 시에도 재시도
-  }, [enabled, reduceMotion, videoKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlay, mode, reduceMotion, videoKey]);
+
+  // 클릭 시: anim/ poster 상태면 video로 전환해서 사용자 제스처로 재생 시도 가능
+  const handleClick = () => {
+    if (reduceMotion) return;
+    setMode('video');
+    setPendingPlay(true);
+  };
 
   return (
     <div
       ref={wrapRef}
       className={s.videoWrap}
-      // ✅ 클릭 시 항상 재생 시도 (reduceMotion / autoplay 실패 모두 대응)
-      onClick={() => void tryPlay()}
+      onClick={handleClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && void tryPlay()}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleClick()}
     >
-      {!enabled ? (
+      {!enabled || mode === 'poster' ? (
         poster ? (
           <Image
             src={poster}
-            alt="feature video poster"
+            alt="feature poster"
             fill
             className={s.posterImg}
             sizes="(max-width: 900px) 100vw, 920px"
@@ -165,40 +213,39 @@ function LazyVideo({ mp4Src, webmSrc, poster, className }: LazyVideoProps) {
         ) : (
           <div className={s.posterFallback} />
         )
+      ) : mode === 'anim' ? (
+        // ✅ 핵심: autoplay 막히면 animated webp로 폴백(이미지라서 “자동재생 정책” 영향 적음)
+        // next/image는 애니메이션이 깨질 수 있어서 <img>가 가장 안전
+        <img
+          src={animSrc}
+          alt="feature animation"
+          className={s.posterImg} // fill처럼 보이게 CSS가 position/size를 잡아줘야 함
+        />
       ) : (
-        <>
-          <video
-            key={videoKey}
-            ref={videoRef}
-            className={className}
-            poster={poster}
-            muted
-            playsInline
-            loop
-            // ✅ reduceMotion이면 자동재생 X, 대신 컨트롤 제공
-            autoPlay={!reduceMotion}
-            controls={reduceMotion || needsUserGesture}
-            preload="metadata"
-            onCanPlay={() => {
-              // ✅ 로드 완료 시에도 한 번 더 시도(브라우저별 타이밍 이슈 완화)
-              if (!reduceMotion) void tryPlay();
-            }}
-          >
-            {webmSrc ? <source src={webmSrc} type="video/webm" /> : null}
-            <source src={mp4Src} type="video/mp4" />
-          </video>
-
-          {(reduceMotion || needsUserGesture) && (
-            <button className={s.playBtn} type="button" onClick={() => void tryPlay()}>
-              ▶︎
-            </button>
-          )}
-        </>
+        <video
+          key={videoKey}
+          ref={videoRef}
+          className={className}
+          poster={poster}
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="metadata"
+          onError={() => setMode('anim')}
+          onCanPlay={() => {
+            // 타이밍 이슈 보정
+            if (!reduceMotion) void tryPlay();
+          }}
+        >
+          {webmSrc ? <source src={webmSrc} type="video/webm" /> : null}
+          <source src={mp4Src} type="video/mp4" />
+          브라우저가 비디오를 지원하지 않습니다.
+        </video>
       )}
     </div>
   );
 }
-
 
 export default function ProductBanners() {
   return (
@@ -230,10 +277,12 @@ export default function ProductBanners() {
               <div className={s.media}>
                 {f.videoMp4 ? (
                   <LazyVideo
-                    key={f.videoMp4} // ✅ 컴포넌트 자체도 고유 키(안전장치)
+                    key={f.videoMp4}
                     mp4Src={f.videoMp4}
                     webmSrc={f.videoWebm}
                     poster={f.videoPoster}
+                    // ✅ "같은 이름" animated webp를 폴백으로 쓰고 싶으면 그냥 이 줄 없어도 됨(내부에서 mp4 -> webp로 계산)
+                    // animatedWebpFallbackSrc={f.videoMp4.replace(/\.mp4$/i, '.webp')}
                     className={s.video}
                   />
                 ) : f.imageSrc ? (
