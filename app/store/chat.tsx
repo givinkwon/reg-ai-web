@@ -187,24 +187,59 @@ const cutSection = (text: string, headerRe: RegExp, nextRe: RegExp): string => {
   return next === -1 ? rest : rest.slice(0, next);
 };
 
+/* ── 공통 유틸 ── */
+const minPositive = (...xs: number[]) => {
+  const v = xs.filter((n) => n >= 0);
+  return v.length ? Math.min(...v) : -1;
+};
+
+const findFirstMatchIndex = (text: string, res: RegExp[]) => {
+  let best = -1;
+  for (const re of res) {
+    const idx = text.search(re);
+    if (idx >= 0) best = best === -1 ? idx : Math.min(best, idx);
+  }
+  return best;
+};
+
 /* ── 근거/서식 섹션 추출 ── */
-/* 근거: '2) 근거' 라인부터 아이콘(🔗) 이전까지 그대로 */
 const cutEvidenceBlock = (text: string) => {
-  // 🔗 이전까지만 파싱 범위
+  // 0) 파싱 범위: 🔗 이전까지만
   const iconIdx = text.indexOf('🔗');
   const scope = iconIdx >= 0 ? text.slice(0, iconIdx) : text;
 
-  // 라인 전체가 정확히 "2) 근거"
-  const headerLineRe = /^\s*2\)\s*근거\s*$/m;
+  // 1) 헤더 후보(기존 2) 근거 + 신규 **근거** + 신규 ##/### 근거)
+  const headerRes: RegExp[] = [
+    /^\s*(?:2\)|2\.|②)\s*근거\s*$/m,                // 기존
+    /^\s*(?:\*\*+)?\s*근거\s*(?:\*\*+)?\s*$/m,      // **근거**
+    /^\s*#{2,6}\s*근거\s*$/m,                       // ## 근거 / ### 근거
+  ];
 
-  const m = scope.match(headerLineRe);
-  if (!m) return '';
+  const start = findFirstMatchIndex(scope, headerRes);
+  if (start < 0) return '';
 
-  // 헤더 라인의 시작부터 끝까지(아이콘 상한으로 이미 컷팅)
-  const start = m.index ?? 0;
-  const block = scope.slice(start).trim();
-  return block;
+  // 2) 근거 블록의 끝(다음 섹션 헤더가 나오면 거기서 끊기)
+  const tail = scope.slice(start);
+
+  const endRes: RegExp[] = [
+    /^\s*(?:3\)|3\.|③)\s*\S+/m,
+    /^\s*(?:4\)|4\.|④)\s*\S+/m,
+    /^\s*(?:5\)|5\.|⑤)\s*\S+/m,
+    /^\s*(?:\*\*+)?\s*관련\s*(?:별표(?:\s*\/?\s*서식)?|서식)(?:\s*링크)?\s*(?:\*\*+)?\s*$/mi,
+    /^\s*(?:\*\*+)?\s*참고\s*기사\s*목록\s*(?:\*\*+)?\s*$/mi,
+    /^\s*(?:\*\*+)?\s*참고\s*사고사례\s*(?:\*\*+)?\s*$/mi,
+    /^\s*#{2,6}\s*(?:관련\s*(?:별표|서식)|참고\s*기사\s*목록|참고\s*사고사례)\s*$/mi,
+  ];
+
+  let end = tail.length;
+  for (const re of endRes) {
+    const idx = tail.search(re);
+    if (idx > 0) end = Math.min(end, idx);
+  }
+
+  return tail.slice(0, end).trim();
 };
+
 
 // "관련 별표/서식"이 있으면 그걸 우선 쓰고,
 // 없으면 "참고 기사 목록"을 forms 블록으로 사용한다.
@@ -224,10 +259,28 @@ const cutFormsBlock = (text: string) => {
   return block2;
 };
 
+/* ── 마크다운/불릿 장식 제거 ── */
+const stripMdDecorations = (s: string) => {
+  return (s || '')
+    .trim()
+    // 앞쪽 불릿/번호 제거 (*, -, •, 1), 1. 등)
+    .replace(/^\s*(?:[-*•]|(?:\d+[\)\.]))\s+/, '')
+    // 굵게 **...** 제거(내용은 유지)
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    // 인라인 코드 `...` 제거(내용은 유지)
+    .replace(/`([^`]+)`/g, '$1')
+    // 남아있는 ** 토큰 제거(비정형 대비)
+    .replace(/\*\*/g, '')
+    .trim();
+};
+
 /* ── 근거 라인 파싱 ── */
 const parseEvidenceLine = (raw: string): EvidenceItem | null => {
   const url = urlOf(raw);
-  const base = url ? raw.replace(url, '').trim() : raw;
+  const base0 = url ? raw.replace(url, '').trim() : raw;
+
+  // ✅ 불릿/마크다운 제거 후 파싱
+  const base = stripMdDecorations(base0);
 
   // “〔법〕 …” 또는 “[법] …”
   const lawM = base.match(/(〔.+?〕|\[.+?\])/);
@@ -253,24 +306,27 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
     .map((x) => x.trim())
     .filter(Boolean);
 
-  // 후보 라인(불릿/번호/〔…〕/[…]/제n조…/부칙…)
-  let candidates = lines.filter((x) =>
-    /^(-|\d+[\)\.]|〔.+?〕|\[.+?\]|제\d+조|부칙)/.test(x),
+  // ✅ 라인 정규화(불릿/마크다운 제거)
+  const normalized = lines.map(stripMdDecorations).filter(Boolean);
+
+  // ✅ 후보 라인: 〔…〕 / […] / 제n조 / 부칙 / (또는 여전히 남아있는 -,* 등)
+  const candidates = normalized.filter((x) =>
+    /^(〔.+?〕|\[.+?\]|제\d+조|부칙)/.test(x),
   );
 
   const items: EvidenceItem[] = [];
   for (const raw of candidates) {
-    const cleaned = cleanTitle(raw);
-    const item = parseEvidenceLine(cleaned);
-    if (item && item.title) items.push(item);
+    const item = parseEvidenceLine(raw);
+    if (item?.title) items.push(item);
   }
 
-  // 후보가 0이면, 근거 블록 전체에서 〔…〕 또는 […]: … 형태를 스캔(fallback)
+  // 후보가 0이면 fallback(정규화된 블록 전체에서 스캔)
   if (items.length === 0) {
-    const fallback = block.match(/(〔.+?〕|\[.+?\]).+?(?::\s*.+)?/g) || [];
+    const scan = stripMdDecorations(block);
+    const fallback = scan.match(/(〔.+?〕|\[.+?\]).+?(?::\s*.+)?/g) || [];
     for (const raw of fallback) {
-      const item = parseEvidenceLine(cleanTitle(raw));
-      if (item && item.title) items.push(item);
+      const item = parseEvidenceLine(raw);
+      if (item?.title) items.push(item);
     }
   }
 

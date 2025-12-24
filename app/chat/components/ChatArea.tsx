@@ -1424,51 +1424,64 @@ export default function ChatArea() {
     regenerate(q);
   };
 
+  const firstMatchIndex = (s: string, patterns: RegExp[]) => {
+    let best = -1;
+    for (const re of patterns) {
+      const idx = s.search(re);
+      if (idx >= 0) best = best === -1 ? idx : Math.min(best, idx);
+    }
+    return best;
+  };
+  
   const cutHtmlBeforeEvidence = (html: string) => {
     if (!html) return html;
-
-    // <br> → 줄바꿈으로 바꿔서 줄 단위로 헤더를 찾기 쉽게
+  
     const working = html.replace(/<(br|BR)\s*\/?>/g, '\n');
-
-    // 1) "2) 근거" 위치
-    const evidenceRe = /^\s*(?:2\)|2\.|②)\s*근거\s*$/m;
-    const evidenceMatch = working.match(evidenceRe);
-
-    // 2) "5) 참고 사고사례" 위치
-    const accidentRe = /^\s*5\)\s*참고\s*사고사례\s*$/m;
-    const accidentMatch = working.match(accidentRe);
-
+  
+    // ✅ 1) HTML heading/p/div 에서 "근거" 찾기 (## 근거 → <h2>근거</h2>)
+    const evidenceHtmlHeader = /<(?:h[1-6]|p|div)[^>]*>\s*(?:<[^>]+>\s*)*(?:2\)|2\.|②)?\s*근거\s*:?\s*(?:<\/[^>]+>\s*)*<\/(?:h[1-6]|p|div)>/i;
+  
+    // ✅ 2) 텍스트 라인에서 "## 근거" 자체가 남아있는 경우(렌더 전 text를 넣는 경우 대비)
+    const evidenceMarkdownHeader = /^\s*#{2,6}\s*근거\s*:?\s*$/m;
+  
+    // ✅ 3) 기존 번호형 + 무번호형(굵게 포함)도 같이
+    const evidenceTextHeader1 = /^\s*(?:2\)|2\.|②)\s*근거\s*:?\s*$/m;
+    const evidenceTextHeader2 = /^\s*(?:\*\*+)?\s*근거\s*(?:\*\*+)?\s*:?\s*$/m;
+  
+    const evidenceIdx = firstMatchIndex(working, [
+      evidenceHtmlHeader,
+      evidenceMarkdownHeader,
+      evidenceTextHeader1,
+      evidenceTextHeader2,
+    ]);
+  
+    // (참고 사고사례도 같은 방식으로 잡고 싶으면 동일하게 추가)
+    const accidentIdx = firstMatchIndex(working, [
+      /^\s*5\)\s*참고\s*사고사례\s*:?\s*$/m,
+      /^\s*#{2,6}\s*참고\s*사고사례\s*:?\s*$/m,
+      /<(?:h[1-6]|p|div)[^>]*>\s*(?:<[^>]+>\s*)*참고\s*사고사례\s*:?\s*(?:<\/[^>]+>\s*)*<\/(?:h[1-6]|p|div)>/i,
+    ]);
+  
     let cutIdx = -1;
-
-    if (evidenceMatch?.index != null) {
-      cutIdx = evidenceMatch.index;
-    }
-    if (accidentMatch?.index != null) {
-      // 근거/사고사례 둘 다 있으면 더 앞에 나오는 쪽에서 자르기
-      cutIdx =
-        cutIdx === -1
-          ? accidentMatch.index
-          : Math.min(cutIdx, accidentMatch.index);
-    }
-
-    // 3) 혹시 정규식이 안 먹히는 경우를 대비한 fallback
+    if (evidenceIdx >= 0 && accidentIdx >= 0) cutIdx = Math.min(evidenceIdx, accidentIdx);
+    else cutIdx = Math.max(evidenceIdx, accidentIdx);
+  
+    // 기존 fallback들
     if (cutIdx < 0) {
       const accIdx = working.indexOf('5) 참고 사고사례');
       if (accIdx >= 0) cutIdx = accIdx;
     }
-
-    // 4) 예전처럼 🔗 아이콘 기준 fallback 유지
     if (cutIdx < 0) {
       const altIconIdx = working.indexOf('🔗');
       if (altIconIdx >= 0) cutIdx = altIconIdx;
     }
-
-    // 자를 위치가 없으면 원본 그대로
+  
     if (cutIdx <= 0) return html;
-
+  
     const before = working.slice(0, cutIdx);
     return before.replace(/\n/g, '<br />');
   };
+  
 
   const splitDigestForArticles = (digest: string, marker = '참고 기사 목록') => {
     if (!digest) return { summaryText: '', articlesText: '' };
