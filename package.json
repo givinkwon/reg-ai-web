@@ -18,6 +18,7 @@
     "react-dom": "18.3.1",
     "recoil": "^0.7.7",
     "uuid": "11.1.0",
+    "yaml": "2.8.2",
     "zustand": "5.0.7"
   },
   "devDependencies": {

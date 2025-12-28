@@ -41,6 +41,12 @@ import MakeSafetyDocs, {
 import DocReviewUploadPane from './DocReviewUploadPane';
 import MakeSafetyEduMaterials from './MakeSafetyEduMaterials';
 
+import RiskAssessmentWizard, {
+  type RiskAssessmentDraft,
+  draftToPrompt,
+} from './risk-assessment/RiskAssessmentWizard'
+import RiskAssessmentWizardModal from './risk-assessment/RiskAssessmentWizardModal';
+
 const TYPE_META: Record<string, { label: string; emoji: string }> = {
   environment: { label: '환경/안전', emoji: '🌱' },
   infosec: { label: '정보보안', emoji: '🛡️' },
@@ -60,7 +66,7 @@ const TASK_META: Record<TaskType, { label: string }> = {
   doc_review: { label: '안전 문서 생성/검토' },
   risk_assessment: { label: '위험성 평가' },
   law_interpret: { label: 'AI 법령 해석' },
-  edu_material: { label: '교육자료 생성' },
+  edu_material: { label: '교육자료 찾기' },
   guideline_interpret: { label: '실무지침 해석' },
   accident_search: { label: '사고사례 검색' },
 };
@@ -113,7 +119,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     taskType: 'doc_review',
   },
   {
-    id: 'risk_assess',
+    id: 'risk_assessment',
     label: '위험성 평가',
     icon: AlertTriangle,
     placeholder:
@@ -130,7 +136,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     id: 'edu_material',
-    label: '교육자료 생성',
+    label: '교육자료 찾기',
     icon: FileText,
     placeholder:
       '신입 직원 교육용 산업안전 교육자료 개요를 만들어줘.',
@@ -818,7 +824,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 실제 사고 사례(전도, 붕괴, 와이어 단선 등)와 교훈',
     ],
     downloadLabel: '크레인 작업 기초 안전교육(PPT) 다운로드',
-    downloadUrl: '/training/crane-basic-training.pptx',
+    downloadUrl: '/templates/crane-basic-training.ppt',
   },
 
   'rigging-signal-training': {
@@ -833,7 +839,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 줄걸이 작업 중 협착·낙하 사고 사례와 예방대책',
     ],
     downloadLabel: '와이어로프·슬링·신호수 교육자료 다운로드',
-    downloadUrl: '/training/rigging-signal-training.pptx',
+    downloadUrl: '/templates/rigging-signal-training.ppt',
   },
 
   'fall-protection-training': {
@@ -848,7 +854,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 비·풍속·야간 등 기상·환경 조건에 따른 작업 중지 기준',
     ],
     downloadLabel: '고소작업·추락방지 기본교육(PPT) 다운로드',
-    downloadUrl: '/training/fall-protection-training.pptx',
+    downloadUrl: '/templates/fall-protection-training.ppt',
   },
 
   /* ---------- 2) 밀폐공간 작업 ---------- */
@@ -865,7 +871,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 실제 질식사고 사례와 주요 원인 분석',
     ],
     downloadLabel: '밀폐공간 작업 기본교육(PPT) 다운로드',
-    downloadUrl: '/training/confined-space-basic.pptx',
+    downloadUrl: '/templates/confined-space-basic.ppt',
   },
 
   'confined-space-gas-measure': {
@@ -880,7 +886,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 측정·환기 기록 양식 작성 예시',
     ],
     downloadLabel: '밀폐공간 가스측정·환기 교육자료 다운로드',
-    downloadUrl: '/training/confined-space-gas-measure.pptx',
+    downloadUrl: '/templates/confined-space-gas-measure.ppt',
   },
 
   'confined-space-rescue': {
@@ -895,7 +901,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 실제 밀폐공간 구조 실패 사례와 교훈',
     ],
     downloadLabel: '밀폐공간 비상대응·구조훈련 교육자료 다운로드',
-    downloadUrl: '/training/confined-space-rescue.pptx',
+    downloadUrl: '/templates/confined-space-rescue.ppt',
   },
 
   /* ---------- 3) 전기작업·LOTO ---------- */
@@ -912,7 +918,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 감전 시 응급조치(전원 차단, 안전한 구조, 심폐소생술 연계)',
     ],
     downloadLabel: '전기 안전 일반교육(PPT) 다운로드',
-    downloadUrl: '/training/electrical-basic-training.pptx',
+    downloadUrl: '/templates/electrical-basic-training.ppt',
   },
 
   'lockout-tagout-training': {
@@ -927,7 +933,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· LOTO 미준수로 인한 실제 중대사고 사례',
     ],
     downloadLabel: 'LOTO 절차 교육자료 다운로드',
-    downloadUrl: '/training/lockout-tagout-training.pptx',
+    downloadUrl: '/templates/lockout-tagout-training.ppt',
   },
 
   'electrical-permit-training': {
@@ -942,7 +948,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 전기작업 중 위험 징후(소음, 냄새, 발열 등) 발견 시 조치요령',
     ],
     downloadLabel: '전기 설비 작업허가·검전 교육자료 다운로드',
-    downloadUrl: '/training/electrical-permit-training.pptx',
+    downloadUrl: '/templates/electrical-permit-training.ppt',
   },
 
   /* ---------- 4) 화기 작업·용접·절단 ---------- */
@@ -959,7 +965,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 작업 종료 후 최소 30분 이상 화재감시의 필요성',
     ],
     downloadLabel: '화기 작업 기본 안전교육(PPT) 다운로드',
-    downloadUrl: '/training/hot-work-basic-training.pptx',
+    downloadUrl: '/templates/hot-work-basic-training.ppt',
   },
 
   'hot-work-permit-training': {
@@ -974,7 +980,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 허가제 미운영으로 발생한 대형 화재 사고 사례',
     ],
     downloadLabel: '화기 작업허가·감시자 교육자료 다운로드',
-    downloadUrl: '/training/hot-work-permit-training.pptx',
+    downloadUrl: '/templates/hot-work-permit-training.ppt',
   },
 
   'gas-cutting-welding-training': {
@@ -989,7 +995,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 가스용접·절단 작업 중 폭발사고 사례 분석',
     ],
     downloadLabel: '가스용접·절단기 안전 취급 교육자료 다운로드',
-    downloadUrl: '/training/gas-cutting-welding-training.pptx',
+    downloadUrl: '/templates/gas-cutting-welding-training.ppt',
   },
 
   /* ---------- 5) 굴착·중장비·토공 ---------- */
@@ -1006,7 +1012,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 붕괴 징후(균열, 토사 이동 등) 발견 시 작업중지 기준',
     ],
     downloadLabel: '굴착·흙막이 붕괴 재해 예방 교육자료 다운로드',
-    downloadUrl: '/training/excavation-shoring-training.pptx',
+    downloadUrl: '/templates/excavation-shoring-training.ppt',
   },
 
   'heavy-equipment-operation-training': {
@@ -1021,7 +1027,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 중장비와 보행자 충돌·협착 사고 사례와 교훈',
     ],
     downloadLabel: '중장비 작업자·유도자 안전교육자료 다운로드',
-    downloadUrl: '/training/heavy-equipment-operation-training.pptx',
+    downloadUrl: '/templates/heavy-equipment-operation-training.ppt',
   },
 
   'spotter-traffic-control-training': {
@@ -1036,7 +1042,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 교통사고 발생 시 초기 대응·신고 절차',
     ],
     downloadLabel: '유도자·차량 통행 관리 교육자료 다운로드',
-    downloadUrl: '/training/spotter-traffic-control-training.pptx',
+    downloadUrl: '/templates/spotter-traffic-control-training.ppt',
   },
 
   /* ---------- 6) 화학물질·MSDS·호흡보호구 ---------- */
@@ -1053,7 +1059,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· MSDS 미비 또는 외국어 MSDS 활용 시 주의사항',
     ],
     downloadLabel: 'MSDS 이해 및 화학물질 표지 교육자료 다운로드',
-    downloadUrl: '/training/msds-basic-training.pptx',
+    downloadUrl: '/templates/msds-basic-training.ppt',
   },
 
   'chemical-handling-storage-training': {
@@ -1068,7 +1074,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 화학물질 관련 화재·폭발·누출 사고 사례',
     ],
     downloadLabel: '화학물질 취급·보관·누출 대응 교육자료 다운로드',
-    downloadUrl: '/training/chemical-handling-storage-training.pptx',
+    downloadUrl: '/templates/chemical-handling-storage-training.ppt',
   },
 
   'respiratory-protection-training': {
@@ -1083,7 +1089,7 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
       '· 호흡보호구 착용 불량으로 인한 건강장해 사례',
     ],
     downloadLabel: '호흡보호구 선택·착용·관리 교육자료 다운로드',
-    downloadUrl: '/training/respiratory-protection-training.pptx',
+    downloadUrl: '/templates/respiratory-protection-training.ppt',
   },
 };
 
@@ -1139,7 +1145,7 @@ const QUICK_ACTION_GROUPS: QuickActionGroup[] = [
     id: 'docs_materials',
     title: '문서 · 자료',
     icon: Folder,
-    items: ['doc_create', 'doc_review', 'edu_material', 'risk_assess'],
+    items: ['doc_create', 'doc_review', 'edu_material', 'risk_assessment'],
   },
 ];
 
@@ -1875,9 +1881,9 @@ export default function ChatArea() {
     }
 
     // ✅ 위험성평가 기능 준비중 알림
-    if (action.id === 'risk_assess') {
-      showNotice('준비중입니다. 26년 1월 기능 배포 예정입니다.');
-      return; // ✅ 여기서 끝내서 태스크 선택/메시지 추가 안되게
+    if (action.id === 'risk_assessment') {
+      setShowRiskWizard(true);
+      return;
     }
 
     if (action.id === 'today_accident') {
@@ -2168,6 +2174,7 @@ export default function ChatArea() {
 
   const isSafetyDocTask = docMode === 'create' || docMode === 'review';
   const isEduTask = selectedTask === 'edu_material';
+  const isRiskTask = selectedTask === 'risk_assessment';
 
   // 실제로 파일을 상태에 추가하는 공통 함수
   const addAttachments = (files: File[]) => {
@@ -2314,6 +2321,8 @@ export default function ChatArea() {
       break;
     }
   }
+
+  const [showRiskWizard, setShowRiskWizard] = useState(false);
 
   useEffect(() => {
     const saved = Cookies.get('selectedJobType') as string | undefined;
@@ -2468,7 +2477,7 @@ export default function ChatArea() {
     // ✅ 1) 유저 메시지 추가 (이게 “유저가 선택했다”처럼 보이게 함)
     addMessage({
       role: 'user',
-      content: `[교육자료 생성] ${material.title}`,
+      content: `[교육자료 찾기] ${material.title}`,
     });
 
     // ✅ 2) assistant 메시지 추가 (이게 “시스템이 답변”처럼 보이게 함)
@@ -2543,7 +2552,26 @@ export default function ChatArea() {
             <div className={s.streamInner}>
             {messages.length === 0 && (
               <>
-                {isSafetyDocTask ? (
+              {isRiskTask ? (
+                <div className={s.docWrap}>
+                  <RiskAssessmentWizard
+                    onClose={() => {
+                      // “뒤로가기” 눌렀을 때: 작업 선택 화면으로 돌아가게
+                      setSelectedTask(null); // 또는 setSelectedTask('') 네 프로젝트 방식대로
+                    }}
+                    onSubmit={(draft) => {
+                      // ✅ 작성 완료 -> 채팅으로 프롬프트 보내고 싶으면
+                      addMessage({ role: 'user', content: draftToPrompt(draft) });
+
+                      // 필요하면 여기서 바로 전송 로직 호출
+                      // await sendMessage(draftToPrompt(draft));
+
+                      // UI는 작업 모드 해제하거나 유지
+                      setSelectedTask(null);
+                    }}
+                  />
+                </div>
+              ) : isSafetyDocTask ? (
                   <MakeSafetyDocs
                     mode={docMode === 'review' ? 'review' : 'create'}
                     onSelectDoc={(category, doc) => {

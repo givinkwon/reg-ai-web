@@ -1,0 +1,234 @@
+schema: "safety_training_catalog_v1"
+match_policy: "first_match_wins"
+categories:
+  - id: "C01_manager_owner_core"
+    name: "법정·공통(관리자/사업주) 교육 교재"
+    materials:
+      - type: exact
+        value: "2024년 안전보건관리담당자 양성교육 교재"
+      - type: exact
+        value: "2023년 안전보건관리담당자 양성교육 교재"
+      - type: exact
+        value: "2022년 안전보건관리담당자 양성교육 교재"
+      - type: exact
+        value: "2024년 위험성평가 사업주교육 교재"
+      - type: exact
+        value: "2023년 위험성평가 사업주교육 교재"
+      - type: exact
+        value: "위험성평가 개정안 교육·세미나 교안"
+      - type: exact
+        value: "2018년도 민간 안전보건교육위탁기관 실적 등록 자료"
+      - type: exact
+        value: "안전관리자의 직무와 역할"
+      - type: exact
+        value: "안전보건교육 방법"
+      - type: exact
+        value: "사업장 안전보건교육 추진요령"
+      - type: exact
+        value: "산업안전개론(안전관리자 신규)"
+      - type: exact
+        value: "산업안전보건개론"
+      - type: exact
+        value: "기업경영과 안전보건"
+      - type: exact
+        value: "자율안전보건관리"
+      - type: exact
+        value: "안전보건관리계획수립 및 평가"
+      - type: exact
+        value: "안전보건관리계획 수립 및 평가"
+      - type: exact
+        value: "안전보건커뮤니케이션"
+      - type: exact
+        value: "사고조사기법"
+      - type: exact
+        value: "업무상 재해 인정기준"
+
+  - id: "C02_industrial_accident_rate_program"
+    name: "산재예방요율제(사업주교육 STEP I~III)"
+    materials:
+      - type: exact
+        value: "2024년 산재예방요율제 사업주교육 STEPⅠ 교재"
+      - type: exact
+        value: "2024년 산재예방요율제 사업주교육 STEPⅡ 교재"
+      - type: exact
+        value: "2024년 산재예방요율제 사업주교육 STEPⅢ 교재"
+      - type: exact
+        value: "2023년 산재예방요율제 사업주교육 STEPⅠ 교재"
+      - type: exact
+        value: "2023년 산재예방요율제 사업주교육 STEPⅡ 교재"
+      - type: exact
+        value: "2023년 산재예방요율제 사업주교육 STEPⅢ 교재"
+      - type: exact
+        value: "2022년 산재예방요율제 사업주교육 STEPⅠ 교재"
+      - type: exact
+        value: "2022년 산재예방요율제 사업주교육 STEPⅡ 교재"
+      - type: exact
+        value: "2022년 산재예방요율제 사업주교육 STEPⅢ 교재"
+
+  - id: "C03_risk_assessment"
+    name: "위험성평가(일반/전기/건설 등)"
+    materials:
+      - type: regex
+        value: "위험성평가"
+      - type: exact
+        value: "안전보건경영시스템과 유해성 평가"
+
+  - id: "C04_special_training_manufacturing_key_process"
+    name: "특별안전보건교육(제조업 주요 위험공정)"
+    materials:
+      - type: regex
+        value: "^\\[특별안전보건교육의 제조업 주요 위험공정종 교육자료\\("
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(허가 및 관리 대상 유해물질의 제조 또는 취급작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(하역운반기계 등 5대 이상 작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(프레스 등 5대 이상 작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(주물 및 단조 작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(전압이 75V 이상 정전 및 활선작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(아세틸렌 용접장치 또는 가스집합 용접장치를 사용하는 금속의 용접,용단,가열작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(밀폐된 장소에서 하는 용접작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(밀폐공간에서의 작업)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(도장작업 고압)]"
+      - type: exact
+        value: "[특별안전보건교육의 제조업 주요 위험공정종 교육자료(1톤 이상 크레인 사용)]"
+
+  - id: "C05_construction"
+    name: "건설업 안전(건축/토목/교량/터널/가설/양중/전기/보건)"
+    materials:
+      - type: exact
+        value: "2025 중소 건설업 안전보건관리체계 구축 적용사례집 배포(샘플양식 포함)"
+      - type: regex
+        value: "건설|건축|토목|교량|터널|초고층|리모델링|가설|양중|타워크레인|건설용리프트|갱폼|흙막이|거푸집|철근|철골|콘크리트|방수|조적|미장|견출|석재|타일|수장|되메움|굴착|발파|가설전기|건설현장"
+
+  - id: "C06_machinery_lifting_transport"
+    name: "기계·기구·양중/운반 안전(프레스/선반/연삭/크레인/지게차 등)"
+    materials:
+      - type: regex
+        value: "위험기계기구|운반기계|공작기계|프레스|선반|연삭|전단기|사출|분쇄기|컨베이어|천장크레인|이동식 크레인|지게차|리프트|덤프트럭|굴삭기|로더|크레인|호이스트|체인블록|슬링|샤클|러그|하역|인양|줄걸이"
+
+  - id: "C07_electrical_static"
+    name: "전기·정전기·감전 예방(규정/설계/보호/사례)"
+    materials:
+      - type: regex
+        value: "전기|감전|누전|접지|차단기|정전기|충전부|활선|정전|전압|전기설비|전기안전|지락"
+
+  - id: "C08_process_safety_psm_fire_explosion_release"
+    name: "공정안전(PSM/HAZOP)·화재·폭발·누출 예방"
+    materials:
+      - type: regex
+        value: "PSM|P\\.S\\.M|F\\.S\\.M|M\\.S\\.S|I\\.L\\.M|F\\.C\\.M"
+      - type: regex
+        value: "공정안전|공정안전보고서|공정안전자료|HAZOP|위험과 운전분석|비상조치계획|정전으로 인한 화학사고"
+      - type: regex
+        value: "^화학공정 설비 조작 위험과 예방_"
+      - type: regex
+        value: "^\\[화재폭발누출 사고예방\\]"
+      - type: regex
+        value: "^\\[화재·폭발·누출예방\\]"
+      - type: exact
+        value: "화재,폭발,누출사고예방 기술수칙"
+      - type: exact
+        value: "화학공장 정비보수작업 안전"
+      - type: exact
+        value: "화학공장 정비 보수작업"
+      - type: exact
+        value: "소규모사업장 화기 작업안전"
+      - type: exact
+        value: "소용량 탱크 및 드럼 화기 작업안전"
+
+  - id: "C09_occupational_health_work_env"
+    name: "산업보건·작업환경·직업병·건강증진"
+    materials:
+      - type: exact
+        value: "건설현장 보건관리 가이드"
+      - type: regex
+        value: "^\\[직업건강\\]"
+      - type: regex
+        value: "작업환경|환기|국소배기|전체환기|작업환경측정|유해인자|유해물질|분진|중금속|유기화합물|소음|진동|근골격|뇌심혈관|스트레스|감염|질환|건강|건강진단|응급|구급|심폐소생술|자외선|한랭|고열|호흡기|청력|VDT"
+      - type: exact
+        value: "겨울철 미세먼지 건강장해 예방가이드"
+      - type: exact
+        value: "겨울철 한파 대비 한랭질환 예방가이드_자율점검표 게시"
+      - type: regex
+        value: "^한랭작업환경 관리 및 건강보호$|^고열작업환경 관리 및 건강보호$"
+
+  - id: "C10_service_facility_logistics_retail"
+    name: "서비스·시설·물류·도소매·교육·건물관리"
+    materials:
+      - type: regex
+        value: "서비스 안전관리|호텔|마트|청소|콜센터|교육서비스업|건물관리업|도소매|소매업|물류|창고|운수창고|환경미화|폐기물|세탁업|보육교사|간병|요양|경비|조경|전지|가로청소|재활용|음식서비스|주방|조리"
+
+  - id: "C11_small_business_custom_guides"
+    name: "50인 미만 소규모 사업장 맞춤형 안전보건 가이드"
+    materials:
+      - type: exact
+        value: "[자동차 샤프트 부품 제조업] 50인 미만 소규모 사업장을 위한 맞춤형 안전보건 가이드"
+      - type: exact
+        value: "[플라스틱 제품 제조업] 50인 미만 소규모 사업장을 위한 맞춤형 안전보건 가이드"
+      - type: exact
+        value: "[구조용 금속제품 제조업]50인 미만 소규모 사업장을 위한 맞춤형 안전보건 가이드"
+      - type: exact
+        value: "[금속주조업(주물업)]50인 미만 소규모 사업장을 위한 맞춤형 안전보건 가이드"
+
+  - id: "C12_job_task_modules"
+    name: "직종별·업무별 작업안전(모듈형 콘텐츠)"
+    materials:
+      - type: regex
+        value: "^직종별 작업안전"
+      - type: regex
+        value: "^[가-힣A-Za-z0-9ㆍ·\\(\\)\\[\\]]+\\s*[-–—]\\s*.+"
+
+  - id: "C13_opl_checklists_leaflets"
+    name: "OPL·점검표·리플릿·안전수칙(현장 배포형)"
+    materials:
+      - type: regex
+        value: "OPL"
+      - type: regex
+        value: "^\\[작업전 안전점검 OPL_"
+      - type: regex
+        value: "^\\[일터에서의 안전보건 OPL\\]"
+      - type: regex
+        value: "^\\[날씨와 산업재해\\]"
+      - type: regex
+        value: "리플릿|점검|자율점검표|안전수칙|체크포인트|안전작업 수칙"
+
+  - id: "C14_major_accident_cases"
+    name: "중대재해·사고사례(사례연구/재해사례 모음)"
+    materials:
+      - type: regex
+        value: "^\\[중대재해_"
+      - type: regex
+        value: "^\\[중대재해사례\\]"
+      - type: regex
+        value: "중대산업사고사례연구|재해사례연구|재해사례와 예방|재해사례별"
+      - type: regex
+        value: "^서비스 안전관리_.*\\(재해사례 및 예방대책\\)$"
+
+  - id: "C15_ppe_protective_equipment"
+    name: "개인보호구(PPE)·보호구 선택/사용/관리"
+    materials:
+      - type: regex
+        value: "보호구|개인보호구|안전대|추락 방지 장치|호흡용 보호구|보안경|귀마개|청력|밀착도|착탈|세척|보관"
+
+  - id: "C16_law_policy_management_system"
+    name: "법·제도·관리체계(법령/도급/관리비/계획서/무재해)"
+    materials:
+      - type: exact
+        value: "중대재해처벌법 및 산업안전보건법 도급의 의미"
+      - type: regex
+        value: "산업안전보건법|법규|정책방향|도급|관리책임자|관리감독자|관리비|유해·위험방지계획서|안전보건개선계획|무재해|소집단활동|추진기법|산재보상보험|급여|인정기준|등록 자료"
+
+  - id: "C17_platform_digital_contents"
+    name: "플랫폼·디지털/VR 콘텐츠"
+    materials:
+      - type: exact
+        value: "Total SHE(안전보건 II 플랫폼) 이용자 가이드"
+      - type: exact
+        value: "정보전달형 VR콘텐츠활용 안전보건교육 교안 및 설문양식 자료"

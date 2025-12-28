@@ -872,6 +872,7 @@ body[data-theme='dark'] .hintChip {
   gap: 10px;
 }
 
+
 @media (max-width: 720px) {
   .safety-doc-download-grid {
     grid-template-columns: 1fr;
@@ -1010,6 +1011,180 @@ body[data-theme='dark'] .hintChip {
     background: rgba(148, 163, 184, 0.22);
     color: #e5e7eb;
   }
+}
+
+/* ===== Safety Edu: Search / Pane / Meta ===== */
+
+.eduCount {
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.eduSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  margin: 12px 0 16px;
+}
+
+.eduSearchIcon {
+  opacity: 0.7;
+}
+
+.eduSearchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+}
+
+.eduSearchClear {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 4px;
+}
+.eduSearchClear:hover { opacity: 1; }
+
+.eduSearchResults {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eduChipMeta {
+  margin-left: 10px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.eduCatCount {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-left: 6px;
+}
+
+.eduMoreBtn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  opacity: 0.85;
+}
+.eduMoreBtn:hover {
+  opacity: 1;
+  background: rgba(255,255,255,0.06);
+}
+
+.eduLoading {
+  padding: 14px 12px;
+  opacity: 0.75;
+}
+
+.eduError {
+  padding: 14px 12px;
+  border: 1px solid rgba(255, 120, 120, 0.25);
+  background: rgba(255, 120, 120, 0.06);
+  border-radius: 12px;
+}
+.eduErrorMsg {
+  margin-top: 6px;
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.eduPane {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.eduPaneHead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.eduPaneTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.eduMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.eduBadge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  opacity: 0.9;
+}
+
+.eduMeta {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.eduIntro {
+  font-size: 13px;
+  opacity: 0.85;
+  margin: 10px 0 10px;
+  line-height: 1.5;
+}
+
+.eduBullets {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.eduActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.eduDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.95;
+}
+.eduDownloadBtn:hover {
+  background: rgba(255,255,255,0.07);
+}
+.eduDownloadBtn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 
