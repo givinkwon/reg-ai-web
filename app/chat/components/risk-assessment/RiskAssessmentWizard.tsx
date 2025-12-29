@@ -185,31 +185,6 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
       </div>
 
       <div className={s.footer}>
-        <div className={s.metaRow}>
-          <input
-            className={s.metaInput}
-            placeholder="현장/설비/작업장 이름 (예: CNC 가공라인)"
-            value={draft.meta.siteName}
-            onChange={(e) =>
-              setDraft((prev) => ({
-                ...prev,
-                meta: { ...prev.meta, siteName: e.target.value },
-              }))
-            }
-          />
-          <input
-            className={s.metaDate}
-            type="date"
-            value={draft.meta.dateISO}
-            onChange={(e) =>
-              setDraft((prev) => ({
-                ...prev,
-                meta: { ...prev.meta, dateISO: e.target.value },
-              }))
-            }
-          />
-        </div>
-
         <div className={s.navRow}>
           <button className={s.navBtn} onClick={goPrev} disabled={step === 'tasks'}>
             이전

@@ -1,4 +1,35 @@
+/* RiskAssessmentWizard.module.css */
+
+/* ✅ 기본(다크) 테마 변수 */
 .wrap {
+  /* color-scheme: form/date input UI도 테마에 맞게 */
+  color-scheme: dark;
+
+  --ra-bg: transparent;
+
+  --ra-text: rgba(255, 255, 255, 0.92);
+  --ra-subtext: rgba(255, 255, 255, 0.65);
+  --ra-muted: rgba(255, 255, 255, 0.35);
+
+  --ra-border: rgba(255, 255, 255, 0.12);
+  --ra-border-soft: rgba(255, 255, 255, 0.08);
+
+  --ra-surface: rgba(255, 255, 255, 0.04);
+  --ra-surface-2: rgba(255, 255, 255, 0.06);
+
+  --ra-input-bg: rgba(0, 0, 0, 0.25);
+
+  --ra-primary: #2563eb;
+  --ra-primary-border: rgba(37, 99, 235, 0.45);
+
+  --ra-tab-border: rgba(255, 255, 255, 0.12);
+  --ra-tab-bg: rgba(255, 255, 255, 0.06);
+  --ra-tab-text: rgba(255, 255, 255, 0.78);
+
+  --ra-tab-active-border: rgba(37, 99, 235, 0.5);
+  --ra-tab-active-bg: rgba(37, 99, 235, 0.22);
+  --ra-tab-active-text: rgba(147, 197, 253, 0.95);
+
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
@@ -6,6 +37,70 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+
+  /* ✅ 라이트 배경에서도 읽히게 기본 텍스트 색 지정 */
+  color: var(--ra-text);
+  background: var(--ra-bg);
+}
+
+/* ✅ 라이트 테마: prefers-color-scheme */
+@media (prefers-color-scheme: light) {
+  .wrap {
+    color-scheme: light;
+
+    /* 필요하면 투명 대신 살짝 카드 배경을 줘도 됨 */
+    --ra-bg: transparent;
+
+    --ra-text: rgba(15, 23, 42, 0.92);     /* slate-900 */
+    --ra-subtext: rgba(51, 65, 85, 0.85);  /* slate-700 */
+    --ra-muted: rgba(100, 116, 139, 0.75); /* slate-500 */
+
+    --ra-border: rgba(15, 23, 42, 0.14);
+    --ra-border-soft: rgba(15, 23, 42, 0.10);
+
+    --ra-surface: rgba(15, 23, 42, 0.03);
+    --ra-surface-2: rgba(15, 23, 42, 0.05);
+
+    --ra-input-bg: rgba(255, 255, 255, 0.92);
+
+    --ra-tab-border: rgba(15, 23, 42, 0.14);
+    --ra-tab-bg: rgba(255, 255, 255, 0.9);
+    --ra-tab-text: rgba(15, 23, 42, 0.82);
+
+    --ra-tab-active-border: rgba(37, 99, 235, 0.35);
+    --ra-tab-active-bg: rgba(37, 99, 235, 0.10);
+    --ra-tab-active-text: rgba(29, 78, 216, 0.95); /* blue-700 */
+  }
+}
+
+/* ✅ 라이트 테마: 앱에서 data-theme/class로 제어한다면 이것도 같이 먹게 */
+:global(html[data-theme='light']) .wrap,
+:global(body[data-theme='light']) .wrap,
+:global(html.light) .wrap,
+:global(body.light) .wrap {
+  color-scheme: light;
+
+  --ra-bg: transparent;
+
+  --ra-text: rgba(15, 23, 42, 0.92);
+  --ra-subtext: rgba(51, 65, 85, 0.85);
+  --ra-muted: rgba(100, 116, 139, 0.75);
+
+  --ra-border: rgba(15, 23, 42, 0.14);
+  --ra-border-soft: rgba(15, 23, 42, 0.10);
+
+  --ra-surface: rgba(15, 23, 42, 0.03);
+  --ra-surface-2: rgba(15, 23, 42, 0.05);
+
+  --ra-input-bg: rgba(255, 255, 255, 0.92);
+
+  --ra-tab-border: rgba(15, 23, 42, 0.14);
+  --ra-tab-bg: rgba(255, 255, 255, 0.9);
+  --ra-tab-text: rgba(15, 23, 42, 0.82);
+
+  --ra-tab-active-border: rgba(37, 99, 235, 0.35);
+  --ra-tab-active-bg: rgba(37, 99, 235, 0.10);
+  --ra-tab-active-text: rgba(29, 78, 216, 0.95);
 }
 
 .header {
@@ -24,24 +119,28 @@
 .title {
   font-size: 22px;
   font-weight: 900;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--ra-text);
 }
 
 .subTitle {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--ra-subtext);
 }
 
 .closeBtn {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--ra-border);
+  background: var(--ra-surface-2);
+  color: var(--ra-text);
   cursor: pointer;
   font-size: 20px;
   line-height: 0;
+}
+
+.closeBtn:hover {
+  filter: brightness(1.05);
 }
 
 .tabs {
@@ -51,36 +150,43 @@
 }
 
 .tab {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--ra-tab-border);
+  background: var(--ra-tab-bg);
+  color: var(--ra-tab-text);
   border-radius: 999px;
   padding: 10px 14px;
   font-weight: 900;
   cursor: pointer;
 }
 
+.tab:hover {
+  filter: brightness(1.03);
+}
+
 .tabActive {
-  border-color: rgba(37, 99, 235, 0.5);
-  background: rgba(37, 99, 235, 0.22);
-  color: rgba(147, 197, 253, 0.95);
+  border-color: var(--ra-tab-active-border);
+  background: var(--ra-tab-active-bg);
+  color: var(--ra-tab-active-text);
 }
 
 .helper {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--ra-subtext);
   margin-top: 2px;
 }
 
 .content {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ra-border-soft);
+  background: var(--ra-surface);
   border-radius: 18px;
   padding: 14px;
+
+  /* ✅ Step 컴포넌트 안쪽 텍스트가 상속받게 */
+  color: var(--ra-text);
 }
 
 .footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--ra-border-soft);
   padding-top: 14px;
   display: flex;
   flex-direction: column;
@@ -95,16 +201,27 @@
 
 .metaInput,
 .metaDate {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.25);
-  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--ra-border);
+  background: var(--ra-input-bg);
+  color: var(--ra-text);
   border-radius: 14px;
   padding: 12px 14px;
   outline: none;
 }
 
 .metaInput::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--ra-muted);
+}
+
+/* ✅ 포커스 가시성 */
+.metaInput:focus-visible,
+.metaDate:focus-visible,
+.tab:focus-visible,
+.navBtn:focus-visible,
+.navBtnPrimary:focus-visible,
+.closeBtn:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
 }
 
 .navRow {
@@ -114,9 +231,9 @@
 }
 
 .navBtn {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--ra-border);
+  background: var(--ra-surface-2);
+  color: var(--ra-text);
   border-radius: 16px;
   padding: 14px 12px;
   font-weight: 900;
@@ -129,8 +246,8 @@
 }
 
 .navBtnPrimary {
-  border: 1px solid rgba(37, 99, 235, 0.45);
-  background: #2563eb;
+  border: 1px solid var(--ra-primary-border);
+  background: var(--ra-primary);
   color: white;
   border-radius: 16px;
   padding: 14px 12px;
