@@ -49,8 +49,17 @@ type ItemJson = Array<{
   publishedAt?: string;
 }>;
 
+/**
+ * ✅ 최소 수정 포인트
+ * - exact 매칭에서 "띄어쓰기/표기 차이"를 줄이기 위해
+ *   normalize에 NFKC(전각/반각 정규화) + 공백 제거만 유지
+ * - 과도한 문장부호 제거 등은 하지 않음(요청 범위 밖)
+ */
 function normalize(s: string) {
-  return (s || '').toLowerCase().replace(/\s+/g, '');
+  return (s || '')
+    .normalize('NFKC')        // ✅ 표기(전각/반각 등) 정규화
+    .toLowerCase()
+    .replace(/\s+/g, '');     // ✅ 공백 제거(붙여쓰기/띄어쓰기 차이 흡수)
 }
 
 function safeRegExp(pattern: string) {
@@ -111,7 +120,11 @@ export async function loadSafetyEduData(params?: {
   const catalogText = await catalogRes.text();
   const catalog = YAML.parse(catalogText) as CatalogV1;
 
-  if (!catalog || catalog.schema !== 'safety_training_catalog_v1' || !Array.isArray(catalog.categories)) {
+  if (
+    !catalog ||
+    catalog.schema !== 'safety_training_catalog_v1' ||
+    !Array.isArray(catalog.categories)
+  ) {
     throw new Error('catalog.yml 스키마가 기대와 다릅니다. (schema: safety_training_catalog_v1 필요)');
   }
 
@@ -162,7 +175,8 @@ export async function loadSafetyEduData(params?: {
     const rules = c.materials ?? [];
     const compiled = rules.map((r) => {
       if (r.type === 'regex') return { type: 'regex' as const, re: safeRegExp(r.value) };
-      if (r.type === 'exact') return { type: 'exact' as const, val: normalize(r.value), raw: r.value };
+      if (r.type === 'exact')
+        return { type: 'exact' as const, val: normalize(r.value), raw: r.value };
       return { type: 'contains' as const, val: normalize(r.value), raw: r.value };
     });
     return {
@@ -172,7 +186,13 @@ export async function loadSafetyEduData(params?: {
     };
   });
 
-  // ✅ 제목을 한 번만 매칭해서 categoryId/guideKey를 동시에 반환
+  /**
+   * ✅ 핵심 수정 포인트 (exact만)
+   * - 기존: (nt === rule.val || t === rule.raw)
+   * - 변경: normalize(t) === normalize(rule.raw)  (즉, nt === rule.val) 로만 판단
+   *   → 띄어쓰기/전각/반각 같은 표기 차이를 흡수
+   * - "원문 완전 동일(t === raw)" 조건은 제거(불필요 + 정확도에 악영향 가능)
+   */
   function match(title: string) {
     const t = (title ?? '').trim();
     const nt = normalize(t);
@@ -183,8 +203,10 @@ export async function loadSafetyEduData(params?: {
           if (!rule.re) continue;
           if (rule.re.test(t) || rule.re.test(nt)) return { categoryId: c.id, guideKey: c.guideKey };
         } else if (rule.type === 'exact') {
-          if (nt === rule.val || t === rule.raw) return { categoryId: c.id, guideKey: c.guideKey };
+          // ✅ exact는 정규화 문자열만으로 비교
+          if (nt === rule.val) return { categoryId: c.id, guideKey: c.guideKey };
         } else {
+          // contains는 기존 로직 유지
           if (nt.includes(rule.val) || t.includes(rule.raw)) return { categoryId: c.id, guideKey: c.guideKey };
         }
       }
