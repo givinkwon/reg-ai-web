@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const FASTAPI_BASE = process.env.FASTAPI_BASE_URL ?? "http://127.0.0.1:8008";
+const FASTAPI_BASE =  "http://127.0.0.1:8008";
 
 /**
  * GET /api/risk-assessment?endpoint=minors&industry_code=...&major_category=...
