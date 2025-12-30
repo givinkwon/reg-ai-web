@@ -27,12 +27,12 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
     useState<PendingKakaoUser | null>(null);
 
   // ✅ 로그인되면 자동으로 닫되,
-  //    "추가 정보 모달"이 떠 있을 때는 닫지 않는다.
   useEffect(() => {
-    if (user && !showExtraModal) {
+    // 로그인 처리 중엔(loading) 닫지 않기
+    if (user && !showExtraModal && !loading) {
       onClose();
     }
-  }, [user, showExtraModal, onClose]);
+  }, [user, showExtraModal, loading, onClose]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -67,6 +67,8 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
         data &&
         (data.is_signup_complete === false ||
           data.is_signup_complete === undefined);
+
+      console.log(needExtra)
 
       if (needExtra) {
         setAccountEmail(fbUser.email);

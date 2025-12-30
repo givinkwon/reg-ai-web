@@ -1,7 +1,7 @@
 // app/chat/components/SignupExtraInfoModal.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './SignupExtraInfoModal.module.css';
 import { useUserStore } from '@/app/store/user';
 
@@ -10,25 +10,131 @@ type Props = {
   onComplete: () => void;
 };
 
+type SubcategoryItem = {
+  id: string;
+  name: string;
+  parent_name?: string;
+};
+
 export default function SignupExtraInfoModal({ email, onComplete }: Props) {
   const [phone, setPhone] = useState('');
   const [company, setCompany] = useState('');
   const [employeeCount, setEmployeeCount] = useState('');
   const [position, setPosition] = useState('');
   const [website, setWebsite] = useState('');
+
+  const [representativeName, setRepresentativeName] = useState('');
+
+  // ✅ 소분류 자동완성
+  const [subcategoryInput, setSubcategoryInput] = useState('');
+  const [subcategorySelected, setSubcategorySelected] = useState<SubcategoryItem | null>(null);
+  const [subcategoryList, setSubcategoryList] = useState<SubcategoryItem[]>([]);
+  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+  const [subcategoryLoading, setSubcategoryLoading] = useState(false);
+  const [subcategoryTouched, setSubcategoryTouched] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
-  // 이미 로그인돼 있는 경우가 대부분이지만,
-  // 혹시 모를 경우를 위해 fallback 으로 userStore 도 가져온다.
   const user = useUserStore((st) => st.user);
   const setUser = useUserStore((st) => st.setUser);
 
+  const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<number | null>(null);
+
+  const canSearch = useMemo(() => subcategoryInput.trim().length >= 1, [subcategoryInput]);
+
+  // ✅ “선택 강제” 유효성: 선택된 값이 있어야만 OK
+  const isSubcategoryValid = useMemo(() => {
+    return !!subcategorySelected;
+  }, [subcategorySelected]);
+
+  const showSubcategoryError = subcategoryTouched && !isSubcategoryValid;
+
+  // ✅ 입력값 변경 시 DB 검색 (debounce + abort)
+  useEffect(() => {
+    if (!subcategoryOpen) return;
+
+    const q = subcategoryInput.trim();
+    if (!canSearch) {
+      setSubcategoryList([]);
+      setSubcategoryLoading(false);
+      return;
+    }
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      try {
+        setSubcategoryLoading(true);
+
+        abortRef.current?.abort();
+        const ac = new AbortController();
+        abortRef.current = ac;
+
+        const res = await fetch(
+          `/api/risk-assessment?endpoint=minors&q=${encodeURIComponent(q)}`,
+          { method: 'GET', signal: ac.signal }
+        );
+
+        if (!res.ok) {
+          console.error('subcategory search error', res.status);
+          setSubcategoryList([]);
+          return;
+        }
+
+        const data = (await res.json()) as { items: string[] };
+
+        // ✅ 너무 많이 내려오면 적당히 컷(스크롤은 UI에서)
+        const items = (data.items ?? []).slice(0, 50);
+
+        setSubcategoryList(
+          items.map((name) => ({
+            id: name,
+            name,
+          }))
+        );
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') console.error(e);
+      } finally {
+        setSubcategoryLoading(false);
+      }
+    }, 180);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [subcategoryInput, subcategoryOpen, canSearch]);
+
+  const selectSubcategory = (it: SubcategoryItem) => {
+    setSubcategorySelected(it);
+    setSubcategoryInput(it.name);
+    setSubcategoryOpen(false);
+    setSubcategoryTouched(true);
+  };
+
+  const clearSubcategory = () => {
+    setSubcategorySelected(null);
+    setSubcategoryInput('');
+    setSubcategoryList([]);
+    setSubcategoryOpen(false);
+    setSubcategoryTouched(false);
+  };
+
+  const formValid =
+    company.trim().length > 0 &&
+    employeeCount.trim().length > 0 &&
+    position.trim().length > 0 &&
+    representativeName.trim().length > 0 &&
+    isSubcategoryValid;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubcategoryTouched(true);
+
+    if (!subcategorySelected) return; // 버튼이 비활성화지만 안전장치
+
     try {
       setLoading(true);
 
-      // 1) 추가 정보 저장 + is_signup_complete = true
       const res = await fetch('/api/accounts/update-secondary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,8 +146,16 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             employee_count: employeeCount,
             position,
             website,
+            representative_name: representativeName,
+
+            // ✅ “선택된 값만” 저장
+            subcategory: {
+              id: subcategorySelected.id,
+              name: subcategorySelected.name,
+              parent_name: subcategorySelected.parent_name ?? null,
+            },
           },
-          mark_complete: true, // 🔹 온보딩 완료 플래그
+          mark_complete: true,
         }),
       });
 
@@ -51,8 +165,6 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
         return;
       }
 
-      // 2) 혹시 아직 userStore 에 로그인 정보가 없다면
-      //    백엔드에서 계정 정보를 한 번 더 읽어서 userStore 에 세팅 (fallback)
       if (!user && email) {
         try {
           const res2 = await fetch('/api/accounts/find-by-email', {
@@ -63,12 +175,9 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
 
           if (res2.ok) {
             const acc = await res2.json();
+            const provider = acc.google_id ? 'google' : acc.kakao_id ? 'kakao' : 'local';
 
-            // google / kakao 구분해서 uid / provider 세팅
-            const provider =
-              acc.google_id ? 'google' : acc.kakao_id ? 'kakao' : 'local';
-
-            const simpleUser = {
+            setUser({
               uid: acc.google_id
                 ? `google:${acc.google_id}`
                 : acc.kakao_id
@@ -78,17 +187,13 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
               name: acc.name ?? null,
               photoUrl: acc.picture ?? null,
               provider,
-            } as const;
-
-            setUser(simpleUser);
+            } as const);
           }
         } catch (e) {
           console.error('[SignupExtraInfoModal] ensure-login error:', e);
-          // 로그인 보정 실패해도 치명적이진 않으니 알림만 로그로 남김
         }
       }
 
-      // 3) 부모에게 "온보딩 완료" 알리기 (모달 닫기 등)
       onComplete();
     } catch (err) {
       console.error(err);
@@ -107,11 +212,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.field}>
             <span>연락처</span>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="전화번호"
-            />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="전화번호" />
           </label>
 
           <label className={styles.field}>
@@ -145,6 +246,85 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
           </label>
 
           <label className={styles.field}>
+            <span>대표자명 *</span>
+            <input
+              value={representativeName}
+              onChange={(e) => setRepresentativeName(e.target.value)}
+              placeholder="대표자명"
+              required
+            />
+          </label>
+
+          {/* ✅ 소분류(선택 강제) */}
+          <label className={styles.field}>
+            <span>소분류 *</span>
+
+            <div className={styles.autoWrap}>
+              <div className={styles.autoInputRow}>
+                <input
+                  value={subcategoryInput}
+                  onChange={(e) => {
+                    setSubcategoryInput(e.target.value);
+                    setSubcategorySelected(null); // ✅ 입력이 바뀌면 선택 해제
+                    setSubcategoryOpen(true);
+                  }}
+                  onFocus={() => setSubcategoryOpen(true)}
+                  onBlur={() => {
+                    setSubcategoryTouched(true);
+                    window.setTimeout(() => setSubcategoryOpen(false), 120);
+                  }}
+                  placeholder="검색해서 선택하세요 (자율 입력 불가)"
+                  aria-invalid={showSubcategoryError}
+                  required
+                />
+
+                {subcategorySelected && (
+                  <button
+                    type="button"
+                    className={styles.clearBtn}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={clearSubcategory}
+                    title="선택 해제"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {showSubcategoryError && (
+                <div className={styles.fieldError}>소분류는 목록에서 선택해야 합니다.</div>
+              )}
+
+              {subcategoryOpen && (
+                <div className={styles.autoPanel}>
+                  {subcategoryLoading && <div className={styles.autoHint}>검색 중…</div>}
+
+                  {!subcategoryLoading && subcategoryList.length === 0 && canSearch && (
+                    <div className={styles.autoHint}>검색 결과가 없습니다.</div>
+                  )}
+
+                  {!subcategoryLoading && !canSearch && (
+                    <div className={styles.autoHint}>1글자 이상 입력하면 검색됩니다.</div>
+                  )}
+
+                  {!subcategoryLoading &&
+                    subcategoryList.map((it) => (
+                      <button
+                        type="button"
+                        key={it.id}
+                        className={styles.autoItem}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectSubcategory(it)}
+                      >
+                        <div className={styles.autoName}>{it.name}</div>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          </label>
+
+          <label className={styles.field}>
             <span>회사 웹사이트</span>
             <input
               value={website}
@@ -153,7 +333,12 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             />
           </label>
 
-          <button type="submit" className={styles.submit} disabled={loading}>
+          <button
+            type="submit"
+            className={styles.submit}
+            disabled={loading || !formValid}
+            title={!formValid ? '필수 항목과 소분류 선택을 완료해 주세요.' : undefined}
+          >
             {loading ? '제출 중...' : '제출하기'}
           </button>
         </form>
