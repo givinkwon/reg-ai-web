@@ -30,6 +30,49 @@ function normalize(str: string) {
   return (str || '').toLowerCase().replace(/\s+/g, '');
 }
 
+/** ✅ catalog.yml의 exclude 규칙 타입 */
+type ExcludeRule =
+  | { type: 'contains'; value: string }
+  | { type: 'regex'; value: string }
+  | { type: 'exact'; value: string };
+
+function isExcluded(title: string, rules: ExcludeRule[]) {
+  const raw = title ?? '';
+  const n = normalize(raw);
+
+  for (const r of rules) {
+    const v = r?.value ?? '';
+    if (!v) continue;
+
+    if (r.type === 'contains') {
+      if (n.includes(normalize(v))) return true;
+    } else if (r.type === 'exact') {
+      if (n === normalize(v)) return true;
+    } else if (r.type === 'regex') {
+      try {
+        const re = new RegExp(v, 'i');
+        if (re.test(raw)) return true;
+      } catch {
+        // regex 문법 오류면 무시(앱 죽지 않게)
+      }
+    }
+  }
+  return false;
+}
+
+function applyExcludeToCategories(
+  categories: SafetyEduCategory[],
+  rules: ExcludeRule[],
+): { categories: SafetyEduCategory[]; count: number } {
+  const outCats = (categories ?? []).map((cat) => {
+    const materials = (cat.materials ?? []).filter((m) => !isExcluded(m.title, rules));
+    return { ...cat, materials };
+  });
+
+  const count = outCats.reduce((acc, c) => acc + (c.materials?.length ?? 0), 0);
+  return { categories: outCats, count };
+}
+
 export default function MakeSafetyEduMaterials({
   onSelectMaterial,
   selectedMaterialId,
@@ -88,15 +131,19 @@ export default function MakeSafetyEduMaterials({
 
         if (!alive) return;
 
-        setCategories(data.categories);
-        setGuides(data.guides);
-        setTotalCount(data.materialCount);
+        // ✅ catalog.yml의 exclude 룰을 사용 (SafetyEduCatalog.ts가 exclude를 리턴해야 함)
+        const excludeRules: ExcludeRule[] = (data as any).exclude ?? [];
+        const filtered = applyExcludeToCategories(data.categories, excludeRules);
 
-        const firstCat = data.categories[0]?.id ?? null;
+        setCategories(filtered.categories);
+        setGuides(data.guides);
+        setTotalCount(filtered.count);
+
+        const firstCat = filtered.categories[0]?.id ?? null;
         setOpenCategoryId(firstCat);
 
         const init: Record<string, number> = {};
-        for (const c of data.categories) init[c.id] = PAGE_SIZE;
+        for (const c of filtered.categories) init[c.id] = PAGE_SIZE;
         setVisibleCountByCat(init);
       } catch (e: any) {
         if (!alive) return;
@@ -144,7 +191,7 @@ export default function MakeSafetyEduMaterials({
         <div className={s.eduIntro}>{guide.intro}</div>
 
         <ul className={s.eduBullets}>
-          {bullets.map((b:any, idx:any) => (
+          {bullets.map((b: any, idx: any) => (
             <li key={idx}>{b}</li>
           ))}
         </ul>
@@ -221,7 +268,7 @@ export default function MakeSafetyEduMaterials({
           ) : (
             searchResults.map(({ cat, m }) => {
               const isSelected = selectedId === m.id;
-              const g = getGuide(m); // ✅ 여기서 항상 guide 확정
+              const g = getGuide(m);
 
               return (
                 <div key={m.id} className={s.docRow}>
@@ -270,10 +317,7 @@ export default function MakeSafetyEduMaterials({
                   <div className={s.docCategoryText}>
                     <span className={s.docCategoryTitle}>
                       {cat.title}
-                      <span className={s.eduCatCount}>
-                        {' '}
-                        ({cat.materials.length.toLocaleString()})
-                      </span>
+                      <span className={s.eduCatCount}> ({cat.materials.length.toLocaleString()})</span>
                     </span>
                     <span className={s.docCategoryDesc}>{cat.description}</span>
                   </div>
@@ -286,9 +330,9 @@ export default function MakeSafetyEduMaterials({
                   <div className={s.docList}>
                     {shown.length > 0 ? (
                       <>
-                        {shown.map((m:any) => {
+                        {shown.map((m: any) => {
                           const isSelected = selectedId === m.id;
-                          const g = getGuide(m); // ✅ 여기서도 통일
+                          const g = getGuide(m);
 
                           return (
                             <div key={m.id} className={s.docRow}>
