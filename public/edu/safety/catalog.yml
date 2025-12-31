@@ -249,4 +249,4 @@ categories:
       - type: exact
         value: "정보전달형 VR콘텐츠활용 안전보건교육 교안 및 설문양식 자료"
       - type: regex
-        value: "VR
+        value: "VR"
