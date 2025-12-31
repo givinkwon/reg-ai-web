@@ -195,8 +195,8 @@ export async function loadSafetyEduData(params?: {
   if (!categories.some((c) => c.id === fallbackCategoryId)) {
     categories.push({
       id: fallbackCategoryId,
-      title: '기타',
-      description: '자동 분류되지 않은 자료',
+      title: '공통/기타',
+      description: '공통/미분류',
       materials: [],
     });
   }
