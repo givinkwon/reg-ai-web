@@ -3,9 +3,9 @@ import YAML from 'yaml';
 export type SafetyEduMaterial = {
   id: string;
   title: string;
-  categoryId: string;     // ✅ 추가: 카테고리 식별자
-  guideKey: string;       // ✅ 가이드 키
-  downloadUrl?: string;   // ✅ blob는 undefined 처리
+  categoryId: string; // ✅ 카테고리 식별자
+  guideKey: string; // ✅ 가이드 키
+  downloadUrl?: string; // ✅ blob는 undefined 처리
   source?: string;
   publishedAt?: string;
 };
@@ -23,6 +23,11 @@ export type SafetyEduGuide = {
   downloadLabel?: string;
 };
 
+type Rule =
+  | { type: 'exact'; value: string }
+  | { type: 'regex'; value: string }
+  | { type: 'contains'; value: string };
+
 type CatalogV1 = {
   schema: 'safety_training_catalog_v1';
   match_policy?: 'first_match_wins';
@@ -32,11 +37,12 @@ type CatalogV1 = {
     name: string;
     description?: string;
     guideKey?: string;
-    materials: Array<
-      | { type: 'exact'; value: string }
-      | { type: 'regex'; value: string }
-      | { type: 'contains'; value: string }
-    >;
+
+    // ✅ 추가: 카테고리별 배제 규칙
+    exclude?: Rule[];
+
+    // ✅ 포함 규칙
+    materials: Rule[];
   }>;
   guides?: Record<string, SafetyEduGuide>;
 };
@@ -51,15 +57,14 @@ type ItemJson = Array<{
 
 /**
  * ✅ 최소 수정 포인트
- * - exact 매칭에서 "띄어쓰기/표기 차이"를 줄이기 위해
- *   normalize에 NFKC(전각/반각 정규화) + 공백 제거만 유지
- * - 과도한 문장부호 제거 등은 하지 않음(요청 범위 밖)
+ * - exact/contains 매칭에서 표기 차이 줄이기 위해
+ *   normalize에 NFKC + 공백 제거만 유지
  */
 function normalize(s: string) {
   return (s || '')
-    .normalize('NFKC')        // ✅ 표기(전각/반각 등) 정규화
+    .normalize('NFKC')
     .toLowerCase()
-    .replace(/\s+/g, '');     // ✅ 공백 제거(붙여쓰기/띄어쓰기 차이 흡수)
+    .replace(/\s+/g, '');
 }
 
 function safeRegExp(pattern: string) {
@@ -72,14 +77,42 @@ function safeRegExp(pattern: string) {
 
 /**
  * ✅ blob: URL은 저장/재사용 불가 → 프론트에선 무효 처리
- * (원하면 여기서 상대경로/절대경로 보정도 같이 할 수 있음)
  */
 function sanitizeDownloadUrl(raw?: string) {
   const u = (raw ?? '').trim();
   if (!u) return undefined;
-  if (u.startsWith('blob:')) return undefined; // ✅ 핵심
+  if (u.startsWith('blob:')) return undefined;
   if (u === '#' || u.toLowerCase().startsWith('javascript')) return undefined;
   return u;
+}
+
+type CompiledRule =
+  | { type: 'regex'; re: RegExp | null; raw: string }
+  | { type: 'exact'; val: string; raw: string }
+  | { type: 'contains'; val: string; raw: string };
+
+function compileRules(rules?: Rule[]): CompiledRule[] {
+  const src = rules ?? [];
+  return src.map((r) => {
+    if (r.type === 'regex') return { type: 'regex' as const, re: safeRegExp(r.value), raw: r.value };
+    if (r.type === 'exact') return { type: 'exact' as const, val: normalize(r.value), raw: r.value };
+    return { type: 'contains' as const, val: normalize(r.value), raw: r.value };
+  });
+}
+
+function testCompiledRule(t: string, nt: string, rule: CompiledRule) {
+  if (rule.type === 'regex') {
+    if (!rule.re) return false;
+    // raw title + normalized title 둘 다 테스트(기존 유지)
+    return rule.re.test(t) || rule.re.test(nt);
+  }
+  if (rule.type === 'exact') {
+    return nt === rule.val;
+  }
+  // contains
+  // - normalized 기준 포함
+  // - raw 기준 포함도 유지(요청 코드 스타일 존중)
+  return nt.includes(rule.val) || t.includes(rule.raw);
 }
 
 export async function loadSafetyEduData(params?: {
@@ -170,47 +203,50 @@ export async function loadSafetyEduData(params?: {
 
   const catMap = new Map(categories.map((c) => [c.id, c] as const));
 
-  // ✅ 매칭 룰 컴파일
+  // ✅ 매칭 룰(포함 + 배제) 컴파일
   const compiledCats = catalog.categories.map((c) => {
-    const rules = c.materials ?? [];
-    const compiled = rules.map((r) => {
-      if (r.type === 'regex') return { type: 'regex' as const, re: safeRegExp(r.value) };
-      if (r.type === 'exact')
-        return { type: 'exact' as const, val: normalize(r.value), raw: r.value };
-      return { type: 'contains' as const, val: normalize(r.value), raw: r.value };
-    });
+    const includeCompiled = compileRules(c.materials ?? []);
+    const excludeCompiled = compileRules(c.exclude ?? []);
+
     return {
       id: c.id,
       guideKey: c.guideKey ?? c.id,
-      compiled,
+      include: includeCompiled,
+      exclude: excludeCompiled,
     };
   });
 
   /**
-   * ✅ 핵심 수정 포인트 (exact만)
-   * - 기존: (nt === rule.val || t === rule.raw)
-   * - 변경: normalize(t) === normalize(rule.raw)  (즉, nt === rule.val) 로만 판단
-   *   → 띄어쓰기/전각/반각 같은 표기 차이를 흡수
-   * - "원문 완전 동일(t === raw)" 조건은 제거(불필요 + 정확도에 악영향 가능)
+   * ✅ 핵심: 카테고리별 exclude를 "먼저" 검사
+   * - exclude에 걸리면 해당 카테고리는 아예 스킵
+   * - 그 다음 include(materials) 매칭
+   * - first_match_wins 유지
    */
   function match(title: string) {
     const t = (title ?? '').trim();
     const nt = normalize(t);
 
     for (const c of compiledCats) {
-      for (const rule of c.compiled) {
-        if (rule.type === 'regex') {
-          if (!rule.re) continue;
-          if (rule.re.test(t) || rule.re.test(nt)) return { categoryId: c.id, guideKey: c.guideKey };
-        } else if (rule.type === 'exact') {
-          // ✅ exact는 정규화 문자열만으로 비교
-          if (nt === rule.val) return { categoryId: c.id, guideKey: c.guideKey };
-        } else {
-          // contains는 기존 로직 유지
-          if (nt.includes(rule.val) || t.includes(rule.raw)) return { categoryId: c.id, guideKey: c.guideKey };
+      // 1) exclude 먼저
+      if (c.exclude.length > 0) {
+        let excluded = false;
+        for (const rule of c.exclude) {
+          if (testCompiledRule(t, nt, rule)) {
+            excluded = true;
+            break;
+          }
+        }
+        if (excluded) continue; // ✅ 이 카테고리는 매칭 금지 → 다음 카테고리로
+      }
+
+      // 2) include rules
+      for (const rule of c.include) {
+        if (testCompiledRule(t, nt, rule)) {
+          return { categoryId: c.id, guideKey: c.guideKey };
         }
       }
     }
+
     return { categoryId: fallbackCategoryId, guideKey: fallbackGuideKey };
   }
 
@@ -224,7 +260,7 @@ export async function loadSafetyEduData(params?: {
       title,
       categoryId,
       guideKey,
-      downloadUrl: sanitizeDownloadUrl(it.downloadUrl), // ✅ blob 제거
+      downloadUrl: sanitizeDownloadUrl(it.downloadUrl),
       source: it.source,
       publishedAt: it.publishedAt,
     };
@@ -232,7 +268,7 @@ export async function loadSafetyEduData(params?: {
     (catMap.get(categoryId) ?? catMap.get(fallbackCategoryId)!).materials.push(m);
   }
 
-  // ✅ 정렬(원하면 날짜 기준으로 바꿔도 됨)
+  // ✅ 정렬
   for (const c of categories) {
     c.materials.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
   }
@@ -240,6 +276,6 @@ export async function loadSafetyEduData(params?: {
   return {
     categories,
     guides,
-    materialCount: items.length,
+    materialCount: items.length, // 전체 아이템 수(배제로 카테고리 이동해도 아이템 수는 동일)
   };
 }
