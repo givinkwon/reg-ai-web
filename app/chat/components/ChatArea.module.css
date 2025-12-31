@@ -244,9 +244,13 @@
 }
 
 @keyframes blink {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     opacity: 0.2;
   }
+
   40% {
     opacity: 1;
   }
@@ -299,14 +303,17 @@
   height: 28px;
   border-radius: 999px;
   border: none;
-  background: var(--accent, #2563eb); /* 진한 파란색 */
-  color: #ffffff;                     /* 아이콘 색(=currentColor) */
+  background: var(--accent, #2563eb);
+  /* 진한 파란색 */
+  color: #ffffff;
+  /* 아이콘 색(=currentColor) */
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .plusBtn:hover {
-  background: #1d4ed8; /* hover 시 조금 더 진하게 */
+  background: #1d4ed8;
+  /* hover 시 조금 더 진하게 */
 }
 
 /* 아이콘은 색 지정하지 말고, 버튼의 color를 따라가게 */
@@ -468,7 +475,8 @@
 }
 
 .taskModal {
-  position: relative;             /* ✅ 닫기 버튼 절대 위치 기준 */
+  position: relative;
+  /* ✅ 닫기 버튼 절대 위치 기준 */
   width: min(420px, calc(100% - 32px));
   border-radius: 16px;
   background: #ffffff;
@@ -479,7 +487,8 @@
 /* 제목은 오른쪽에 X 들어갈 공간 조금 확보 */
 .typeTitle {
   margin: 0;
-  padding-right: 32px;            /* ✅ X 자리 여유 */
+  padding-right: 32px;
+  /* ✅ X 자리 여유 */
   font-size: 15px;
   font-weight: 600;
   color: #111827;
@@ -491,7 +500,8 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 1;                     /* 카드 내용보다 위 */
+  z-index: 1;
+  /* 카드 내용보다 위 */
   cursor: pointer;
   width: 28px;
   height: 28px;
@@ -543,8 +553,10 @@
 .taskCardIcon {
   width: 18px;
   height: 18px;
-  color: var(--accent);   /* #2563eb */
-  stroke: var(--accent);  /* lucide 아이콘은 stroke 기준이라 같이 지정 */
+  color: var(--accent);
+  /* #2563eb */
+  stroke: var(--accent);
+  /* lucide 아이콘은 stroke 기준이라 같이 지정 */
 }
 
 .taskLabel {
@@ -585,33 +597,40 @@
   justify-items: center;
   column-gap: 18px;
   row-gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));   /* 기본: 3열 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* 기본: 3열 */
 }
 
 
 .quickBtn {
-  width: 230px;              /* 가로 사이즈 통일 */
-  height: 56px;              /* 세로 사이즈 통일 */
+  width: 230px;
+  /* 가로 사이즈 통일 */
+  height: 56px;
+  /* 세로 사이즈 통일 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   padding: 0 20px;
   border-radius: 999px;
-  border: 1px solid #bfdbfe;        /* 연한 파랑 테두리 */
-  background: #e5f1ff;              /* 연 하늘색 배경 */
-  color: #0f172a;                   /* 글자색(짙은 남색) */
+  border: 1px solid #bfdbfe;
+  /* 연한 파랑 테두리 */
+  background: #e5f1ff;
+  /* 연 하늘색 배경 */
+  color: #0f172a;
+  /* 글자색(짙은 남색) */
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
   box-shadow: 0 18px 40px rgba(148, 163, 184, 0.4);
   cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease,
-              box-shadow 0.15s ease;
+    box-shadow 0.15s ease;
 }
 
 .quickBtn:hover {
-  background: #dbeafe;              /* 살짝 진한 하늘색 */
+  background: #dbeafe;
+  /* 살짝 진한 하늘색 */
   box-shadow: 0 20px 46px rgba(148, 163, 184, 0.55);
   transform: translateY(-1px);
 }
@@ -642,7 +661,8 @@
   max-width: 780px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start; /* ✅ 가운데 → 왼쪽 정렬 */
+  justify-content: flex-start;
+  /* ✅ 가운데 → 왼쪽 정렬 */
   gap: 8px;
 }
 
@@ -700,7 +720,8 @@ body[data-theme='dark'] .hintChip {
 .quickSectionTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #2563eb; /* 기존 포인트 컬러에 맞춰서 */
+  color: #2563eb;
+  /* 기존 포인트 컬러에 맞춰서 */
 }
 
 .accountLabel {
@@ -756,7 +777,7 @@ body[data-theme='dark'] .hintChip {
   justify-content: space-between;
   gap: 12px;
   padding: 0;
-  background: transparent;
+  background: transparent!important;
   border: none;
   text-align: left;
 }
@@ -1025,9 +1046,9 @@ body[data-theme='dark'] .hintChip {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   margin: 12px 0 16px;
 }
 
@@ -1051,7 +1072,10 @@ body[data-theme='dark'] .hintChip {
   opacity: 0.7;
   padding: 4px;
 }
-.eduSearchClear:hover { opacity: 1; }
+
+.eduSearchClear:hover {
+  opacity: 1;
+}
 
 .eduSearchResults {
   display: flex;
@@ -1076,14 +1100,16 @@ body[data-theme='dark'] .hintChip {
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px dashed rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
   opacity: 0.85;
+  color: black;
 }
+
 .eduMoreBtn:hover {
   opacity: 1;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .eduLoading {
@@ -1097,6 +1123,7 @@ body[data-theme='dark'] .hintChip {
   background: rgba(255, 120, 120, 0.06);
   border-radius: 12px;
 }
+
 .eduErrorMsg {
   margin-top: 6px;
   opacity: 0.8;
@@ -1104,8 +1131,8 @@ body[data-theme='dark'] .hintChip {
 }
 
 .eduPane {
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 14px;
   padding: 12px;
 }
@@ -1133,8 +1160,8 @@ body[data-theme='dark'] .hintChip {
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
   opacity: 0.9;
 }
 
@@ -1172,16 +1199,18 @@ body[data-theme='dark'] .hintChip {
   gap: 8px;
   padding: 9px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
   opacity: 0.95;
 }
+
 .eduDownloadBtn:hover {
-  background: rgba(255,255,255,0.07);
+  background: rgba(255, 255, 255, 0.07);
 }
+
 .eduDownloadBtn[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;
@@ -1249,10 +1278,9 @@ body[data-theme='dark'] .hintChip {
   .quickTitle {
     font-size: 20px;
   }
+
   .quickBtn {
     padding: 8px 14px;
     font-size: 12px;
   }
 }
-
-
