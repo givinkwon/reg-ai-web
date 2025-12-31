@@ -162,6 +162,8 @@ categories:
         value: "겨울철 한파 대비 한랭질환 예방가이드_자율점검표 게시"
       - type: regex
         value: "^한랭작업환경 관리 및 건강보호$|^고열작업환경 관리 및 건강보호$"
+      - type: regex
+        value: "감정"
 
   - id: "C10_service_facility_logistics_retail"
     name: "서비스·시설·물류·도소매·교육·건물관리"
