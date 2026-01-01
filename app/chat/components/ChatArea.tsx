@@ -2550,13 +2550,6 @@ export default function ChatArea() {
         <div className={s.body}>
           <div className={s.stream}>
             <div className={s.streamInner}>
-            {/* ✅ Edu Task는 messages 없어도/있어도 유지 */}
-            {isEduTask && (
-              <MakeSafetyEduMaterials
-                onSelectMaterial={handleSelectSafetyEduMaterial}
-                selectedMaterialId={selectedEduMaterialId}
-              />
-            )}
             {messages.length === 0 && (
               <>
               {isRiskTask ? (
@@ -2578,7 +2571,14 @@ export default function ChatArea() {
                     }}
                   />
                 </div>
-              ) : isSafetyDocTask ? (
+              ) :
+                isEduTask ? (
+                  <MakeSafetyEduMaterials
+                    onSelectMaterial={handleSelectSafetyEduMaterial}
+                    selectedMaterialId={selectedEduMaterialId}
+                  />
+                
+                ): isSafetyDocTask ? (
                   <MakeSafetyDocs
                     mode={docMode === 'review' ? 'review' : 'create'}
                     onSelectDoc={(category, doc) => {

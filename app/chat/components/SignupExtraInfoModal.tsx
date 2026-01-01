@@ -22,12 +22,12 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
   const [employeeCount, setEmployeeCount] = useState('');
   const [position, setPosition] = useState('');
   const [website, setWebsite] = useState('');
-
   const [representativeName, setRepresentativeName] = useState('');
 
   // ✅ 소분류 자동완성
   const [subcategoryInput, setSubcategoryInput] = useState('');
-  const [subcategorySelected, setSubcategorySelected] = useState<SubcategoryItem | null>(null);
+  const [subcategorySelected, setSubcategorySelected] =
+    useState<SubcategoryItem | null>(null);
   const [subcategoryList, setSubcategoryList] = useState<SubcategoryItem[]>([]);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [subcategoryLoading, setSubcategoryLoading] = useState(false);
@@ -41,9 +41,12 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
-  const canSearch = useMemo(() => subcategoryInput.trim().length >= 1, [subcategoryInput]);
+  const canSearch = useMemo(
+    () => subcategoryInput.trim().length >= 1,
+    [subcategoryInput],
+  );
 
-  // ✅ “선택 강제” 유효성: 선택된 값이 있어야만 OK
+  // ✅ “선택 강제” 유효성
   const isSubcategoryValid = useMemo(() => {
     return !!subcategorySelected;
   }, [subcategorySelected]);
@@ -72,7 +75,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
 
         const res = await fetch(
           `/api/risk-assessment?endpoint=minors&q=${encodeURIComponent(q)}`,
-          { method: 'GET', signal: ac.signal }
+          { method: 'GET', signal: ac.signal },
         );
 
         if (!res.ok) {
@@ -83,14 +86,12 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
 
         const data = (await res.json()) as { items: string[] };
 
-        // ✅ 너무 많이 내려오면 적당히 컷(스크롤은 UI에서)
         const items = (data.items ?? []).slice(0, 50);
-
         setSubcategoryList(
           items.map((name) => ({
             id: name,
             name,
-          }))
+          })),
         );
       } catch (e: any) {
         if (e?.name !== 'AbortError') console.error(e);
@@ -130,11 +131,12 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
     e.preventDefault();
     setSubcategoryTouched(true);
 
-    if (!subcategorySelected) return; // 버튼이 비활성화지만 안전장치
+    if (!subcategorySelected) return;
 
     try {
       setLoading(true);
 
+      // 1) secondary info 저장 + mark_complete
       const res = await fetch('/api/accounts/update-secondary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,8 +149,6 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             position,
             website,
             representative_name: representativeName,
-
-            // ✅ “선택된 값만” 저장
             subcategory: {
               id: subcategorySelected.id,
               name: subcategorySelected.name,
@@ -165,32 +165,56 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
         return;
       }
 
-      if (!user && email) {
-        try {
-          const res2 = await fetch('/api/accounts/find-by-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-          });
+      // 2) 서버에서 계정 다시 읽어서 store 갱신 (✅ user가 이미 있어도 갱신해야 함)
+      try {
+        const res2 = await fetch('/api/accounts/find-by-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
 
-          if (res2.ok) {
-            const acc = await res2.json();
-            const provider = acc.google_id ? 'google' : acc.kakao_id ? 'kakao' : 'local';
+        if (res2.ok) {
+          const acc = await res2.json();
+          const provider = acc.google_id
+            ? 'google'
+            : acc.kakao_id
+            ? 'kakao'
+            : 'local';
 
+          // ✅ 기존 uid 유지가 더 안전(특히 firebase uid 형식 google:xxx)
+          const nextUid =
+            user?.uid ??
+            (acc.google_id
+              ? `google:${acc.google_id}`
+              : acc.kakao_id
+              ? `kakao:${acc.kakao_id}`
+              : acc.account_id);
+
+          setUser({
+            uid: nextUid,
+            email: acc.email ?? email ?? null,
+            name: acc.name ?? null,
+            photoUrl: acc.picture ?? null,
+            provider,
+            isSignupComplete: true, // ✅ 완료로 확정
+          } as const);
+        } else {
+          // fallback: 최소한 현재 user를 완료로 마킹
+          if (user) {
             setUser({
-              uid: acc.google_id
-                ? `google:${acc.google_id}`
-                : acc.kakao_id
-                ? `kakao:${acc.kakao_id}`
-                : acc.account_id,
-              email: acc.email ?? null,
-              name: acc.name ?? null,
-              photoUrl: acc.picture ?? null,
-              provider,
-            } as const);
+              ...user,
+              isSignupComplete: true,
+            });
           }
-        } catch (e) {
-          console.error('[SignupExtraInfoModal] ensure-login error:', e);
+        }
+      } catch (e) {
+        console.error('[SignupExtraInfoModal] refresh user error:', e);
+        // fallback: 최소한 현재 user를 완료로 마킹
+        if (user) {
+          setUser({
+            ...user,
+            isSignupComplete: true,
+          });
         }
       }
 
@@ -212,7 +236,11 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.field}>
             <span>연락처</span>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="전화번호" />
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="전화번호"
+            />
           </label>
 
           <label className={styles.field}>
@@ -265,7 +293,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
                   value={subcategoryInput}
                   onChange={(e) => {
                     setSubcategoryInput(e.target.value);
-                    setSubcategorySelected(null); // ✅ 입력이 바뀌면 선택 해제
+                    setSubcategorySelected(null);
                     setSubcategoryOpen(true);
                   }}
                   onFocus={() => setSubcategoryOpen(true)}
@@ -292,19 +320,29 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
               </div>
 
               {showSubcategoryError && (
-                <div className={styles.fieldError}>소분류는 목록에서 선택해야 합니다.</div>
+                <div className={styles.fieldError}>
+                  소분류는 목록에서 선택해야 합니다.
+                </div>
               )}
 
               {subcategoryOpen && (
                 <div className={styles.autoPanel}>
-                  {subcategoryLoading && <div className={styles.autoHint}>검색 중…</div>}
-
-                  {!subcategoryLoading && subcategoryList.length === 0 && canSearch && (
-                    <div className={styles.autoHint}>검색 결과가 없습니다.</div>
+                  {subcategoryLoading && (
+                    <div className={styles.autoHint}>검색 중…</div>
                   )}
 
+                  {!subcategoryLoading &&
+                    subcategoryList.length === 0 &&
+                    canSearch && (
+                      <div className={styles.autoHint}>
+                        검색 결과가 없습니다.
+                      </div>
+                    )}
+
                   {!subcategoryLoading && !canSearch && (
-                    <div className={styles.autoHint}>1글자 이상 입력하면 검색됩니다.</div>
+                    <div className={styles.autoHint}>
+                      1글자 이상 입력하면 검색됩니다.
+                    </div>
                   )}
 
                   {!subcategoryLoading &&

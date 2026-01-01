@@ -11,28 +11,41 @@ type LoginPromptModalProps = {
   onClose: () => void;
 };
 
-type PendingKakaoUser = {
-  kakaoId: string;
-  email: string;
-};
-
 export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
   const user = useUserStore((st) => st.user);
+  const initialized = useUserStore((st) => st.initialized);
   const setUser = useUserStore((st) => st.setUser);
+
   const [loading, setLoading] = useState(false);
 
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
-  const [pendingKakaoUser, setPendingKakaoUser] =
-    useState<PendingKakaoUser | null>(null);
 
-  // ✅ 로그인되면 자동으로 닫되,
+  // ✅ (1) 새로고침/복원된 user가 "가입 미완료"면 자동으로 추가정보 모달 오픈
   useEffect(() => {
-    // 로그인 처리 중엔(loading) 닫지 않기
-    if (user && !showExtraModal && !loading) {
+    if (!initialized) return;
+    if (!user?.email) return;
+
+    if (user.isSignupComplete === false) {
+      setAccountEmail(user.email);
+      setShowExtraModal(true);
+    }
+  }, [initialized, user?.email, user?.isSignupComplete]);
+
+  // ✅ (2) 가입 완료된 로그인 상태면 자동 close (단, extra modal/로딩 중이면 닫지 않음)
+  useEffect(() => {
+    if (!initialized) return;
+    if (loading) return;
+    if (!user) return;
+
+    // extra modal이 떠있으면 닫지 않기
+    if (showExtraModal) return;
+
+    // 가입 완료면 닫기
+    if (user.isSignupComplete !== false) {
       onClose();
     }
-  }, [user, showExtraModal, loading, onClose]);
+  }, [initialized, user, showExtraModal, loading, onClose]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -58,23 +71,29 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
       });
 
       const data = await res.json().catch(() => null);
-      console.log('[LoginPromptModal] account result:', data);
+      console.log('[LoginPromptModal] google account result:', data);
 
-      // ✅ "가입 완료가 아닌" 상태면 추가 정보 팝업만 띄우고
-      //    로그인 모달은 숨긴다.
       const needExtra =
-        res.ok &&
-        data &&
+        !!res.ok &&
+        !!data &&
         (data.is_signup_complete === false ||
           data.is_signup_complete === undefined);
 
-      console.log(needExtra)
+      // ✅ needExtra여도 user 저장 (새로고침 복원 목적)
+      setUser({
+        uid: `google:${fbUser.uid}`,
+        email: fbUser.email ?? null,
+        name: fbUser.displayName ?? null,
+        photoUrl: fbUser.photoURL ?? null,
+        provider: 'google',
+        isSignupComplete: !needExtra,
+      });
 
       if (needExtra) {
         setAccountEmail(fbUser.email);
-        setShowExtraModal(true); // 추가 정보 팝업 오픈
+        setShowExtraModal(true);
       } else {
-        // 이미 가입 완료 상태면 바로 닫기 (useEffect가 처리)
+        // useEffect가 onClose 처리
         onClose();
       }
     } catch (err) {
@@ -98,7 +117,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
 
     // ✅ 최초 한 번만 init
     if (!kakao.isInitialized()) {
-      const key = "79c1a2486d79d909091433229e814d9d"
+      const key = '79c1a2486d79d909091433229e814d9d';
 
       if (!key) {
         console.error('[Kakao] NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY is not set');
@@ -151,27 +170,26 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
           console.log('[LoginPromptModal] kakao account result:', data);
 
           const needExtra =
-            res.ok &&
-            data &&
+            !!res.ok &&
+            !!data &&
             (data.is_signup_complete === false ||
               data.is_signup_complete === undefined);
 
+          // ✅ needExtra여도 user 저장 (새로고침 복원 목적)
+          setUser({
+            uid: `kakao:${kakaoId}`,
+            email,
+            name: null,
+            photoUrl: null,
+            provider: 'kakao',
+            isSignupComplete: !needExtra,
+          });
+
           if (needExtra) {
-            // 🔹 추가 정보 모달을 위해 잠시 저장
-            setPendingKakaoUser({ kakaoId, email });
             setAccountEmail(email);
             setShowExtraModal(true);
-            // 👈 여기서는 setUser() 호출 안 함
           } else {
-            // 이미 가입 완료된 카카오 계정이면 바로 로그인 처리
-            setUser({
-              uid: `kakao:${kakaoId}`,
-              email,
-              name: null,
-              photoUrl: null,
-              provider: 'kakao',
-            });
-            onClose();
+            onClose(); // useEffect가 처리해도 되지만 즉시 닫아도 OK
           }
         } catch (err) {
           console.error('[LoginPromptModal] Kakao login error:', err);
@@ -192,6 +210,13 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
     setShowExtraModal(false);
     onClose(); // 온보딩 끝났으니 메인으로
   };
+
+  useEffect(() => {
+    if (!initialized) return;
+    if (user?.email && user.isSignupComplete === false) {
+      setShowExtraModal(true);
+    }
+  }, [initialized, user?.email, user?.isSignupComplete]);
 
   return (
     <>

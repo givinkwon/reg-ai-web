@@ -68,7 +68,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
         qs.set('endpoint', 'detail-tasks');
         qs.set('q', norm(q));
         qs.set('limit', '50');
-        if (minorCategory) qs.set('minor', minorCategory);
+        // if (minorCategory) qs.set('minor', minorCategory);
 
         const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
           method: 'GET',
