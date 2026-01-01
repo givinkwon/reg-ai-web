@@ -17,16 +17,18 @@ const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 
 // =========================
-// ✅ localStorage cache
+// ✅ localStorage cache (v2)
+// - "빈 캐시"면 무시하고 API 재호출되도록 방어
 // =========================
-const CACHE_PREFIX = 'regai:risk:stepTasks:v1';
+const CACHE_PREFIX = 'regai:risk:stepTasks:v2';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
+const RETRY_COOLDOWN_MS = 1000 * 20; // 20초 (연타 방지)
 
 type StepTasksCache = {
-  v: 1;
+  v: 2;
   ts: number;
-  user: string;          // email or 'guest'
-  minor: string;         // 'ALL' 포함
+  user: string; // email or 'guest'
+  minor: string; // 'ALL' 포함
   recommended: string[]; // 추천 리스트(화면 목록용)
   tasks: RiskAssessmentDraft['tasks']; // 선택된 작업(칩) 전체
 };
@@ -34,16 +36,26 @@ type StepTasksCache = {
 function cacheKey(userEmail: string | null | undefined, minorCategory: string | null) {
   const u = norm(userEmail) || 'guest';
   const m = norm(minorCategory) || 'ALL';
-  return `${CACHE_PREFIX}:${u}:${m}`;
+  return `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(m)}`;
 }
 
 function safeReadCache(key: string): StepTasksCache | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
+
     const parsed = JSON.parse(raw) as StepTasksCache;
-    if (!parsed?.ts || !Array.isArray(parsed?.tasks)) return null;
+
+    if (parsed?.v !== 2) return null;
+    if (!parsed?.ts) return null;
+    if (!Array.isArray(parsed?.tasks) || !Array.isArray(parsed?.recommended)) return null;
     if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+
+    // ✅ 핵심: "빈 캐시"는 MISS 처리해서 API를 다시 타게 함
+    const tLen = parsed.tasks.length;
+    const rLen = parsed.recommended.length;
+    if (tLen === 0 && rLen === 0) return null;
+
     return parsed;
   } catch {
     return null;
@@ -54,7 +66,7 @@ function safeWriteCache(key: string, payload: StepTasksCache) {
   try {
     localStorage.setItem(key, JSON.stringify(payload));
   } catch {
-    // storage full/blocked면 무시
+    // ignore
   }
 }
 
@@ -69,14 +81,17 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
   const [recommended, setRecommended] = useState<string[]>([]);
   const [addOpen, setAddOpen] = useState(false);
 
-  // ✅ 자동 선택: 같은 소분류에서 한 번만 실행되게 가드
+  // ✅ 자동 선택: 같은 소분류에서 1회만 적용
   const autoAppliedRef = useRef<string | null>(null);
 
-  // ✅ 캐시를 이번 minor에서 이미 확인했는지 가드
+  // ✅ 캐시 체크 가드
   const cacheCheckedRef = useRef<string | null>(null);
 
-  // ✅ minor가 바뀐 “전환”인지 체크용
+  // ✅ minor 전환 체크
   const prevMinorRef = useRef<string | null>(null);
+
+  // ✅ API 연타 방지
+  const attemptRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     const v = norm(minor);
@@ -107,11 +122,13 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     });
   };
 
-  // ✅ 소분류 폴백
+  // ✅ 소분류 폴백 (유저 계정에서 가져오기)
   useEffect(() => {
     if (overrideMinor) return;
     if (minorCategory) return;
     if (!user?.email) return;
+
+    let cancelled = false;
 
     (async () => {
       try {
@@ -129,17 +146,23 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
           acc?.subcategory?.name ??
           null;
 
-        if (typeof minorFound === 'string' && norm(minorFound)) {
+        if (!cancelled && typeof minorFound === 'string' && norm(minorFound)) {
           setMinorCategory(norm(minorFound));
         }
       } catch {
         // silent
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.email, minorCategory, overrideMinor]);
 
   // =========================
-  // ✅ 1) 캐시 우선 복원
+  // ✅ 1) 캐시 우선 복원 (유효 캐시가 있을 때만)
+  //    - tasks가 있으면(길이>0)만 덮어쓰기 후보
+  //    - recommended만 있는 캐시도 "목록" 복원용으로는 사용
   // =========================
   useEffect(() => {
     if (!minorCategory) {
@@ -167,86 +190,99 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const key = cacheKey(userEmail, currentMinor);
     const cached = safeReadCache(key);
 
-    if (cached && Array.isArray(cached.tasks) && cached.tasks.length > 0) {
-      // ✅ 덮어쓰기 조건:
-      // - minor가 바뀌는 순간(전환)
-      // - 또는 현재 tasks가 비어있는 경우(새로고침/재접속)
-      // (초기 minor가 늦게 잡혔는데 이미 사용자가 수동으로 tasks 만든 경우를 보호)
-      const shouldOverwrite = isMinorSwitch || draft.tasks.length === 0;
+    if (!cached) return; // ✅ 캐시 없거나 "빈 캐시"면 아래 API 로드로 내려감
 
+    // ✅ 1) tasks 복원 (tasks가 있을 때만)
+    if (Array.isArray(cached.tasks) && cached.tasks.length > 0) {
+      const shouldOverwrite = isMinorSwitch || draft.tasks.length === 0;
       if (shouldOverwrite) {
         setDraft((prev) => ({
           ...prev,
           tasks: cached.tasks,
         }));
       }
-
-      // 화면 목록(추천 리스트)도 캐시 우선
-      const cachedReco =
-        Array.isArray(cached.recommended) && cached.recommended.length > 0
-          ? cached.recommended
-          : cached.tasks.map((t) => norm(t.title)).filter(Boolean);
-
-      setRecommended(Array.from(new Set(cachedReco.map(norm).filter(Boolean))));
-      setRecoError(null);
-      setRecoLoading(false);
-
-      // ✅ 캐시 복원된 minor에서는 자동선택(merge) 다시 하지 않게 막기
-      autoAppliedRef.current = currentMinor;
     }
-    // 캐시 없으면 → 아래 "API 로드" effect가 수행됨
+
+    // ✅ 2) 목록 복원 (recommended 우선, 없으면 tasks로)
+    const cachedReco =
+      Array.isArray(cached.recommended) && cached.recommended.length > 0
+        ? cached.recommended
+        : cached.tasks.map((t) => norm(t.title)).filter(Boolean);
+
+    setRecommended(Array.from(new Set(cachedReco.map(norm).filter(Boolean))));
+    setRecoError(null);
+    setRecoLoading(false);
+
+    // ✅ 캐시로 목록/선택이 복원된 minor에서는 auto-merge를 다시 하지 않게 막기
+    autoAppliedRef.current = currentMinor;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minorCategory, user?.email]);
 
   // =========================
-  // ✅ 2) 캐시가 없을 때만 API로 recommended 로드
+  // ✅ 2) 캐시가 없거나(또는 빈 캐시)일 때만 API로 recommended 로드
+  //    - 연타 방지(쿨다운)
   // =========================
   useEffect(() => {
     if (!minorCategory) return;
 
     const currentMinor = norm(minorCategory);
     const userEmail = user?.email ?? null;
-
-    // 캐시가 있으면 API를 건드리지 않는다.
     const key = cacheKey(userEmail, currentMinor);
+
     const cached = safeReadCache(key);
-    if (cached && Array.isArray(cached.tasks) && cached.tasks.length > 0) {
+    if (cached) {
+      // ✅ 유효 캐시가 있으면 API 호출 안함
       return;
     }
+
+    // ✅ 쿨다운
+    const last = attemptRef.current.get(currentMinor);
+    if (last && Date.now() - last < RETRY_COOLDOWN_MS) return;
+    attemptRef.current.set(currentMinor, Date.now());
+
+    const ac = new AbortController();
 
     (async () => {
       setRecoLoading(true);
       setRecoError(null);
+
       try {
         const qs = new URLSearchParams();
         qs.set('endpoint', 'detail-tasks');
         qs.set('minor', currentMinor);
         qs.set('limit', '50');
 
-        const res = await fetch(`/api/risk-assessment?${qs.toString()}`, { cache: 'no-store' });
+        const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
+          cache: 'no-store',
+          signal: ac.signal,
+        });
+
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           throw new Error(`목록 로드 실패 (${res.status}) ${txt.slice(0, 80)}`);
         }
 
-        const data = (await res.json()) as { items: string[] };
+        const data = (await res.json()) as { items?: string[] };
         const items = (data.items ?? []).map(norm).filter(Boolean);
         const uniq = Array.from(new Set(items));
 
         setRecommended(uniq);
-
-        // ✅ (선택) 최초 로드면 자동 선택: 기존 로직 유지(merge)
-        //   - 만약 "덮어쓰기"가 더 좋으면, 아래 setDraft를 prev.tasks 대신 uniq로 바꾸면 됨.
       } catch (e: any) {
+        if (e?.name === 'AbortError') return;
         setRecommended([]);
         setRecoError(e?.message ?? '목록 로드 중 오류');
       } finally {
         setRecoLoading(false);
       }
     })();
+
+    return () => ac.abort();
   }, [minorCategory, user?.email]);
 
-  // ✅ 3) recommended 로드되면 자동 선택(기존 로직 유지)
+  // =========================
+  // ✅ 3) recommended 로드되면 자동 선택(merge)
+  //    - 같은 minor에서는 1회만
+  // =========================
   useEffect(() => {
     if (!minorCategory) return;
     if (recoLoading || recoError) return;
@@ -254,7 +290,6 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
     const currentMinor = norm(minorCategory);
 
-    // 같은 소분류에서는 1번만 자동 적용
     if (autoAppliedRef.current === currentMinor) return;
 
     setDraft((prev) => {
@@ -277,6 +312,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
   // =========================
   // ✅ 4) 저장: tasks / recommended 바뀌면 캐시에 기록
+  //    - 둘 다 비어있으면 저장하지 않음 (빈 캐시 생성 방지)
   // =========================
   useEffect(() => {
     if (!minorCategory) return;
@@ -285,25 +321,28 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const userEmail = user?.email ?? null;
     const key = cacheKey(userEmail, currentMinor);
 
-    // recommended가 비어도, 화면 목록이 없으면 UX가 안 좋으니 tasks로 대체해서 저장
+    const tasksToSave = draft.tasks ?? [];
     const recoToSave =
       recommended.length > 0
         ? recommended
-        : Array.from(new Set(draft.tasks.map((t) => norm(t.title)).filter(Boolean)));
+        : Array.from(new Set(tasksToSave.map((t) => norm(t.title)).filter(Boolean)));
+
+    // ✅ 둘 다 비면 저장 X (이 상태에서 저장하면 "빈 캐시"가 생김)
+    if (tasksToSave.length === 0 && recoToSave.length === 0) return;
 
     const payload: StepTasksCache = {
-      v: 1,
+      v: 2,
       ts: Date.now(),
       user: norm(userEmail) || 'guest',
       minor: currentMinor || 'ALL',
       recommended: recoToSave,
-      tasks: draft.tasks ?? [],
+      tasks: tasksToSave,
     };
 
     safeWriteCache(key, payload);
   }, [minorCategory, user?.email, draft.tasks, recommended]);
 
-  // ✅ 화면에 보여줄 목록: recommended가 비었으면(캐시엔 tasks만 있는 경우 등) tasks로 대체
+  // ✅ 화면에 보여줄 목록: recommended가 비었으면 tasks로 대체
   const displayList = useMemo(() => {
     if (recommended.length > 0) return recommended;
     return Array.from(new Set(draft.tasks.map((t) => norm(t.title)).filter(Boolean)));

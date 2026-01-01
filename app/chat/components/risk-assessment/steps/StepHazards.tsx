@@ -31,8 +31,11 @@ const DEFAULT_S: RiskLevel = 2;
 // =========================
 // ✅ localStorage cache (process_name + sub_process 단위로 hazards 저장)
 // =========================
-const CACHE_PREFIX = 'regai:risk:stepHazards:v1';
+const CACHE_PREFIX = 'regai:risk:stepHazards:v2'; // ✅ v2로 bump (과거 빈 캐시 무효화)
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
+
+// ✅ 무한 호출 방지(빈 캐시/빈 응답이어도 “조금 있다가” 다시 시도)
+const RETRY_COOLDOWN_MS = 1000 * 20; // 20초(원하면 60초로)
 
 type HazardCacheItem = {
   id: string;
@@ -43,7 +46,7 @@ type HazardCacheItem = {
 };
 
 type HazardCache = {
-  v: 1;
+  v: 2;
   ts: number;
   user: string; // email or guest
   processName: string; // task.title
@@ -63,8 +66,14 @@ function safeReadCache(key: string): HazardCache | null {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as HazardCache;
+
+    if (parsed?.v !== 2) return null;
     if (!parsed?.ts || !Array.isArray(parsed?.hazards)) return null;
     if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+
+    // ✅ 핵심: hazards가 비어있으면 “빈 캐시” → MISS 처리
+    if (parsed.hazards.length === 0) return null;
+
     return parsed;
   } catch {
     return null;
@@ -75,7 +84,7 @@ function safeWriteCache(key: string, payload: HazardCache) {
   try {
     localStorage.setItem(key, JSON.stringify(payload));
   } catch {
-    // storage full/blocked면 무시
+    // ignore
   }
 }
 
@@ -85,9 +94,13 @@ export default function StepHazards({ draft, setDraft }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [target, setTarget] = useState<{ taskId: string; processId: string } | null>(null);
 
-  // ✅ 자동 채움 가드 (taskId:processId)
-  const autoFilledRef = useRef<Set<string>>(new Set());
-  const [autoLoading, setAutoLoading] = useState<Record<string, boolean>>({}); // key => boolean
+  // ✅ 완료(성공적으로 hazards가 채워진 공정만) 가드
+  const completedRef = useRef<Set<string>>(new Set());
+
+  // ✅ 재시도 쿨다운 가드 (빈 응답/실패여도 바로 연타 안하게)
+  const attemptRef = useRef<Map<string, number>>(new Map());
+
+  const [autoLoading, setAutoLoading] = useState<Record<string, boolean>>({});
 
   const tasks = useMemo(() => draft.tasks, [draft.tasks]);
 
@@ -183,6 +196,11 @@ export default function StepHazards({ draft, setDraft }: Props) {
   // =========================
   // ✅ 자동 채움: (process_name, sub_process) → risk_situation_result distinct → hazards 자동 추가
   //    캐시 우선 → 없으면 API 호출
+  //
+  // ✅ 방어:
+  //  - 빈 캐시는 MISS 처리(safeReadCache)
+  //  - 빈 응답/실패 시 completedRef에 넣지 않음 (재시도 가능)
+  //  - 대신 쿨다운(attemptRef)으로 연타 방지
   // =========================
   useEffect(() => {
     let cancelled = false;
@@ -203,16 +221,20 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
           const key = `${t.id}:${p.id}`;
 
-          // 이미 처리한 공정이면 스킵
-          if (autoFilledRef.current.has(key)) continue;
+          // ✅ 이미 성공적으로 채워진 공정이면 스킵
+          if (completedRef.current.has(key)) continue;
 
-          // 이미 위험요인이 있으면 "완료"로 처리하고 캐시 저장만
+          // ✅ (재시도) 쿨다운 체크
+          const last = attemptRef.current.get(key);
+          if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
+
+          // ✅ 이미 위험요인이 있으면: 성공 상태로 간주 + 캐시 저장 + completed 처리
           if ((p.hazards ?? []).length > 0) {
-            autoFilledRef.current.add(key);
+            completedRef.current.add(key);
 
             const ck = cacheKey(user?.email ?? null, processName, subProcess);
             safeWriteCache(ck, {
-              v: 1,
+              v: 2,
               ts: Date.now(),
               user: norm(user?.email) || 'guest',
               processName,
@@ -225,21 +247,20 @@ export default function StepHazards({ draft, setDraft }: Props) {
                 controls: h.controls ?? '',
               })),
             });
-
             continue;
           }
 
-          // ✅ 1) 캐시 먼저
+          // ✅ 1) 캐시 먼저 (빈 캐시는 safeReadCache에서 null)
           const ck = cacheKey(user?.email ?? null, processName, subProcess);
           const cached = safeReadCache(ck);
-
-          if (cached && cached.hazards.length > 0) {
-            autoFilledRef.current.add(key);
+          if (cached) {
             addHazardsBulk(t.id, p.id, cached.hazards.map((x) => x.title));
+            completedRef.current.add(key); // ✅ 실제로 채움 발생
             continue;
           }
 
-          // ✅ 2) 캐시 없으면 API 호출
+          // ✅ 2) API 호출 (시도 시간 기록)
+          attemptRef.current.set(key, Date.now());
           setAutoLoading((prev) => ({ ...prev, [key]: true }));
 
           const ac = new AbortController();
@@ -247,7 +268,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
           try {
             const qs = new URLSearchParams();
-            qs.set('endpoint', 'risk-situations'); // ✅ 백엔드에 추가할 엔드포인트
+            qs.set('endpoint', 'risk-situations');
             qs.set('process_name', processName);
             qs.set('sub_process', subProcess);
             qs.set('limit', '80');
@@ -258,7 +279,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
             });
 
             if (!res.ok) {
-              autoFilledRef.current.add(key);
+              // ❗ 실패면 completed 처리하지 않음 (쿨다운 후 재시도 가능)
               continue;
             }
 
@@ -268,9 +289,9 @@ export default function StepHazards({ draft, setDraft }: Props) {
             if (items.length > 0) {
               addHazardsBulk(t.id, p.id, items);
 
-              // ✅ API 결과 캐시
+              // ✅ API 결과 캐시(비어있을 때는 저장하지 않음)
               safeWriteCache(ck, {
-                v: 1,
+                v: 2,
                 ts: Date.now(),
                 user: norm(user?.email) || 'guest',
                 processName,
@@ -283,11 +304,13 @@ export default function StepHazards({ draft, setDraft }: Props) {
                   controls: '',
                 })),
               });
-            }
 
-            autoFilledRef.current.add(key);
+              completedRef.current.add(key); // ✅ 실제로 채워짐 → 완료
+            }
+            // ❗ items가 0이면 completed 처리 X (쿨다운 후 재시도)
           } catch (e: any) {
-            if (e?.name !== 'AbortError') autoFilledRef.current.add(key);
+            // ❗ Abort 제외하고도 completed 처리 X → 재시도
+            if (e?.name === 'AbortError') return;
           } finally {
             setAutoLoading((prev) => ({ ...prev, [key]: false }));
           }
@@ -305,6 +328,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
   // =========================
   // ✅ 사용자가 수동 추가/삭제한 hazards도 캐시에 반영
+  //    - hazards가 0이면 저장하지 않음(빈 캐시 방지)
   // =========================
   useEffect(() => {
     const u = user?.email ?? null;
@@ -317,19 +341,21 @@ export default function StepHazards({ draft, setDraft }: Props) {
         const subProcess = norm(p.title);
         if (!subProcess) continue;
 
-        const hazards = (p.hazards ?? []).map((h) => ({
-          id: h.id,
-          title: norm(h.title),
-          likelihood: h.likelihood ?? DEFAULT_L,
-          severity: h.severity ?? DEFAULT_S,
-          controls: h.controls ?? '',
-        })).filter((h) => h.title);
+        const hazards = (p.hazards ?? [])
+          .map((h) => ({
+            id: h.id,
+            title: norm(h.title),
+            likelihood: h.likelihood ?? DEFAULT_L,
+            severity: h.severity ?? DEFAULT_S,
+            controls: h.controls ?? '',
+          }))
+          .filter((h) => h.title);
 
-        if (hazards.length === 0) continue;
+        if (hazards.length === 0) continue; // ✅ 빈 캐시 저장 금지
 
         const ck = cacheKey(u, processName, subProcess);
         safeWriteCache(ck, {
-          v: 1,
+          v: 2,
           ts: Date.now(),
           user: norm(u) || 'guest',
           processName,
@@ -400,7 +426,6 @@ export default function StepHazards({ draft, setDraft }: Props) {
         suggestions={SUGGEST_HAZARDS}
         onClose={() => setSheetOpen(false)}
         onAdd={(v) => addHazard(v)}
-        // ✅ 검색도 DB에서 risk_situation_result 기준으로 추천되게
         searchEndpoint="risk-situations"
         searchParams={{
           process_name: norm(targetTask?.title),
