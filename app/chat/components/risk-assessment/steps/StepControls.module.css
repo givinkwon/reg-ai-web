@@ -124,3 +124,51 @@
     cursor: pointer;
   }
   
+  /* StepControls.module.css (추가 예시) */
+
+.section { margin-top: 14px; }
+.sectionTitle { font-size: 13px; opacity: 0.9; margin-bottom: 8px; }
+
+.seg { display: flex; gap: 8px; }
+.segBtn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  background: rgba(255,255,255,0.04);
+  color: black;
+}
+.segBtnActive {
+  border-color: rgba(90,160,255,0.7);
+  background: rgba(90,160,255,0.18);
+  color: #1d4ed8;
+}
+
+.chipRow { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  background: rgba(255,255,255,0.04);
+  color: #1d4ed8;
+  font-size: 12px;
+}
+.chipActive {
+  border-color: rgba(90,160,255,0.7);
+  background: rgba(90,160,255,0.18);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 72px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.loadingBadge {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.hint { font-size: 12px; opacity: 0.75; margin-bottom: 8px; }

@@ -18,6 +18,28 @@ export type HazardItem = {
   controls: string;
 };
 
+export type Judgement = '상' | '중' | '하';
+
+export type Hazard = {
+  id: string;
+  title: string; // risk_situation_result
+
+  // ✅ 새로 추가
+  judgement?: Judgement;
+
+  current_controls_items?: string[];     // chips(후보)
+  risk_judgement_reasons?: string[];     // chips(후보)
+
+  current_control_text?: string;         // 선택/입력된 값
+  judgement_reason_text?: string;        // 선택/입력된 값
+
+  // (기존 필드 유지해도 됨)
+  likelihood?: RiskLevel;
+  severity?: RiskLevel;
+  controls?: string;
+};
+
+
 export type ProcessItem = {
   id: string;
   title: string;
