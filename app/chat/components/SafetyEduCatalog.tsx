@@ -5,7 +5,7 @@ export type SafetyEduMaterial = {
   title: string;
   categoryId: string; // ✅ 카테고리 식별자
   guideKey: string; // ✅ 가이드 키
-  downloadUrl?: string; // ✅ blob는 undefined 처리
+  downloadUrl?: string;
   source?: string;
   publishedAt?: string;
 };
@@ -73,17 +73,6 @@ function safeRegExp(pattern: string) {
   } catch {
     return null;
   }
-}
-
-/**
- * ✅ blob: URL은 저장/재사용 불가 → 프론트에선 무효 처리
- */
-function sanitizeDownloadUrl(raw?: string) {
-  const u = (raw ?? '').trim();
-  if (!u) return undefined;
-  if (u.startsWith('blob:')) return undefined;
-  if (u === '#' || u.toLowerCase().startsWith('javascript')) return undefined;
-  return u;
 }
 
 type CompiledRule =
@@ -176,7 +165,7 @@ export async function loadSafetyEduData(params?: {
   // ✅ guides: YAML에 없으면 최소 fallback만 (UI 안죽게)
   const guides: Record<string, SafetyEduGuide> = {
     [fallbackGuideKey]: {
-      intro: '가이드가 등록되지 않은 자료입니다.',
+      intro: '',
       bulletPoints: [],
       downloadLabel: '자료 다운로드',
     },
@@ -260,7 +249,7 @@ export async function loadSafetyEduData(params?: {
       title,
       categoryId,
       guideKey,
-      downloadUrl: sanitizeDownloadUrl(it.downloadUrl),
+      downloadUrl: it.downloadUrl,
       source: it.source,
       publishedAt: it.publishedAt,
     };

@@ -2475,16 +2475,16 @@ export default function ChatArea() {
     setSelectedEduMaterialId(material.id);
 
     // ✅ 1) 유저 메시지 추가 (이게 “유저가 선택했다”처럼 보이게 함)
-    addMessage({
-      role: 'user',
-      content: `[교육자료 찾기] ${material.title}`,
-    });
+    // addMessage({
+    //   role: 'user',
+    //   content: `[교육자료 찾기] ${material.title}`,
+    // });
 
-    // ✅ 2) assistant 메시지 추가 (이게 “시스템이 답변”처럼 보이게 함)
-    addMessage({
-      role: 'assistant',
-      content: buildEduGuideHtml({ category, material, guide }),
-    });
+    // // ✅ 2) assistant 메시지 추가 (이게 “시스템이 답변”처럼 보이게 함)
+    // addMessage({
+    //   role: 'assistant',
+    //   content: buildEduGuideHtml({ category, material, guide }),
+    // });
   };
 
   return (
@@ -2550,6 +2550,13 @@ export default function ChatArea() {
         <div className={s.body}>
           <div className={s.stream}>
             <div className={s.streamInner}>
+            {/* ✅ Edu Task는 messages 없어도/있어도 유지 */}
+            {isEduTask && (
+              <MakeSafetyEduMaterials
+                onSelectMaterial={handleSelectSafetyEduMaterial}
+                selectedMaterialId={selectedEduMaterialId}
+              />
+            )}
             {messages.length === 0 && (
               <>
               {isRiskTask ? (
@@ -2642,11 +2649,6 @@ export default function ChatArea() {
                       ) : null
                     }
                   />
-                ) : isEduTask ? (
-                    <MakeSafetyEduMaterials
-                      onSelectMaterial={handleSelectSafetyEduMaterial}
-                      selectedMaterialId={selectedEduMaterialId} // 선택 하이라이트 원하면
-                    />
                 ) : (
                   // 그 외 작업들은 기존 "무엇을 도와드릴까요?" 퀵 액션 노출
                   <div className={s.quickWrap}>

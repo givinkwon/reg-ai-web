@@ -179,7 +179,7 @@ export default function MakeSafetyEduMaterials({
 
     return (
       <div className={s.eduPane}>
-        <div className={s.eduPaneHead}>
+        {/* <div className={s.eduPaneHead}>
           <div className={s.eduPaneTitle}>{m.title}</div>
           <div className={s.eduMetaRow}>
             <span className={s.eduBadge}>{cat.title}</span>
@@ -188,13 +188,13 @@ export default function MakeSafetyEduMaterials({
           </div>
         </div>
 
-        <div className={s.eduIntro}>{guide.intro}</div>
+        <div className={s.eduIntro}>{guide.intro}</div> */}
 
-        <ul className={s.eduBullets}>
+        {/* <ul className={s.eduBullets}>
           {bullets.map((b: any, idx: any) => (
             <li key={idx}>{b}</li>
           ))}
-        </ul>
+        </ul> */}
 
         <div className={s.eduActions}>
           <a
