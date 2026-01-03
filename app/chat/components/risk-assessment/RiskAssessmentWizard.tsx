@@ -9,46 +9,41 @@ import StepHazards from './steps/StepHazards';
 import StepControls from './steps/StepControls';
 
 export type RiskLevel = 1 | 2 | 3 | 4 | 5;
-
-export type HazardItem = {
-  id: string;
-  title: string;
-  likelihood: RiskLevel;
-  severity: RiskLevel;
-  controls: string;
-};
-
 export type Judgement = '상' | '중' | '하';
 
 export type Hazard = {
   id: string;
   title: string; // risk_situation_result
 
-  // ✅ 새로 추가
+  // 점수 계산 (기존 유지)
+  likelihood: RiskLevel;
+  severity: RiskLevel;
+
+  // 기존 "감소대책" 문자열(네 StepControls에서 쓰고 있던 값)
+  // ✅ 엑셀에서는 mitigation_text로 쓰는 걸 추천(아래 flatten에서 매핑)
+  controls?: string;
+
+  // ✅ 새로 추가(엑셀/DB 연동용)
   judgement?: Judgement;
 
-  current_controls_items?: string[];     // chips(후보)
-  risk_judgement_reasons?: string[];     // chips(후보)
+  // chips 후보(백엔드 /control-options에서 내려받아 StepControls에서 세팅)
+  current_controls_items?: string[];
+  risk_judgement_reasons?: string[];
 
-  current_control_text?: string;         // 선택/입력된 값
-  judgement_reason_text?: string;        // 선택/입력된 값
-
-  // (기존 필드 유지해도 됨)
-  likelihood?: RiskLevel;
-  severity?: RiskLevel;
-  controls?: string;
+  // 사용자가 최종 선택/입력한 값
+  current_control_text?: string; // 현재조치
+  judgement_reason_text?: string; // 판단근거
 };
-
 
 export type ProcessItem = {
   id: string;
-  title: string;
-  hazards: HazardItem[];
+  title: string;     // sub_process
+  hazards: Hazard[];
 };
 
 export type TaskItem = {
   id: string;
-  title: string;
+  title: string;     // process_name
   processes: ProcessItem[];
 };
 
@@ -64,12 +59,12 @@ type StepId = 'tasks' | 'processes' | 'hazards' | 'controls';
 
 type Props = {
   onClose?: () => void;
-  onSubmit: (draft: RiskAssessmentDraft) => void;
+  onSubmit: (draft: RiskAssessmentDraft) => void | Promise<void>; // ✅ async 허용
 };
 
 const INITIAL_DRAFT: RiskAssessmentDraft = {
   meta: { siteName: '', dateISO: '' },
-  tasks: [], // ✅ 빈 배열 시작
+  tasks: [],
 };
 
 const TAB_LABELS: { id: StepId; label: string; helper: string }[] = [
@@ -106,20 +101,30 @@ export function draftToPrompt(draft: RiskAssessmentDraft) {
       lines.push('');
       return;
     }
+
     t.processes.forEach((p, pi) => {
       lines.push(`- 공정 ${ti + 1}.${pi + 1}: ${p.title || '(미입력)'}`);
+
       if (p.hazards.length === 0) {
         lines.push('  - 유해·위험요인: (미입력)');
       } else {
         p.hazards.forEach((h, hi) => {
-          const score = h.likelihood * h.severity;
+          const l = h.likelihood ?? 1;
+          const sv = h.severity ?? 1;
+          const score = l * sv;
+
           lines.push(
-            `  - 요인 ${hi + 1}: ${h.title} (가능성 ${h.likelihood}, 중대성 ${h.severity}, 점수 ${score})`,
+            `  - 요인 ${hi + 1}: ${h.title} (가능성 ${l}, 중대성 ${sv}, 점수 ${score})`,
           );
+
           if (h.controls?.trim()) lines.push(`    - 감소대책: ${h.controls.trim()}`);
+          if (h.judgement) lines.push(`    - 판단(상/중/하): ${h.judgement}`);
+          if (h.current_control_text?.trim()) lines.push(`    - 현재조치: ${h.current_control_text.trim()}`);
+          if (h.judgement_reason_text?.trim()) lines.push(`    - 판단근거: ${h.judgement_reason_text.trim()}`);
         });
       }
     });
+
     lines.push('');
   });
 
@@ -130,18 +135,17 @@ export function draftToPrompt(draft: RiskAssessmentDraft) {
 export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
   const [step, setStep] = useState<StepId>('tasks');
   const [draft, setDraft] = useState<RiskAssessmentDraft>(INITIAL_DRAFT);
-
-  // ✅ Wizard에서 소분류를 이미 알고 있다면 여기서 세팅해서 StepTasks로 내려주면 됨
   const [minor, setMinor] = useState<string>('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // 날짜 세팅 (hydration 안정)
+    // 날짜 세팅
     setDraft((prev) => {
       if (prev.meta.dateISO) return prev;
       return { ...prev, meta: { ...prev.meta, dateISO: todayISOClient() } };
     });
 
-    // 예시: localStorage에서 소분류 가져오기(키는 프로젝트에 맞게 조정)
+    // localStorage에서 소분류
     try {
       const v = localStorage.getItem('risk_minor_category') || '';
       if (v.trim()) setMinor(v.trim());
@@ -175,6 +179,19 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
     if (prev) setStep(prev);
   };
 
+  const handleSubmit = async () => {
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      await onSubmit(draft);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message || '보고서 생성에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className={s.wrap}>
       <div className={s.header}>
@@ -205,29 +222,29 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
 
       <div className={s.helper}>{TAB_LABELS.find((t) => t.id === step)?.helper}</div>
 
+      <div className={s.footer}>
+        <div className={s.navRow}>
+          <button className={s.navBtn} onClick={goPrev} disabled={step === 'tasks' || submitting}>
+            이전
+          </button>
+
+          {step !== 'controls' ? (
+            <button className={s.navBtnPrimary} onClick={goNext} disabled={!canGoNext || submitting}>
+              다음
+            </button>
+          ) : (
+            <button className={s.navBtnPrimary} onClick={handleSubmit} disabled={submitting}>
+              {submitting ? '생성 중…' : '위험성 평가 보고서 생성'}
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className={s.content}>
         {step === 'tasks' && <StepTasks draft={draft} setDraft={setDraft} minor={minor} />}
         {step === 'processes' && <StepProcesses draft={draft} setDraft={setDraft} />}
         {step === 'hazards' && <StepHazards draft={draft} setDraft={setDraft} />}
         {step === 'controls' && <StepControls draft={draft} setDraft={setDraft} />}
-      </div>
-
-      <div className={s.footer}>
-        <div className={s.navRow}>
-          <button className={s.navBtn} onClick={goPrev} disabled={step === 'tasks'}>
-            이전
-          </button>
-
-          {step !== 'controls' ? (
-            <button className={s.navBtnPrimary} onClick={goNext} disabled={!canGoNext}>
-              다음
-            </button>
-          ) : (
-            <button className={s.navBtnPrimary} onClick={() => onSubmit(draft)}>
-              위험성 평가 보고서 생성
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

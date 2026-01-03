@@ -2487,6 +2487,53 @@ export default function ChatArea() {
     // });
   };
 
+  function getFilenameFromDisposition(cd: string | null) {
+    if (!cd) return null;
+  
+    // filename*=UTF-8''... 우선
+    const m1 = /filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i.exec(cd);
+    if (m1?.[1]) {
+      try {
+        return decodeURIComponent(m1[1].trim().replace(/^"+|"+$/g, ''));
+      } catch {
+        return m1[1].trim().replace(/^"+|"+$/g, '');
+      }
+    }
+  
+    // filename="..."
+    const m2 = /filename\s*=\s*("?)([^";]+)\1/i.exec(cd);
+    if (m2?.[2]) return m2[2].trim();
+  
+    return null;
+  }
+
+  function buildExcelPayload(draft: any, email: string) {
+    const items: any[] = [];
+  
+    for (const t of draft.tasks || []) {
+      for (const p of t.processes || []) {
+        for (const h of p.hazards || []) {
+          items.push({
+            process_name: (t.title || '').trim(),
+            sub_process: (p.title || '').trim(),
+            risk_situation_result: (h.title || '').trim(),
+            judgement: h.judgement ?? '중',
+            current_control_text: h.current_control_text ?? '',
+            mitigation_text: h.controls ?? '', // 네가 controls를 “개선대책”으로 쓰면 여기로
+          });
+        }
+      }
+    }
+  
+    return {
+      email,
+      dateISO: draft.meta?.dateISO ?? null,
+      items,
+    };
+  }
+  
+  
+
   return (
     <>
       <section className={s.wrap}>
@@ -2556,18 +2603,54 @@ export default function ChatArea() {
                 <div className={s.docWrap}>
                   <RiskAssessmentWizard
                     onClose={() => {
-                      // “뒤로가기” 눌렀을 때: 작업 선택 화면으로 돌아가게
-                      setSelectedTask(null); // 또는 setSelectedTask('') 네 프로젝트 방식대로
-                    }}
-                    onSubmit={(draft) => {
-                      // ✅ 작성 완료 -> 채팅으로 프롬프트 보내고 싶으면
-                      addMessage({ role: 'user', content: draftToPrompt(draft) });
-
-                      // 필요하면 여기서 바로 전송 로직 호출
-                      // await sendMessage(draftToPrompt(draft));
-
-                      // UI는 작업 모드 해제하거나 유지
                       setSelectedTask(null);
+                    }}
+                    onSubmit={async (draft) => {
+                      try {
+                        if (!user?.email) {
+                          alert("로그인해주세요")
+                          return
+                        }
+                        // ✅ FastAPI로 엑셀 생성 요청 (Next 프록시 통해서)
+                        const payload = buildExcelPayload(draft, user.email);
+
+                        const res = await fetch('/api/risk-assessment?endpoint=export-excel', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload),
+                        });
+
+                        if (!res.ok) {
+                          const t = await res.text();
+                          throw new Error(t || '엑셀 생성 실패');
+                        }
+
+                        // ✅ 파일 다운로드
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = url;
+
+                        // Content-Disposition에서 파일명 뽑기(없으면 fallback)
+                        const cd = res.headers.get('content-disposition');
+                        const filename =
+                          getFilenameFromDisposition(cd) ||
+                          `위험성평가_${draft.meta.dateISO || 'today'}.xlsx`;
+
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+
+                        window.URL.revokeObjectURL(url);
+
+                        // ✅ UI 종료
+                        setSelectedTask(null);
+                      } catch (e: any) {
+                        console.error(e);
+                        alert(e?.message || '엑셀 다운로드에 실패했습니다.');
+                      }
                     }}
                   />
                 </div>
