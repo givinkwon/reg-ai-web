@@ -20,13 +20,13 @@ const norm = (v?: string | null) => (v ?? '').trim();
 // ✅ Cache (hazard 단위)
 // key = user + process_name + sub_process + risk_situation_result
 // =========================
-const CACHE_PREFIX = 'regai:risk:stepControls:v2'; // ✅ v2로 bump (기존 빈 캐시 무효화)
+const CACHE_PREFIX = 'regai:risk:stepControls:v4'; // ✅ v4로 bump (기존 v3 캐시 무효화)
 const TTL_MS = 1000 * 60 * 60 * 24 * 180;
 
 type ControlCache = {
-  v: 2;
+  v: 4;
   ts: number;
-  fetched: boolean; // ✅ API를 한번이라도 조회했거나, 의미 있는 사용자 입력이 있는지
+  fetched: boolean;
 
   user: string;
   process_name: string;
@@ -34,11 +34,12 @@ type ControlCache = {
   risk_situation_result: string;
 
   judgement: Judgement;
-  current_controls_items: string[];
-  risk_judgement_reasons: string[];
 
-  current_control_text: string; // 현재안전조치 선택/입력값
-  judgement_reason_text: string; // 판단근거 선택/입력값
+  current_controls_items: string[];
+  current_control_text: string;
+
+  mitigation_items: string[];
+  mitigation_text: string;
 };
 
 function cacheKey(
@@ -55,12 +56,11 @@ function cacheKey(
 
 function isEmptyShell(c: ControlCache) {
   const controls = Array.isArray(c.current_controls_items) ? c.current_controls_items.length : 0;
-  const reasons = Array.isArray(c.risk_judgement_reasons) ? c.risk_judgement_reasons.length : 0;
+  const mitigations = Array.isArray(c.mitigation_items) ? c.mitigation_items.length : 0;
   const t1 = norm(c.current_control_text);
-  const t2 = norm(c.judgement_reason_text);
+  const t2 = norm(c.mitigation_text);
 
-  // ✅ fetched=false 이면서 아무것도 없으면 “빈 캐시”로 간주
-  return !c.fetched && controls === 0 && reasons === 0 && !t1 && !t2;
+  return !c.fetched && controls === 0 && mitigations === 0 && !t1 && !t2;
 }
 
 function readCache(key: string): ControlCache | null {
@@ -70,10 +70,10 @@ function readCache(key: string): ControlCache | null {
     const parsed = JSON.parse(raw) as ControlCache;
 
     if (!parsed?.ts) return null;
-    if (parsed.v !== 2) return null;
+    if (parsed.v !== 4) return null;
     if (Date.now() - parsed.ts > TTL_MS) return null;
 
-    if (isEmptyShell(parsed)) return null; // ✅ 빈 캐시는 MISS 처리
+    if (isEmptyShell(parsed)) return null;
     return parsed;
   } catch {
     return null;
@@ -88,13 +88,30 @@ function writeCache(key: string, payload: ControlCache) {
   }
 }
 
+function dedup(arr: any): string[] {
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const x of arr) {
+    const v = norm(String(x ?? ''));
+    if (!v) continue;
+    if (seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
 export default function StepControls({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
 
-  // rowKey별 자동 로딩 표시
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
-  const autoFilledRef = useRef<Set<string>>(new Set());
 
+  // ✅ row 처리 완료/진행 중 마킹 (무한 호출 방지)
+  const doneRef = useRef<Set<string>>(new Set());
+  const inflightRef = useRef<Set<string>>(new Set());
+
+  // ===== 렌더용 rows (UI 표시) =====
   const rows = useMemo(() => {
     const out: Array<{
       rowKey: string;
@@ -102,16 +119,17 @@ export default function StepControls({ draft, setDraft }: Props) {
       processId: string;
       hazardId: string;
 
-      process_name: string; // taskTitle
-      sub_process: string; // processTitle
-      risk_situation_result: string; // hazardTitle
+      process_name: string;
+      sub_process: string;
+      risk_situation_result: string;
 
       judgement: Judgement;
-      current_controls_items: string[];
-      risk_judgement_reasons: string[];
 
+      current_controls_items: string[];
       current_control_text: string;
-      judgement_reason_text: string;
+
+      mitigation_items: string[];
+      mitigation_text: string;
     }> = [];
 
     draft.tasks.forEach((t) => {
@@ -134,15 +152,14 @@ export default function StepControls({ draft, setDraft }: Props) {
             risk_situation_result,
 
             judgement: (h.judgement as Judgement) ?? '중',
+
             current_controls_items: Array.isArray(h.current_controls_items)
               ? h.current_controls_items.map(norm).filter(Boolean)
               : [],
-            risk_judgement_reasons: Array.isArray(h.risk_judgement_reasons)
-              ? h.risk_judgement_reasons.map(norm).filter(Boolean)
-              : [],
-
             current_control_text: norm(h.current_control_text),
-            judgement_reason_text: norm(h.judgement_reason_text),
+
+            mitigation_items: Array.isArray(h.mitigation_items) ? h.mitigation_items.map(norm).filter(Boolean) : [],
+            mitigation_text: norm(h.mitigation_text),
           });
         });
       });
@@ -151,16 +168,47 @@ export default function StepControls({ draft, setDraft }: Props) {
     return out;
   }, [draft]);
 
+  // ===== effect에서 사용할 “대상” (deps용 시그니처는 값(텍스트/칩) 제외) =====
+  const targets = useMemo(() => {
+    return rows.map((r) => ({
+      rowKey: r.rowKey,
+      taskId: r.taskId,
+      processId: r.processId,
+      hazardId: r.hazardId,
+      process_name: r.process_name,
+      sub_process: r.sub_process,
+      risk_situation_result: r.risk_situation_result,
+      // 현재 값(초기 텍스트 유지용)
+      current_control_text: r.current_control_text,
+      mitigation_text: r.mitigation_text,
+      judgement: r.judgement,
+      current_controls_items: r.current_controls_items,
+      mitigation_items: r.mitigation_items,
+    }));
+  }, [rows]);
+
+  // ✅ deps 시그니처: 텍스트/칩 변화는 제외하고 “식별/제목”만으로 구성 (무한 호출 방지 핵심)
+  const targetsSig = useMemo(() => {
+    return targets
+      .map(
+        (t) =>
+          `${t.rowKey}|${t.process_name}|${t.sub_process}|${t.risk_situation_result}`,
+      )
+      .join('||');
+  }, [targets]);
+
   const updateHazard = (
     taskId: string,
     processId: string,
     hazardId: string,
     patch: Partial<{
       judgement: Judgement;
+
       current_controls_items: string[];
-      risk_judgement_reasons: string[];
       current_control_text: string;
-      judgement_reason_text: string;
+
+      mitigation_items: string[];
+      mitigation_text: string;
     }>,
   ) => {
     setDraft((prev) => ({
@@ -185,108 +233,133 @@ export default function StepControls({ draft, setDraft }: Props) {
   };
 
   // =========================
-  // ✅ 자동 채움: 캐시 우선 → 없으면 API(control-options)
-  //    - chips 불러오고, 첫번째를 텍스트에 자동 선택
+  // ✅ 자동 채움: 캐시 우선 → 없으면 API 2개 호출
+  //    - control-options: 현재 안전조치
+  //    - mitigation-options: 개선대책
   // =========================
   useEffect(() => {
     let cancelled = false;
     const controllers: AbortController[] = [];
 
     const run = async () => {
-      for (const r of rows) {
+      for (const t of targets) {
         if (cancelled) return;
 
-        if (!r.process_name || !r.sub_process || !r.risk_situation_result) continue;
-        if (autoFilledRef.current.has(r.rowKey)) continue;
+        if (!t.process_name || !t.sub_process || !t.risk_situation_result) continue;
 
-        const ck = cacheKey(user?.email, r.process_name, r.sub_process, r.risk_situation_result);
+        // ✅ 사용자별/row별 고유 처리 키
+        const userKey = norm(user?.email) || 'guest';
+        const runKey = `${userKey}::${t.rowKey}`;
 
-        // ✅ 1) 캐시 (빈 캐시는 readCache에서 MISS)
+        // ✅ 이미 끝났거나 진행 중이면 스킵 (무한 호출 방지)
+        if (doneRef.current.has(runKey) || inflightRef.current.has(runKey)) continue;
+
+        // ✅ “시작 즉시” in-flight 마킹 (updateHazard로 리렌더 되어도 재진입 방지)
+        inflightRef.current.add(runKey);
+
+        const ck = cacheKey(user?.email, t.process_name, t.sub_process, t.risk_situation_result);
+
+        // 1) 캐시 먼저 적용
         const cached = readCache(ck);
         if (cached) {
-          const controls = Array.from(new Set((cached.current_controls_items ?? []).map(norm))).filter(Boolean);
-          const reasons = Array.from(new Set((cached.risk_judgement_reasons ?? []).map(norm))).filter(Boolean);
+          const controls = dedup(cached.current_controls_items);
+          const mitigations = dedup(cached.mitigation_items);
 
           const nextControlText = norm(cached.current_control_text) || (controls[0] ?? '');
-          const nextReasonText = norm(cached.judgement_reason_text) || (reasons[0] ?? '');
+          const nextMitigationText = norm(cached.mitigation_text) || (mitigations[0] ?? '');
 
-          updateHazard(r.taskId, r.processId, r.hazardId, {
-            judgement: cached.judgement ?? '중',
+          updateHazard(t.taskId, t.processId, t.hazardId, {
+            judgement: cached.judgement ?? t.judgement ?? '중',
             current_controls_items: controls,
-            risk_judgement_reasons: reasons,
             current_control_text: nextControlText,
-            judgement_reason_text: nextReasonText,
+            mitigation_items: mitigations,
+            mitigation_text: nextMitigationText,
           });
+        }
 
-          autoFilledRef.current.add(r.rowKey);
+        // 캐시/현재값이 비어있으면 API 요청
+        const needControls =
+          (cached?.current_controls_items?.length ?? 0) === 0 && (t.current_controls_items?.length ?? 0) === 0;
+        const needMitigations =
+          (cached?.mitigation_items?.length ?? 0) === 0 && (t.mitigation_items?.length ?? 0) === 0;
+
+        if (!needControls && !needMitigations) {
+          doneRef.current.add(runKey);
+          inflightRef.current.delete(runKey);
           continue;
         }
 
-        // ✅ 2) API
-        setLoadingMap((prev) => ({ ...prev, [r.rowKey]: true }));
+        setLoadingMap((prev) => ({ ...prev, [t.rowKey]: true }));
 
         const ac = new AbortController();
         controllers.push(ac);
 
         try {
-          const qs = new URLSearchParams();
-          qs.set('endpoint', 'control-options');
-          qs.set('process_name', r.process_name);
-          qs.set('sub_process', r.sub_process);
-          qs.set('risk_situation_result', r.risk_situation_result);
-          qs.set('limit', '80');
-
-          const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
-            cache: 'no-store',
-            signal: ac.signal,
-          });
-
-          if (!res.ok) {
-            autoFilledRef.current.add(r.rowKey);
-            continue;
-          }
-
-          const data = (await res.json()) as {
-            current_controls_items?: string[];
-            risk_judgement_reasons?: string[];
+          const makeUrl = (endpoint: string) => {
+            const qs = new URLSearchParams();
+            qs.set('endpoint', endpoint);
+            qs.set('process_name', t.process_name);
+            qs.set('sub_process', t.sub_process);
+            qs.set('risk_situation_result', t.risk_situation_result);
+            qs.set('limit', '80');
+            return `/api/risk-assessment?${qs.toString()}`;
           };
 
-          const controls = Array.from(new Set((data.current_controls_items ?? []).map(norm))).filter(Boolean);
-          const reasons = Array.from(new Set((data.risk_judgement_reasons ?? []).map(norm))).filter(Boolean);
+          const fetchJson = async <T,>(url: string): Promise<T | null> => {
+            const res = await fetch(url, { cache: 'no-store', signal: ac.signal });
+            if (!res.ok) return null;
+            return (await res.json()) as T;
+          };
 
-          const nextControlText = r.current_control_text || (controls[0] ?? '');
-          const nextReasonText = r.judgement_reason_text || (reasons[0] ?? '');
+          type ControlRes = { current_controls_items?: string[] };
+          type MitigationRes = { mitigation_items?: string[] };
 
-          updateHazard(r.taskId, r.processId, r.hazardId, {
+          const [controlData, mitigationData] = await Promise.all([
+            needControls ? fetchJson<ControlRes>(makeUrl('control-options')) : Promise.resolve(null),
+            needMitigations ? fetchJson<MitigationRes>(makeUrl('mitigation-options')) : Promise.resolve(null),
+          ]);
+
+          // ✅ API 우선, 없으면 cached/현재값 fallback
+          const controls = dedup(controlData?.current_controls_items ?? cached?.current_controls_items ?? t.current_controls_items ?? []);
+          const mitigations = dedup(mitigationData?.mitigation_items ?? cached?.mitigation_items ?? t.mitigation_items ?? []);
+
+          const nextControlText = norm(t.current_control_text) || norm(cached?.current_control_text) || (controls[0] ?? '');
+          const nextMitigationText = norm(t.mitigation_text) || norm(cached?.mitigation_text) || (mitigations[0] ?? '');
+
+          updateHazard(t.taskId, t.processId, t.hazardId, {
             current_controls_items: controls,
-            risk_judgement_reasons: reasons,
             current_control_text: nextControlText,
-            judgement_reason_text: nextReasonText,
+            mitigation_items: mitigations,
+            mitigation_text: nextMitigationText,
           });
 
-          // ✅ 캐시 저장 (API 한번 조회했다는 의미로 fetched=true)
+          // ✅ 캐시 저장
           writeCache(ck, {
-            v: 2,
+            v: 4,
             ts: Date.now(),
             fetched: true,
 
             user: norm(user?.email) || 'guest',
-            process_name: r.process_name,
-            sub_process: r.sub_process,
-            risk_situation_result: r.risk_situation_result,
+            process_name: t.process_name,
+            sub_process: t.sub_process,
+            risk_situation_result: t.risk_situation_result,
 
-            judgement: r.judgement ?? '중',
+            judgement: t.judgement ?? '중',
+
             current_controls_items: controls,
-            risk_judgement_reasons: reasons,
             current_control_text: nextControlText,
-            judgement_reason_text: nextReasonText,
+
+            mitigation_items: mitigations,
+            mitigation_text: nextMitigationText,
           });
 
-          autoFilledRef.current.add(r.rowKey);
+          doneRef.current.add(runKey);
         } catch (e: any) {
-          if (e?.name !== 'AbortError') autoFilledRef.current.add(r.rowKey);
+          // 실패해도 재진입 루프 방지: done 처리(원하면 retry 정책으로 바꿔도 됨)
+          if (e?.name !== 'AbortError') doneRef.current.add(runKey);
         } finally {
-          setLoadingMap((prev) => ({ ...prev, [r.rowKey]: false }));
+          inflightRef.current.delete(runKey);
+          setLoadingMap((prev) => ({ ...prev, [t.rowKey]: false }));
         }
       }
     };
@@ -297,12 +370,11 @@ export default function StepControls({ draft, setDraft }: Props) {
       cancelled = true;
       controllers.forEach((c) => c.abort());
     };
-  }, [rows, user?.email]); // rows 변동 시 새 항목만 autoFilledRef로 1회 처리
+    // ✅ rows가 아니라 "시그니처"에만 의존 (무한 호출 방지 핵심)
+  }, [targetsSig, user?.email]);
 
   // =========================
-  // ✅ 사용자가 수정한 값도 캐시에 반영
-  //    - 단, “완전 빈 값”은 저장하지 않음(빈 캐시 생성 방지)
-  //    - 디바운스(타이핑마다 localStorage 쓰기 방지)
+  // ✅ 사용자 수정값 캐시 반영 (디바운스)
   // =========================
   useEffect(() => {
     const t = setTimeout(() => {
@@ -311,19 +383,19 @@ export default function StepControls({ draft, setDraft }: Props) {
 
         const hasMeaning =
           r.current_controls_items.length > 0 ||
-          r.risk_judgement_reasons.length > 0 ||
           !!norm(r.current_control_text) ||
-          !!norm(r.judgement_reason_text) ||
+          r.mitigation_items.length > 0 ||
+          !!norm(r.mitigation_text) ||
           r.judgement !== '중';
 
-        if (!hasMeaning) continue; // ✅ 빈 캐시 저장 금지
+        if (!hasMeaning) continue;
 
         const ck = cacheKey(user?.email, r.process_name, r.sub_process, r.risk_situation_result);
 
         writeCache(ck, {
-          v: 2,
+          v: 4,
           ts: Date.now(),
-          fetched: true, // ✅ 사용자 입력이 있으면 의미 있으니 true
+          fetched: true,
 
           user: norm(user?.email) || 'guest',
           process_name: r.process_name,
@@ -331,10 +403,12 @@ export default function StepControls({ draft, setDraft }: Props) {
           risk_situation_result: r.risk_situation_result,
 
           judgement: r.judgement ?? '중',
+
           current_controls_items: r.current_controls_items ?? [],
-          risk_judgement_reasons: r.risk_judgement_reasons ?? [],
           current_control_text: r.current_control_text ?? '',
-          judgement_reason_text: r.judgement_reason_text ?? '',
+
+          mitigation_items: r.mitigation_items ?? [],
+          mitigation_text: r.mitigation_text ?? '',
         });
       }
     }, 250);
@@ -345,7 +419,7 @@ export default function StepControls({ draft, setDraft }: Props) {
   if (rows.length === 0) {
     return (
       <div className={s.wrap}>
-        <div className={s.topNote}>위험요인별로 위험성 판단(상/중/하)과 근거/현재안전조치를 작성해 주세요.</div>
+        <div className={s.topNote}>위험요인별로 위험성 판단(상/중/하)과 현재안전조치/개선대책을 작성해 주세요.</div>
         <div className={s.empty}>아직 위험요인이 없습니다. 이전 단계에서 유해·위험요인을 추가해 주세요.</div>
       </div>
     );
@@ -354,7 +428,7 @@ export default function StepControls({ draft, setDraft }: Props) {
   return (
     <div className={s.wrap}>
       <div className={s.topNote}>
-        위험요인별로 <b>위험성 판단(상/중/하)</b>을 선택하고, <b>현재안전조치</b>와 <b>위험성 판단 근거</b>를 입력/선택해 주세요.
+        위험요인별로 <b>위험성 판단(상/중/하)</b>을 선택하고, <b>현재안전조치</b>와 <b>개선 대책</b>을 입력/선택해 주세요.
       </div>
 
       {rows.map((r) => {
@@ -373,7 +447,7 @@ export default function StepControls({ draft, setDraft }: Props) {
 
             <div className={s.hazardTitle}>• {r.risk_situation_result}</div>
 
-            {/* 1) 위험성 판단 (상/중/하) */}
+            {/* 1) 위험성 판단 */}
             <div className={s.section}>
               <div className={s.sectionTitle}>위험성 판단</div>
               <div className={s.seg}>
@@ -425,20 +499,20 @@ export default function StepControls({ draft, setDraft }: Props) {
               />
             </div>
 
-            {/* 3) 위험성 판단 근거 */}
+            {/* 3) 개선 대책 */}
             <div className={s.section}>
-              <div className={s.sectionTitle}>위험성 판단 근거</div>
+              <div className={s.sectionTitle}>개선 대책</div>
 
-              {r.risk_judgement_reasons.length > 0 ? (
+              {r.mitigation_items.length > 0 ? (
                 <div className={s.chipRow}>
-                  {r.risk_judgement_reasons.map((x) => {
-                    const selected = norm(r.judgement_reason_text) === norm(x);
+                  {r.mitigation_items.map((x) => {
+                    const selected = norm(r.mitigation_text) === norm(x);
                     return (
                       <button
                         key={x}
                         type="button"
                         className={`${s.chip} ${selected ? s.chipActive : ''}`}
-                        onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { judgement_reason_text: x })}
+                        onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { mitigation_text: x })}
                         title="클릭하면 선택됩니다"
                       >
                         {x}
@@ -447,16 +521,14 @@ export default function StepControls({ draft, setDraft }: Props) {
                   })}
                 </div>
               ) : (
-                <div className={s.hint}>DB에 등록된 판단 근거가 없습니다. 직접 입력할 수 있어요.</div>
+                <div className={s.hint}>DB에 등록된 개선 대책이 없습니다. 직접 입력할 수 있어요.</div>
               )}
 
               <textarea
                 className={s.textarea}
-                placeholder="위험성 판단 근거를 입력하세요 (예: 작업빈도/노출시간/과거사고/법규근거 등)"
-                value={r.judgement_reason_text}
-                onChange={(e) =>
-                  updateHazard(r.taskId, r.processId, r.hazardId, { judgement_reason_text: e.target.value })
-                }
+                placeholder="개선 대책을 입력하세요 (예: 국소배기 설치, 환기 강화, MSDS 교육, 보호구 지급/착용 등)"
+                value={r.mitigation_text}
+                onChange={(e) => updateHazard(r.taskId, r.processId, r.hazardId, { mitigation_text: e.target.value })}
               />
             </div>
           </div>
