@@ -2519,7 +2519,7 @@ export default function ChatArea() {
             risk_situation_result: (h.title || '').trim(),
             judgement: h.judgement ?? '중',
             current_control_text: h.current_control_text ?? '',
-            mitigation_text: h.controls ?? '', // 네가 controls를 “개선대책”으로 쓰면 여기로
+            mitigation_text: h.mitigation_text ?? '', // 네가 controls를 “개선대책”으로 쓰면 여기로
           });
         }
       }
