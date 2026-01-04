@@ -18,19 +18,18 @@ const norm = (v?: string | null) => (v ?? '').trim();
 
 // =========================
 // ✅ localStorage cache (v2)
-// - "빈 캐시"면 무시하고 API 재호출되도록 방어
 // =========================
 const CACHE_PREFIX = 'regai:risk:stepTasks:v2';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
-const RETRY_COOLDOWN_MS = 1000 * 20; // 20초 (연타 방지)
+const RETRY_COOLDOWN_MS = 1000 * 20; // 20초
 
 type StepTasksCache = {
   v: 2;
   ts: number;
   user: string; // email or 'guest'
   minor: string; // 'ALL' 포함
-  recommended: string[]; // 추천 리스트(화면 목록용)
-  tasks: RiskAssessmentDraft['tasks']; // 선택된 작업(칩) 전체
+  recommended: string[];
+  tasks: RiskAssessmentDraft['tasks'];
 };
 
 function cacheKey(userEmail: string | null | undefined, minorCategory: string | null) {
@@ -51,7 +50,7 @@ function safeReadCache(key: string): StepTasksCache | null {
     if (!Array.isArray(parsed?.tasks) || !Array.isArray(parsed?.recommended)) return null;
     if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
 
-    // ✅ 핵심: "빈 캐시"는 MISS 처리해서 API를 다시 타게 함
+    // ✅ 빈 캐시 방지
     const tLen = parsed.tasks.length;
     const rLen = parsed.recommended.length;
     if (tLen === 0 && rLen === 0) return null;
@@ -81,16 +80,19 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
   const [recommended, setRecommended] = useState<string[]>([]);
   const [addOpen, setAddOpen] = useState(false);
 
-  // ✅ 자동 선택: 같은 소분류에서 1회만 적용
+  // ✅ 자동 선택: scope(user+minor)에서 1회만 적용
   const autoAppliedRef = useRef<string | null>(null);
 
-  // ✅ 캐시 체크 가드
+  // ✅ 캐시 체크 가드: scope(user+minor) 단위로
   const cacheCheckedRef = useRef<string | null>(null);
 
   // ✅ minor 전환 체크
   const prevMinorRef = useRef<string | null>(null);
 
-  // ✅ API 연타 방지
+  // ✅ scope 전환 체크 (guest → user 같은 케이스)
+  const prevScopeRef = useRef<string | null>(null);
+
+  // ✅ API 연타 방지 (scope 단위로)
   const attemptRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
@@ -160,50 +162,54 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
   }, [user?.email, minorCategory, overrideMinor]);
 
   // =========================
-  // ✅ 1) 캐시 우선 복원 (유효 캐시가 있을 때만)
-  //    - tasks가 있으면(길이>0)만 덮어쓰기 후보
-  //    - recommended만 있는 캐시도 "목록" 복원용으로는 사용
+  // ✅ 1) 캐시 우선 복원 (scope 단위)
   // =========================
   useEffect(() => {
     if (!minorCategory) {
       setRecommended([]);
       setRecoError(null);
       setRecoLoading(false);
+
       autoAppliedRef.current = null;
       cacheCheckedRef.current = null;
       prevMinorRef.current = null;
+      prevScopeRef.current = null;
       return;
     }
 
     const currentMinor = norm(minorCategory);
     const userEmail = user?.email ?? null;
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
 
     // minor 전환 체크
     const prevMinor = prevMinorRef.current;
     const isMinorSwitch = !!prevMinor && prevMinor !== currentMinor;
     prevMinorRef.current = currentMinor;
 
-    // 같은 minor에서 중복 체크 방지
-    if (cacheCheckedRef.current === currentMinor) return;
-    cacheCheckedRef.current = currentMinor;
+    // scope 전환 체크 (guest → user 등)
+    const prevScope = prevScopeRef.current;
+    const isScopeSwitch = !!prevScope && prevScope !== scope;
+    prevScopeRef.current = scope;
+
+    // 같은 scope에서 중복 체크 방지
+    if (cacheCheckedRef.current === scope) return;
+    cacheCheckedRef.current = scope;
 
     const key = cacheKey(userEmail, currentMinor);
     const cached = safeReadCache(key);
+    if (!cached) return; // 캐시 없으면 아래 API 로드로
 
-    if (!cached) return; // ✅ 캐시 없거나 "빈 캐시"면 아래 API 로드로 내려감
-
-    // ✅ 1) tasks 복원 (tasks가 있을 때만)
+    // ✅ 1) tasks 복원: scope가 바뀌었으면(guest→user) 기존 tasks가 있어도 덮어쓰는 게 맞음
     if (Array.isArray(cached.tasks) && cached.tasks.length > 0) {
-      const shouldOverwrite = isMinorSwitch || draft.tasks.length === 0;
-      if (shouldOverwrite) {
-        setDraft((prev) => ({
-          ...prev,
-          tasks: cached.tasks,
-        }));
-      }
+      setDraft((prev) => {
+        const prevLen = prev.tasks?.length ?? 0;
+        const shouldOverwrite = isMinorSwitch || isScopeSwitch || prevLen === 0;
+        if (!shouldOverwrite) return prev;
+        return { ...prev, tasks: cached.tasks };
+      });
     }
 
-    // ✅ 2) 목록 복원 (recommended 우선, 없으면 tasks로)
+    // ✅ 2) 목록 복원
     const cachedReco =
       Array.isArray(cached.recommended) && cached.recommended.length > 0
         ? cached.recommended
@@ -213,14 +219,13 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     setRecoError(null);
     setRecoLoading(false);
 
-    // ✅ 캐시로 목록/선택이 복원된 minor에서는 auto-merge를 다시 하지 않게 막기
-    autoAppliedRef.current = currentMinor;
+    // ✅ 캐시가 존재하는 scope에서는 auto-merge 재실행 방지
+    autoAppliedRef.current = scope;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minorCategory, user?.email]);
+  }, [minorCategory, user?.email, setDraft]);
 
   // =========================
-  // ✅ 2) 캐시가 없거나(또는 빈 캐시)일 때만 API로 recommended 로드
-  //    - 연타 방지(쿨다운)
+  // ✅ 2) 캐시 없을 때만 API로 recommended 로드 (scope 단위 쿨다운)
   // =========================
   useEffect(() => {
     if (!minorCategory) return;
@@ -228,17 +233,15 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const currentMinor = norm(minorCategory);
     const userEmail = user?.email ?? null;
     const key = cacheKey(userEmail, currentMinor);
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
 
     const cached = safeReadCache(key);
-    if (cached) {
-      // ✅ 유효 캐시가 있으면 API 호출 안함
-      return;
-    }
+    if (cached) return; // 유효 캐시 있으면 API 호출 X
 
-    // ✅ 쿨다운
-    const last = attemptRef.current.get(currentMinor);
+    // ✅ 쿨다운도 scope 기준
+    const last = attemptRef.current.get(scope);
     if (last && Date.now() - last < RETRY_COOLDOWN_MS) return;
-    attemptRef.current.set(currentMinor, Date.now());
+    attemptRef.current.set(scope, Date.now());
 
     const ac = new AbortController();
 
@@ -281,7 +284,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
   // =========================
   // ✅ 3) recommended 로드되면 자동 선택(merge)
-  //    - 같은 minor에서는 1회만
+  //    - scope 단위로 1회만
   // =========================
   useEffect(() => {
     if (!minorCategory) return;
@@ -289,8 +292,10 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     if (recommended.length === 0) return;
 
     const currentMinor = norm(minorCategory);
+    const userEmail = user?.email ?? null;
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
 
-    if (autoAppliedRef.current === currentMinor) return;
+    if (autoAppliedRef.current === scope) return;
 
     setDraft((prev) => {
       const exist = new Set(prev.tasks.map((t) => norm(t.title)));
@@ -307,12 +312,11 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
       return { ...prev, tasks: merged };
     });
 
-    autoAppliedRef.current = currentMinor;
-  }, [minorCategory, recommended, recoLoading, recoError, setDraft]);
+    autoAppliedRef.current = scope;
+  }, [minorCategory, recommended, recoLoading, recoError, user?.email, setDraft]);
 
   // =========================
   // ✅ 4) 저장: tasks / recommended 바뀌면 캐시에 기록
-  //    - 둘 다 비어있으면 저장하지 않음 (빈 캐시 생성 방지)
   // =========================
   useEffect(() => {
     if (!minorCategory) return;
@@ -327,11 +331,10 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         ? recommended
         : Array.from(new Set(tasksToSave.map((t) => norm(t.title)).filter(Boolean)));
 
-    // ✅ 둘 다 비면 저장 X (이 상태에서 저장하면 "빈 캐시"가 생김)
     if (tasksToSave.length === 0 && recoToSave.length === 0) return;
 
-    const payload: StepTasksCache = {
-      v: 2,
+    const payload = {
+      v: 2 as const,
       ts: Date.now(),
       user: norm(userEmail) || 'guest',
       minor: currentMinor || 'ALL',

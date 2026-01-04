@@ -35,7 +35,6 @@ function buildUpstream(reqUrl: string) {
 }
 
 // ✅ FastAPI로 전달할 헤더 선택
-// - 여기서 cookie/authorization을 반드시 forward (로그인 기반 응답이면 필수)
 function pickForwardHeaders(req: Request) {
   const h: Record<string, string> = {};
 
@@ -55,9 +54,7 @@ function pickForwardHeaders(req: Request) {
     if (v) h[k] = v;
   }
 
-  // accept가 없으면 기본 JSON
   if (!h['accept']) h['accept'] = 'application/json';
-
   return h;
 }
 
@@ -82,6 +79,47 @@ function isTextLike(contentType: string) {
     ct.includes('application/xml') ||
     ct.includes('application/problem+json')
   );
+}
+
+function isJsonLike(contentType: string) {
+  const ct = (contentType || '').toLowerCase();
+  return ct.includes('application/json') || ct.includes('application/problem+json');
+}
+
+/**
+ * ✅ 핵심: upstream이 어떤 endpoint에서는
+ *   {"items":[...]} 를 주고,
+ *   어떤 endpoint에서는 "{\"items\":[...]}" 처럼 "JSON 문자열"을 주는 경우가 있음.
+ *
+ * 프록시에서 1~2번 파싱해서 최종적으로 object/array로 정규화한다.
+ */
+function parseMaybeJsonTwice(raw: string) {
+  let v: any = raw;
+
+  for (let i = 0; i < 2; i++) {
+    if (typeof v !== 'string') break;
+    const s = v.trim();
+    if (!s) break;
+
+    const looksJson =
+      (s.startsWith('{') && s.endsWith('}')) ||
+      (s.startsWith('[') && s.endsWith(']')) ||
+      (s.startsWith('"') && s.endsWith('"'));
+
+    if (!looksJson) break;
+
+    try {
+      v = JSON.parse(s);
+    } catch {
+      break;
+    }
+  }
+
+  return v;
+}
+
+function noStoreHeaders(extra?: Record<string, string>) {
+  return { 'Cache-Control': 'no-store', ...(extra ?? {}) };
 }
 
 export async function GET(req: Request) {
@@ -110,7 +148,7 @@ export async function GET(req: Request) {
 
     const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
 
-    // ✅ JSON/Text는 바디 로그 찍고 그대로 반환
+    // ✅ JSON/Text 계열이면 텍스트로 읽어서 처리
     if (isTextLike(contentType)) {
       const body = await res.text();
 
@@ -120,18 +158,37 @@ export async function GET(req: Request) {
         }ms bodyHead=${JSON.stringify(short(body))}`,
       );
 
+      // ✅ JSON이면 "문자열 JSON"까지 풀어 object/array로 정규화해서 반환
+      if (isJsonLike(contentType)) {
+        const parsed = parseMaybeJsonTwice(body);
+
+        // object/array면 그대로 json 응답
+        if (typeof parsed === 'object' && parsed !== null) {
+          return NextResponse.json(parsed, {
+            status: res.status,
+            headers: noStoreHeaders(),
+          });
+        }
+
+        // JSON인데 object가 아니면(예: string/number/bool) 안전하게 감싸서 반환
+        return NextResponse.json(
+          { value: parsed },
+          { status: res.status, headers: noStoreHeaders() },
+        );
+      }
+
+      // ✅ JSON이 아닌 text/xml 등은 그대로 반환
       return new NextResponse(body, {
         status: res.status,
-        headers: {
-          'Content-Type': contentType,
-          'Cache-Control': 'no-store',
-        },
+        headers: noStoreHeaders({ 'Content-Type': contentType }),
       });
     }
 
-    // ✅ 그 외는 스트리밍 반환(바이너리 안전)
+    // ✅ 바이너리는 스트리밍 반환
     console.log(
-      `[risk-assessment ${rid}] GET upstreamStatus=${res.status} ct=${contentType} elapsed=${Date.now() - started}ms (stream)`,
+      `[risk-assessment ${rid}] GET upstreamStatus=${res.status} ct=${contentType} elapsed=${
+        Date.now() - started
+      }ms (stream)`,
     );
 
     return new NextResponse(res.body, {
@@ -140,7 +197,9 @@ export async function GET(req: Request) {
     });
   } catch (e: any) {
     console.error(
-      `[risk-assessment ${rid}] GET fetch failed elapsed=${Date.now() - started}ms err=${e?.message ?? String(e)}`,
+      `[risk-assessment ${rid}] GET fetch failed elapsed=${Date.now() - started}ms err=${
+        e?.message ?? String(e)
+      }`,
     );
 
     return NextResponse.json(
@@ -181,10 +240,45 @@ export async function POST(req: Request) {
       body: bodyBuf,
     });
 
+    const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
+
+    // ✅ JSON/Text 계열이면 텍스트로 읽어서 처리(특히 JSON 정규화)
+    if (isTextLike(contentType)) {
+      const body = await res.text();
+
+      console.log(
+        `[risk-assessment ${rid}] POST upstreamStatus=${res.status} ct=${contentType} elapsed=${
+          Date.now() - started
+        }ms bodyHead=${JSON.stringify(short(body))}`,
+      );
+
+      if (isJsonLike(contentType)) {
+        const parsed = parseMaybeJsonTwice(body);
+
+        if (typeof parsed === 'object' && parsed !== null) {
+          return NextResponse.json(parsed, {
+            status: res.status,
+            headers: noStoreHeaders(),
+          });
+        }
+
+        return NextResponse.json(
+          { value: parsed },
+          { status: res.status, headers: noStoreHeaders() },
+        );
+      }
+
+      return new NextResponse(body, {
+        status: res.status,
+        headers: noStoreHeaders({ 'Content-Type': contentType }),
+      });
+    }
+
+    // ✅ 바이너리는 기존처럼 스트리밍
     console.log(
-      `[risk-assessment ${rid}] POST upstreamStatus=${res.status} ct=${res.headers.get('content-type')} elapsed=${
+      `[risk-assessment ${rid}] POST upstreamStatus=${res.status} ct=${contentType} elapsed=${
         Date.now() - started
-      }ms`,
+      }ms (stream)`,
     );
 
     return new NextResponse(res.body, {
@@ -193,7 +287,9 @@ export async function POST(req: Request) {
     });
   } catch (e: any) {
     console.error(
-      `[risk-assessment ${rid}] POST fetch failed elapsed=${Date.now() - started}ms err=${e?.message ?? String(e)}`,
+      `[risk-assessment ${rid}] POST fetch failed elapsed=${Date.now() - started}ms err=${
+        e?.message ?? String(e)
+      }`,
     );
 
     return NextResponse.json(

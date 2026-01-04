@@ -1,4 +1,3 @@
-// components/risk-assessment/steps/StepProcesses.tsx
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -16,37 +15,28 @@ type Props = {
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 
-const SUGGEST_PROCESSES = [
-  '절단/절삭',
-  '가공(밀링/선반)',
-  '세척/탈지',
-  '조립/체결',
-  '검사/측정',
-  '포장/적재',
-];
+const SUGGEST_PROCESSES = ['절단/절삭', '가공(밀링/선반)', '세척/탈지', '조립/체결', '검사/측정', '포장/적재'];
 
 // =========================
-// ✅ localStorage cache (task.process_name 단위로 sub_process 목록 저장)
-// - "빈 캐시"가 남아있어도 API를 다시 타도록 방어
+// ✅ localStorage cache (task.title 단위로 sub_process 목록 저장)
 // =========================
-const CACHE_PREFIX = 'regai:risk:stepProcesses:v2'; // v2로 bump
-const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
-const RETRY_COOLDOWN_MS = 1000 * 20; // 20초(원하면 늘리기)
+const CACHE_PREFIX = 'regai:risk:stepProcesses:v2';
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180;
+const RETRY_COOLDOWN_MS = 1000 * 20;
 
 type ProcessCache = {
   v: 2;
   ts: number;
-  user: string; // email or guest
+  user: string;
   processName: string; // task.title
   minorCategory?: string | null;
-  subProcesses: string[]; // DB sub_process distinct
+  subProcesses: string[];
 };
 
 function cacheKey(userEmail: string | null | undefined, processName: string, minorCategory?: string | null) {
   const u = norm(userEmail) || 'guest';
   const pn = norm(processName);
   const mc = norm(minorCategory);
-  // minorCategory까지 키에 포함하면 정확도↑(없으면 공란으로 통일)
   return `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(pn)}:${encodeURIComponent(mc)}`;
 }
 
@@ -60,7 +50,7 @@ function safeReadCache(key: string): ProcessCache | null {
     if (!parsed?.ts || !Array.isArray(parsed?.subProcesses)) return null;
     if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
 
-    // ✅ 핵심: 비어있는 캐시는 MISS 처리
+    // ✅ 빈 캐시는 MISS 처리(= 다시 API 타게)
     if (parsed.subProcesses.length === 0) return null;
 
     return parsed;
@@ -77,13 +67,51 @@ function safeWriteCache(key: string, payload: ProcessCache) {
   }
 }
 
+/** ✅ 응답이 string[] / {items:...} / {value:...} / 객체배열 등 무엇이든 "문자열 배열"로 정규화 */
+function toText(x: any) {
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object') {
+    return x.title ?? x.name ?? x.sub_process ?? x.subProcess ?? x.process ?? '';
+  }
+  return '';
+}
+
+function extractItems(payload: any): string[] {
+  const arr =
+    Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : Array.isArray(payload?.sub_processes)
+          ? payload.sub_processes
+          : Array.isArray(payload?.subProcesses)
+            ? payload.subProcesses
+            : Array.isArray(payload?.rows)
+              ? payload.rows
+              : Array.isArray(payload?.data)
+                ? payload.data
+                : Array.isArray(payload?.value)
+                  ? payload.value
+                  : Array.isArray(payload?.value?.items)
+                    ? payload.value.items
+                    : Array.isArray(payload?.value?.sub_processes)
+                      ? payload.value.sub_processes
+                      : Array.isArray(payload?.value?.subProcesses)
+                        ? payload.value.subProcesses
+                        : Array.isArray(payload?.value?.rows)
+                          ? payload.value.rows
+                          : [];
+
+  return Array.from(new Set(arr.map(toText).map(norm).filter(Boolean)));
+}
+
 export default function StepProcesses({ draft, setDraft, minorCategory }: Props) {
   const user = useUserStore((st) => st.user);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [targetTaskId, setTargetTaskId] = useState<string | null>(null);
 
-  // ✅ "성공적으로 sub_process를 채운 task"만 완료 처리
+  // ✅ “성공적으로 채운 task”만 완료 처리
   const completedRef = useRef<Set<string>>(new Set());
   // ✅ 실패/빈 응답이어도 연타 방지
   const attemptRef = useRef<Map<string, number>>(new Map());
@@ -91,10 +119,19 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
   const tasks = useMemo(() => draft.tasks, [draft.tasks]);
 
-  const targetTask = useMemo(
-    () => tasks.find((t) => t.id === targetTaskId) ?? null,
-    [tasks, targetTaskId],
-  );
+  // ✅ effect deps용 시그니처: title 변화/작업 추가삭제만 감지 (processes 변화 제외)
+  const tasksSig = useMemo(() => {
+    return tasks.map((t) => `${t.id}|${norm(t.title)}`).join('||');
+  }, [tasks]);
+
+  // ✅ 캐시 저장용 시그니처: processes 변화까지 감지
+  const processesSig = useMemo(() => {
+    return tasks
+      .map((t) => `${t.id}|${norm(t.title)}|${(t.processes ?? []).map((p) => norm(p.title)).join(',')}`)
+      .join('||');
+  }, [tasks]);
+
+  const targetTask = useMemo(() => tasks.find((t) => t.id === targetTaskId) ?? null, [tasks, targetTaskId]);
 
   const openSheet = (taskId: string) => {
     setTargetTaskId(taskId);
@@ -113,10 +150,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         const exists = new Set(t.processes.map((p) => norm(p.title)));
         if (exists.has(v)) return t;
 
-        return {
-          ...t,
-          processes: [...t.processes, { id: uid(), title: v, hazards: [] }],
-        };
+        return { ...t, processes: [...t.processes, { id: uid(), title: v, hazards: [] }] };
       }),
     }));
   };
@@ -155,13 +189,8 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   };
 
   // =========================
-  // ✅ 자동 채움: process_name(task.title) -> sub_process(distinct) 자동 추가
-  //    캐시 우선 → 없으면 API 호출
-  //
-  // ✅ 방어:
-  //  - 빈 캐시(subProcesses=[])는 MISS 처리(safeReadCache)
-  //  - API 실패/빈 응답이면 completedRef에 넣지 않음(재시도 가능)
-  //  - attemptRef 쿨다운으로 연타 방지
+  // ✅ 자동 채움: task.title -> sub_process(distinct)
+  // ✅ deps를 tasksSig로(= processes 추가로 effect 재시작/abort 안됨)
   // =========================
   useEffect(() => {
     let cancelled = false;
@@ -177,14 +206,9 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         // ✅ 이미 성공적으로 채운 task면 스킵
         if (completedRef.current.has(t.id)) continue;
 
-        // ✅ 쿨다운 체크
-        const last = attemptRef.current.get(t.id);
-        if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
-
-        // ✅ 이미 공정이 들어있으면: 성공 상태로 간주 + 캐시 저장 + completed 처리
+        // ✅ 이미 공정이 들어있으면: 완료로 처리 + 캐시 저장
         if (t.processes && t.processes.length > 0) {
           completedRef.current.add(t.id);
-
           const ck = cacheKey(user?.email, processName, minorCategory);
           safeWriteCache(ck, {
             v: 2,
@@ -194,14 +218,16 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
             minorCategory: minorCategory ?? null,
             subProcesses: t.processes.map((p) => norm(p.title)).filter(Boolean),
           });
-
           continue;
         }
+
+        // ✅ 쿨다운
+        const last = attemptRef.current.get(t.id);
+        if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
 
         // ✅ 1) 캐시
         const ck = cacheKey(user?.email, processName, minorCategory);
         const cached = safeReadCache(ck);
-
         if (cached) {
           addProcessesBulk(t.id, cached.subProcesses);
           completedRef.current.add(t.id);
@@ -220,7 +246,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
           qs.set('endpoint', 'sub-processes');
           qs.set('process_name', processName);
           qs.set('limit', '50');
-          // (선택) minorCategory를 백엔드가 지원하면 사용
           if (norm(minorCategory)) qs.set('minor', norm(minorCategory));
 
           const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
@@ -228,18 +253,20 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
             signal: ac.signal,
           });
 
-          if (!res.ok) {
-            // 실패면 completed 처리 X (쿨다운 후 재시도)
-            continue;
+          if (!res.ok) continue;
+
+          const raw = await res.json();
+
+          // 🔎 개발 중이면 실제 응답 형태를 꼭 확인
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[StepProcesses] sub-processes raw:', raw, 'isArray?', Array.isArray(raw));
           }
 
-          const data = (await res.json()) as { items?: string[] };
-          const items = Array.from(new Set((data.items ?? []).map(norm).filter(Boolean)));
+          const items = extractItems(raw);
 
           if (items.length > 0) {
             addProcessesBulk(t.id, items);
 
-            // ✅ 비어있지 않을 때만 캐시 저장
             safeWriteCache(ck, {
               v: 2,
               ts: Date.now(),
@@ -251,10 +278,9 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
             completedRef.current.add(t.id);
           }
-          // items=0이면 completed 처리 X (쿨다운 후 재시도)
+          // items=0이면 completed 처리 X → 재시도 가능(쿨다운)
         } catch (e: any) {
-          if (e?.name === 'AbortError') return;
-          // completed 처리 X
+          if (e?.name === 'AbortError') continue;
         } finally {
           setAutoLoadingIds((prev) => ({ ...prev, [t.id]: false }));
         }
@@ -267,11 +293,11 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
       cancelled = true;
       controllers.forEach((c) => c.abort());
     };
-  }, [tasks, user?.email, minorCategory, setDraft]);
+  }, [tasksSig, user?.email, minorCategory]);
 
   // =========================
-  // ✅ 사용자가 수동으로 추가/삭제한 processes도 캐시에 반영
-  //    - 0개면 저장하지 않음(빈 캐시 방지)
+  // ✅ 수동 추가/삭제도 캐시에 반영(0개면 저장 안함)
+  //    (processesSig로 바꿔서 실제로 반응하게)
   // =========================
   useEffect(() => {
     for (const t of tasks) {
@@ -291,7 +317,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         subProcesses,
       });
     }
-  }, [tasks, user?.email, minorCategory]);
+  }, [processesSig, user?.email, minorCategory]);
 
   return (
     <div className={s.wrap}>
@@ -335,7 +361,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         suggestions={SUGGEST_PROCESSES}
         onClose={() => setSheetOpen(false)}
         onAdd={(v) => addProcess(v)}
-        // ✅ 검색 자동완성(백엔드가 지원하는 경우)
         searchEndpoint="sub-processes"
         searchParams={{
           process_name: norm(targetTask?.title),

@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import s from './RiskAssessmentWizard.module.css';
 
 import StepTasks from './steps/StepTasks';
 import StepProcesses from './steps/StepProcesses';
 import StepHazards from './steps/StepHazards';
 import StepControls from './steps/StepControls';
+
+// ✅ 추가: 진행률 모달
+import ProgressDownloadModal from './ui/ProgressDownloadModal';
 
 export type RiskLevel = 1 | 2 | 3 | 4 | 5;
 export type Judgement = '상' | '중' | '하';
@@ -15,35 +18,29 @@ export type Hazard = {
   id: string;
   title: string; // risk_situation_result
 
-  // 점수 계산 (기존 유지)
   likelihood: RiskLevel;
   severity: RiskLevel;
 
-  // 기존 "감소대책" 문자열(네 StepControls에서 쓰고 있던 값)
-  // ✅ 엑셀에서는 mitigation_text로 쓰는 걸 추천(아래 flatten에서 매핑)
   controls?: string;
 
-  // ✅ 새로 추가(엑셀/DB 연동용)
   judgement?: Judgement;
 
-  // chips 후보(백엔드 /control-options에서 내려받아 StepControls에서 세팅)
   current_controls_items?: string[];
   risk_judgement_reasons?: string[];
 
-  // 사용자가 최종 선택/입력한 값
   current_control_text?: string; // 현재조치
   judgement_reason_text?: string; // 판단근거
 };
 
 export type ProcessItem = {
   id: string;
-  title: string;     // sub_process
+  title: string; // sub_process
   hazards: Hazard[];
 };
 
 export type TaskItem = {
   id: string;
-  title: string;     // process_name
+  title: string; // process_name
   processes: ProcessItem[];
 };
 
@@ -59,7 +56,10 @@ type StepId = 'tasks' | 'processes' | 'hazards' | 'controls';
 
 type Props = {
   onClose?: () => void;
-  onSubmit: (draft: RiskAssessmentDraft) => void | Promise<void>; // ✅ async 허용
+
+  // ✅ 그대로 유지: 기존 호출부 안 깨짐
+  // (하지만 아래에서 signal도 "있으면" 넘겨줌. 안받아도 무시됨)
+  onSubmit: (draft: RiskAssessmentDraft) => void | Promise<void>;
 };
 
 const INITIAL_DRAFT: RiskAssessmentDraft = {
@@ -80,6 +80,11 @@ function todayISOClient() {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const da = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${da}`;
+}
+
+// ✅ 진행률 easing (부드럽게)
+function easeInOutCubic(x: number) {
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
 export function draftToPrompt(draft: RiskAssessmentDraft) {
@@ -113,9 +118,7 @@ export function draftToPrompt(draft: RiskAssessmentDraft) {
           const sv = h.severity ?? 1;
           const score = l * sv;
 
-          lines.push(
-            `  - 요인 ${hi + 1}: ${h.title} (가능성 ${l}, 중대성 ${sv}, 점수 ${score})`,
-          );
+          lines.push(`  - 요인 ${hi + 1}: ${h.title} (가능성 ${l}, 중대성 ${sv}, 점수 ${score})`);
 
           if (h.controls?.trim()) lines.push(`    - 감소대책: ${h.controls.trim()}`);
           if (h.judgement) lines.push(`    - 판단(상/중/하): ${h.judgement}`);
@@ -137,6 +140,116 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
   const [draft, setDraft] = useState<RiskAssessmentDraft>(INITIAL_DRAFT);
   const [minor, setMinor] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+
+  // =========================
+  // ✅ 생성 진행 모달 상태
+  // =========================
+  const [genOpen, setGenOpen] = useState(false);
+  const [genPercent, setGenPercent] = useState(0);
+  const [genErrorText, setGenErrorText] = useState<string | null>(null);
+
+  const genTimerRef = useRef<number | null>(null);
+  const genAbortRef = useRef<AbortController | null>(null);
+  const genStartAtRef = useRef<number>(0);
+
+  const stopGenTimer = () => {
+    if (genTimerRef.current) {
+      window.clearInterval(genTimerRef.current);
+      genTimerRef.current = null;
+    }
+  };
+
+  // ✅ 5분짜리 “시간 기반 + 구간별” 진행률
+  const startFakeProgress = () => {
+    stopGenTimer();
+    setGenErrorText(null);
+    setGenOpen(true);
+
+    // ✅ 0~95%를 5분(300초)에 걸쳐 진행
+    // 구간: 0~25 / 25~50 / 50~75 / 75~95
+    const PLAN = [
+      { to: 25, ms: 60_000 }, // 1분
+      { to: 50, ms: 90_000 }, // 1.5분
+      { to: 75, ms: 90_000 }, // 1.5분
+      { to: 95, ms: 60_000 }, // 1분
+    ] as const;
+
+    genStartAtRef.current = Date.now();
+    setGenPercent(0);
+
+    const totalMs = PLAN.reduce((sum, x) => sum + x.ms, 0);
+
+    genTimerRef.current = window.setInterval(() => {
+      const elapsed = Date.now() - genStartAtRef.current;
+
+      let from = 0;
+      let acc = 0;
+      let target = 95;
+
+      for (const seg of PLAN) {
+        const segStart = acc;
+        const segEnd = acc + seg.ms;
+
+        if (elapsed < segEnd) {
+          const raw = (elapsed - segStart) / seg.ms; // 0~1
+          const t = easeInOutCubic(Math.max(0, Math.min(1, raw)));
+          target = from + (seg.to - from) * t;
+          break;
+        }
+
+        acc = segEnd;
+        from = seg.to;
+        target = seg.to;
+      }
+
+      // ✅ 5분이 지나면 95%에서 대기
+      if (elapsed >= totalMs) target = 95;
+
+      // ✅ 단조 증가 + 소수점 0.1 단위
+      setGenPercent((prev) => {
+        const next = Math.max(prev, Math.round(target * 10) / 10);
+        return Math.min(95, next);
+      });
+    }, 200);
+  };
+
+  const finishAndClose = async () => {
+    stopGenTimer();
+    setGenPercent(100);
+    await new Promise((r) => setTimeout(r, 450));
+    setGenOpen(false);
+    setGenPercent(0);
+    setGenErrorText(null);
+  };
+
+  const cancelGeneration = () => {
+    // ✅ onSubmit이 signal을 쓰면 실제로 취소됨 (fetch 등)
+    genAbortRef.current?.abort();
+    genAbortRef.current = null;
+
+    stopGenTimer();
+    setGenOpen(false);
+    setGenPercent(0);
+    setGenErrorText(null);
+
+    // UI상 submit도 해제
+    setSubmitting(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      genAbortRef.current?.abort();
+      stopGenTimer();
+    };
+  }, []);
+
+  // ✅ 퍼센트 구간별 메시지
+  const genMessage = useMemo(() => {
+    if (genPercent < 25) return '사업장 정보를 분석하고 있어요';
+    if (genPercent < 50) return '세부 공정 데이터를 분석하고 있어요';
+    if (genPercent < 75) return '위험 요인 데이터를 취합하여 위험성평가를 진행하고 있어요';
+    return 'RegAI가 사업장에 적합한 최적의 개선 대책을 준비하고 있어요!';
+  }, [genPercent]);
 
   useEffect(() => {
     // 날짜 세팅
@@ -179,16 +292,44 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
     if (prev) setStep(prev);
   };
 
+  // =========================
+  // ✅ 여기서 모달을 띄우고, onSubmit 완료까지 기다림
+  // =========================
   const handleSubmit = async () => {
     if (submitting) return;
+
+    const ac = new AbortController();
+    genAbortRef.current = ac;
+
     try {
       setSubmitting(true);
-      await onSubmit(draft);
+      startFakeProgress();
+
+      // ✅ onSubmit이 signal을 받을 수도 있으니 "있으면" 넘김 (안 받으면 무시됨)
+      await (onSubmit as any)(draft, { signal: ac.signal });
+
+      // 완료 직전 살짝 올려주고 마무리
+      setGenPercent((p) => Math.max(p, 92));
+      await finishAndClose();
     } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        // 사용자가 취소한 경우: 조용히 종료
+        return;
+      }
       console.error(e);
+
+      stopGenTimer();
+      setGenErrorText('보고서 생성에 실패했습니다.');
+      // 잠깐 에러 보여주고 닫기
+      await new Promise((r) => setTimeout(r, 1200));
+      setGenOpen(false);
+      setGenPercent(0);
+
       alert(e?.message || '보고서 생성에 실패했습니다.');
     } finally {
+      genAbortRef.current = null;
       setSubmitting(false);
+      stopGenTimer();
     }
   };
 
@@ -214,6 +355,7 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
             type="button"
             className={`${s.tab} ${step === t.id ? s.tabActive : ''}`}
             onClick={() => setStep(t.id)}
+            disabled={submitting} // ✅ 생성 중 탭 이동 방지
           >
             {t.label}
           </button>
@@ -246,6 +388,15 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
         {step === 'hazards' && <StepHazards draft={draft} setDraft={setDraft} />}
         {step === 'controls' && <StepControls draft={draft} setDraft={setDraft} />}
       </div>
+
+      {/* ✅ 진행률 모달 */}
+      <ProgressDownloadModal
+        open={genOpen}
+        percent={genPercent}
+        title={genMessage}
+        onCancel={cancelGeneration}
+        errorText={genErrorText}
+      />
     </div>
   );
 }

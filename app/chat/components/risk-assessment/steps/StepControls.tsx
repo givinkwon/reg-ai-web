@@ -1,4 +1,3 @@
-// components/risk-assessment/steps/StepControls.tsx
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -20,8 +19,11 @@ const norm = (v?: string | null) => (v ?? '').trim();
 // ✅ Cache (hazard 단위)
 // key = user + process_name + sub_process + risk_situation_result
 // =========================
-const CACHE_PREFIX = 'regai:risk:stepControls:v4'; // ✅ v4로 bump (기존 v3 캐시 무효화)
+const CACHE_PREFIX = 'regai:risk:stepControls:v4';
 const TTL_MS = 1000 * 60 * 60 * 24 * 180;
+
+// ✅ 재시도 쿨다운(실패/빈응답 시에도 연타 방지)
+const RETRY_COOLDOWN_MS = 1000 * 20;
 
 type ControlCache = {
   v: 4;
@@ -60,6 +62,7 @@ function isEmptyShell(c: ControlCache) {
   const t1 = norm(c.current_control_text);
   const t2 = norm(c.mitigation_text);
 
+  // ✅ fetched=false & 모두 비어있으면 무시하고 재호출되게
   return !c.fetched && controls === 0 && mitigations === 0 && !t1 && !t2;
 }
 
@@ -102,14 +105,78 @@ function dedup(arr: any): string[] {
   return out;
 }
 
+// =========================
+// ✅ 응답 정규화 유틸 (StepProcesses/StepHazards와 동일한 원인 대응)
+// =========================
+function toText(x: any): string {
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object') {
+    return x.title ?? x.name ?? x.text ?? x.value ?? x.label ?? '';
+  }
+  return '';
+}
+
+/**
+ * payload가
+ * - string[]
+ * - {items:[]}
+ * - {current_controls_items:[]}
+ * - {mitigation_items:[]}
+ * - {value: ...} (프록시가 감쌀 수 있음)
+ * - {rows:[]}, {data:[]}
+ * - 객체 배열([{title:"..."}, ...])
+ * 등 어떤 형태로 와도 문자열 배열로 뽑아내기
+ */
+function extractStringList(payload: any, preferredKeys: string[] = []): string[] {
+  let v: any = payload;
+
+  // 1) 프록시가 {value: ...}로 감싼 케이스 1~2회 풀기
+  for (let i = 0; i < 2; i++) {
+    if (v && typeof v === 'object' && !Array.isArray(v) && 'value' in v) {
+      v = (v as any).value;
+    } else break;
+  }
+
+  // 2) 배열이면 그대로
+  if (Array.isArray(v)) {
+    return Array.from(new Set(v.map(toText).map(norm).filter(Boolean)));
+  }
+
+  // 3) 객체면: 우선 preferredKeys → 그 다음 일반 키 후보들
+  if (v && typeof v === 'object') {
+    const obj = v as any;
+
+    // preferredKeys 우선
+    for (const k of preferredKeys) {
+      if (Array.isArray(obj?.[k])) {
+        return Array.from(new Set(obj[k].map(toText).map(norm).filter(Boolean)));
+      }
+    }
+
+    // 일반 후보들
+    const commonKeys = ['items', 'rows', 'data', 'list', 'results'];
+    for (const k of commonKeys) {
+      if (Array.isArray(obj?.[k])) {
+        return Array.from(new Set(obj[k].map(toText).map(norm).filter(Boolean)));
+      }
+    }
+  }
+
+  return [];
+}
+
 export default function StepControls({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
+  const userKey = norm(user?.email) || 'guest';
 
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
 
-  // ✅ row 처리 완료/진행 중 마킹 (무한 호출 방지)
+  /**
+   * ✅ done/inflight 키에 scope(=cacheKey)까지 포함해서 관리
+   */
   const doneRef = useRef<Set<string>>(new Set());
   const inflightRef = useRef<Set<string>>(new Set());
+  const attemptRef = useRef<Map<string, number>>(new Map());
 
   // ===== 렌더용 rows (UI 표시) =====
   const rows = useMemo(() => {
@@ -168,17 +235,18 @@ export default function StepControls({ draft, setDraft }: Props) {
     return out;
   }, [draft]);
 
-  // ===== effect에서 사용할 “대상” (deps용 시그니처는 값(텍스트/칩) 제외) =====
+  // ===== effect에서 사용할 “대상” =====
   const targets = useMemo(() => {
     return rows.map((r) => ({
       rowKey: r.rowKey,
       taskId: r.taskId,
       processId: r.processId,
       hazardId: r.hazardId,
+
       process_name: r.process_name,
       sub_process: r.sub_process,
       risk_situation_result: r.risk_situation_result,
-      // 현재 값(초기 텍스트 유지용)
+
       current_control_text: r.current_control_text,
       mitigation_text: r.mitigation_text,
       judgement: r.judgement,
@@ -187,13 +255,10 @@ export default function StepControls({ draft, setDraft }: Props) {
     }));
   }, [rows]);
 
-  // ✅ deps 시그니처: 텍스트/칩 변화는 제외하고 “식별/제목”만으로 구성 (무한 호출 방지 핵심)
+  // ✅ deps 시그니처: 텍스트/칩 변화는 제외하고 “식별/제목”만으로 구성
   const targetsSig = useMemo(() => {
     return targets
-      .map(
-        (t) =>
-          `${t.rowKey}|${t.process_name}|${t.sub_process}|${t.risk_situation_result}`,
-      )
+      .map((t) => `${t.rowKey}|${t.process_name}|${t.sub_process}|${t.risk_situation_result}`)
       .join('||');
   }, [targets]);
 
@@ -236,6 +301,10 @@ export default function StepControls({ draft, setDraft }: Props) {
   // ✅ 자동 채움: 캐시 우선 → 없으면 API 2개 호출
   //    - control-options: 현재 안전조치
   //    - mitigation-options: 개선대책
+  //
+  // ✅ FIX:
+  // - API 응답 형태 정규화(extractStringList)
+  // - AbortError 시 return 금지(continue)
   // =========================
   useEffect(() => {
     let cancelled = false;
@@ -247,17 +316,18 @@ export default function StepControls({ draft, setDraft }: Props) {
 
         if (!t.process_name || !t.sub_process || !t.risk_situation_result) continue;
 
-        // ✅ 사용자별/row별 고유 처리 키
-        const userKey = norm(user?.email) || 'guest';
-        const runKey = `${userKey}::${t.rowKey}`;
-
-        // ✅ 이미 끝났거나 진행 중이면 스킵 (무한 호출 방지)
-        if (doneRef.current.has(runKey) || inflightRef.current.has(runKey)) continue;
-
-        // ✅ “시작 즉시” in-flight 마킹 (updateHazard로 리렌더 되어도 재진입 방지)
-        inflightRef.current.add(runKey);
-
         const ck = cacheKey(user?.email, t.process_name, t.sub_process, t.risk_situation_result);
+        const scopeKey = `${t.rowKey}|${ck}`; // ✅ 스코프 포함 키
+
+        // ✅ 이미 끝났거나 진행 중이면 스킵
+        if (doneRef.current.has(scopeKey) || inflightRef.current.has(scopeKey)) continue;
+
+        // ✅ 쿨다운(실패/빈응답이어도 연타 방지)
+        const last = attemptRef.current.get(scopeKey);
+        if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
+
+        // ✅ 시작 즉시 in-flight 마킹 (리렌더 재진입 방지)
+        inflightRef.current.add(scopeKey);
 
         // 1) 캐시 먼저 적용
         const cached = readCache(ck);
@@ -277,19 +347,20 @@ export default function StepControls({ draft, setDraft }: Props) {
           });
         }
 
-        // 캐시/현재값이 비어있으면 API 요청
+        // ✅ 캐시/현재값이 비어있으면 API 요청
         const needControls =
           (cached?.current_controls_items?.length ?? 0) === 0 && (t.current_controls_items?.length ?? 0) === 0;
         const needMitigations =
           (cached?.mitigation_items?.length ?? 0) === 0 && (t.mitigation_items?.length ?? 0) === 0;
 
         if (!needControls && !needMitigations) {
-          doneRef.current.add(runKey);
-          inflightRef.current.delete(runKey);
+          doneRef.current.add(scopeKey);
+          inflightRef.current.delete(scopeKey);
           continue;
         }
 
         setLoadingMap((prev) => ({ ...prev, [t.rowKey]: true }));
+        attemptRef.current.set(scopeKey, Date.now());
 
         const ac = new AbortController();
         controllers.push(ac);
@@ -305,26 +376,44 @@ export default function StepControls({ draft, setDraft }: Props) {
             return `/api/risk-assessment?${qs.toString()}`;
           };
 
-          const fetchJson = async <T,>(url: string): Promise<T | null> => {
+          const fetchJson = async (url: string): Promise<{ ok: boolean; data: any }> => {
             const res = await fetch(url, { cache: 'no-store', signal: ac.signal });
-            if (!res.ok) return null;
-            return (await res.json()) as T;
+            if (!res.ok) return { ok: false, data: null };
+            const data = await res.json();
+            return { ok: true, data };
           };
 
-          type ControlRes = { current_controls_items?: string[] };
-          type MitigationRes = { mitigation_items?: string[] };
-
-          const [controlData, mitigationData] = await Promise.all([
-            needControls ? fetchJson<ControlRes>(makeUrl('control-options')) : Promise.resolve(null),
-            needMitigations ? fetchJson<MitigationRes>(makeUrl('mitigation-options')) : Promise.resolve(null),
+          const [controlRes, mitigationRes] = await Promise.all([
+            needControls ? fetchJson(makeUrl('control-options')) : Promise.resolve({ ok: true, data: null }),
+            needMitigations ? fetchJson(makeUrl('mitigation-options')) : Promise.resolve({ ok: true, data: null }),
           ]);
 
-          // ✅ API 우선, 없으면 cached/현재값 fallback
-          const controls = dedup(controlData?.current_controls_items ?? cached?.current_controls_items ?? t.current_controls_items ?? []);
-          const mitigations = dedup(mitigationData?.mitigation_items ?? cached?.mitigation_items ?? t.mitigation_items ?? []);
+          const controlOk = controlRes.ok;
+          const mitigationOk = mitigationRes.ok;
 
-          const nextControlText = norm(t.current_control_text) || norm(cached?.current_control_text) || (controls[0] ?? '');
-          const nextMitigationText = norm(t.mitigation_text) || norm(cached?.mitigation_text) || (mitigations[0] ?? '');
+          // ✅ 응답 형태 정규화
+          // - control-options: current_controls_items / items / array / value 등 모두 대응
+          // - mitigation-options: mitigation_items / items / array / value 등 모두 대응
+          const controlsFromApi = needControls
+            ? extractStringList(controlRes.data, ['current_controls_items', 'controls', 'control_items', 'options'])
+            : [];
+          const mitigationsFromApi = needMitigations
+            ? extractStringList(mitigationRes.data, ['mitigation_items', 'mitigations', 'mitigation_options', 'options'])
+            : [];
+
+          const controls = dedup(
+            controlsFromApi.length > 0
+              ? controlsFromApi
+              : cached?.current_controls_items ?? t.current_controls_items ?? [],
+          );
+          const mitigations = dedup(
+            mitigationsFromApi.length > 0 ? mitigationsFromApi : cached?.mitigation_items ?? t.mitigation_items ?? [],
+          );
+
+          const nextControlText =
+            norm(t.current_control_text) || norm(cached?.current_control_text) || (controls[0] ?? '');
+          const nextMitigationText =
+            norm(t.mitigation_text) || norm(cached?.mitigation_text) || (mitigations[0] ?? '');
 
           updateHazard(t.taskId, t.processId, t.hazardId, {
             current_controls_items: controls,
@@ -333,13 +422,16 @@ export default function StepControls({ draft, setDraft }: Props) {
             mitigation_text: nextMitigationText,
           });
 
-          // ✅ 캐시 저장
+          // ✅ 캐시는 "최소 1개라도 ok"면 저장하되,
+          // fetched는 (요청한 것들이) 모두 ok일 때만 true
+          const fetched = (needControls ? controlOk : true) && (needMitigations ? mitigationOk : true);
+
           writeCache(ck, {
             v: 4,
             ts: Date.now(),
-            fetched: true,
+            fetched,
 
-            user: norm(user?.email) || 'guest',
+            user: userKey,
             process_name: t.process_name,
             sub_process: t.sub_process,
             risk_situation_result: t.risk_situation_result,
@@ -353,12 +445,15 @@ export default function StepControls({ draft, setDraft }: Props) {
             mitigation_text: nextMitigationText,
           });
 
-          doneRef.current.add(runKey);
+          // ✅ 둘 다 성공(또는 필요 없는 요청은 true로 간주)했을 때만 done
+          if (fetched) {
+            doneRef.current.add(scopeKey);
+          }
         } catch (e: any) {
-          // 실패해도 재진입 루프 방지: done 처리(원하면 retry 정책으로 바꿔도 됨)
-          if (e?.name !== 'AbortError') doneRef.current.add(runKey);
+          // ✅ AbortError는 전체 중단(return)하지 말고 해당 row만 스킵
+          if (e?.name === 'AbortError') continue;
         } finally {
-          inflightRef.current.delete(runKey);
+          inflightRef.current.delete(scopeKey);
           setLoadingMap((prev) => ({ ...prev, [t.rowKey]: false }));
         }
       }
@@ -370,14 +465,13 @@ export default function StepControls({ draft, setDraft }: Props) {
       cancelled = true;
       controllers.forEach((c) => c.abort());
     };
-    // ✅ rows가 아니라 "시그니처"에만 의존 (무한 호출 방지 핵심)
   }, [targetsSig, user?.email]);
 
   // =========================
   // ✅ 사용자 수정값 캐시 반영 (디바운스)
   // =========================
   useEffect(() => {
-    const t = setTimeout(() => {
+    const tmr = setTimeout(() => {
       for (const r of rows) {
         if (!r.process_name || !r.sub_process || !r.risk_situation_result) continue;
 
@@ -397,7 +491,7 @@ export default function StepControls({ draft, setDraft }: Props) {
           ts: Date.now(),
           fetched: true,
 
-          user: norm(user?.email) || 'guest',
+          user: userKey,
           process_name: r.process_name,
           sub_process: r.sub_process,
           risk_situation_result: r.risk_situation_result,
@@ -413,7 +507,7 @@ export default function StepControls({ draft, setDraft }: Props) {
       }
     }, 250);
 
-    return () => clearTimeout(t);
+    return () => clearTimeout(tmr);
   }, [rows, user?.email]);
 
   if (rows.length === 0) {
@@ -493,9 +587,7 @@ export default function StepControls({ draft, setDraft }: Props) {
                 className={s.textarea}
                 placeholder="현재 적용 중인 안전조치를 입력하세요 (예: 가드 설치, 인터록, PPE 등)"
                 value={r.current_control_text}
-                onChange={(e) =>
-                  updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: e.target.value })
-                }
+                onChange={(e) => updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: e.target.value })}
               />
             </div>
 
