@@ -1,57 +1,175 @@
+/* app/chat/page.module.css */
+
+/* =========================
+   Layout (Base)
+   - 핵심: 모바일 overflow/height 안정화
+   - 핵심: flex 자식 min-width/min-height 0
+========================= */
+
 .shell {
   display: flex;
   width: 100%;
-  height: 100vh;
-  background: #F3F5F9;
+  height: 100vh; /* 기본(데스크톱) */
+  background: #f3f5f9;
   padding: 8px;
   padding-right: 0;
   position: relative;
   gap: 0;
-  overflow-x:hidden;
-  overflow-y:hidden;
-}
-.sideDesktop { display: none; }
-.rightDesktop { display: none; }
-.main { flex: 1; display: flex; }
 
-@media (min-width: 1024px) { /* lg */
-  .sideDesktop { display: flex; }
-}
-@media (min-width: 1280px) { /* xl */
-  .rightDesktop { display: flex; }
+  /* ✅ 가로/세로 넘침 방지 */
+  overflow: hidden;
 }
 
+/* ✅ 본문(ChatArea) 영역: 내부 스크롤 정상화를 위해 min-height:0 필수 */
+.main {
+  flex: 1;
+  display: flex;
+  min-width: 0;   /* ✅ flex child overflow 방지 */
+  min-height: 0;  /* ✅ 내부 스크롤 정상화 */
+}
+
+/* 사이드/우측 패널: 기본은 숨김 */
+.sideDesktop {
+  display: none;
+  min-height: 0;
+}
+.rightDesktop {
+  display: none;
+  min-height: 0;
+}
+
+/* lg 이상: 왼쪽 사이드바 */
+@media (min-width: 1024px) {
+  .sideDesktop {
+    display: flex;
+    min-width: 0;
+  }
+}
+
+/* xl 이상: 오른쪽 패널 */
+@media (min-width: 1280px) {
+  .rightDesktop {
+    display: flex;
+    min-width: 0;
+  }
+}
+
+/* =========================
+   Mobile layout fixes
+   - 100vh -> 100dvh
+   - safe-area + 주소창 변화 대응
+========================= */
+@media (max-width: 768px) {
+  .shell {
+    padding: 0;
+    padding-right: 0;
+
+    /* ✅ 모바일 주소창/하단바 대응 */
+    height: 100dvh;
+
+    /* ✅ 혹시 모를 1px 가로삐져나감 방지 */
+    overflow: hidden;
+  }
+
+  .main {
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+/* =========================
+   Mobile Sidebar Overlay
+========================= */
 .overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 40;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
 }
+
 .sideFloat {
-  position: fixed; left: 0; top: 0; height: 100%; z-index: 50;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100%;
+  z-index: 50;
+
+  /* ✅ 사이드바도 화면 밖으로 밀리지 않게 */
+  max-width: 92vw;
 }
 
-/* 팝업 */
-.typeModalOverlay{
-  position:fixed; inset:0; background:rgba(0,0,0,.45);
-  display:flex; align-items:center; justify-content:center;
-  z-index:120;
-}
-.typeModal{
-  width:min(560px,92vw); background:#fff; border-radius:16px;
-  box-shadow:0 12px 40px rgba(0,0,0,.22);
-  padding:20px;
-}
-.typeTitle{ font-weight:700; margin-bottom:12px; }
-.typeGrid{ display:grid; gap:10px; grid-template-columns:1fr 1fr; }
-.typeCard{
-  display:flex; gap:10px; align-items:center; justify-content:center;
-  padding:14px 12px; border:1px solid var(--border); border-radius:12px;
-  background:#f8fafc;
-}
-.typeCard:hover{ filter:brightness(.98); }
-.typeEmoji{ font-size:22px; }
-.typeLabel{ font-weight:600; }
+/* =========================
+   (Optional) Common Modal
+========================= */
+.typeModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
 
-/* ===== 로그인 팝업 ===== */
+  /* ✅ 모달로 인해 바깥이 가로 스크롤 생기는 것 방지 */
+  overflow: hidden;
+}
 
+.typeModal {
+  width: min(560px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  padding: 20px;
+
+  /* ✅ 내부 요소가 길어도 카드 밖으로 밀리지 않게 */
+  min-width: 0;
+}
+
+.typeTitle {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.typeGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.typeCard {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  background: #f8fafc;
+  min-width: 0;
+}
+
+.typeCard:hover {
+  filter: brightness(0.98);
+}
+
+.typeEmoji {
+  font-size: 22px;
+}
+
+.typeLabel {
+  font-weight: 600;
+
+  /* ✅ 라벨이 길면 줄임표 처리 */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================
+   Login Modal
+========================= */
 .loginOverlay {
   position: fixed;
   inset: 0;
@@ -59,7 +177,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000; /* 사이드바/우측 패널보다 위 */
+  z-index: 2000;
+  overflow: hidden;
 }
 
 .loginCard {
@@ -69,6 +188,9 @@
   padding: 22px 22px 18px;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
   text-align: center;
+
+  /* ✅ 카드 내부 overflow 방지 */
+  min-width: 0;
 }
 
 .loginBadge {
@@ -97,9 +219,11 @@
   color: #6b7280;
   margin-bottom: 18px;
   line-height: 1.5;
+
+  /* ✅ 긴 텍스트가 있으면 줄바꿈 */
+  overflow-wrap: anywhere;
 }
 
-/* 공통 버튼 베이스 */
 .loginBtnGoogle,
 .loginBtnKakao {
   width: 100%;
@@ -113,6 +237,9 @@
   margin-bottom: 10px;
   cursor: pointer;
   transition: background 0.15s ease, box-shadow 0.15s ease;
+
+  /* ✅ 버튼 내용이 길어도 오버플로우 방지 */
+  min-width: 0;
 }
 
 .loginBtnGoogle:hover,
@@ -125,6 +252,12 @@
   font-size: 14px;
   font-weight: 500;
   color: #111827;
+
+  /* ✅ 긴 라벨 안전 */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loginBack {
@@ -145,5 +278,9 @@
   .loginCard {
     border-radius: 20px;
     padding: 20px 18px 16px;
+  }
+
+  .typeGrid {
+    grid-template-columns: 1fr; /* ✅ 좁은 화면에서 2열이 밀면 1열 */
   }
 }
