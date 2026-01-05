@@ -7,13 +7,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  Home,           // ✅ 집 아이콘
+  Home,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import s from './Sidebar.module.css';
 import { useChatStore } from '../../store/chat';
+import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
+  const router = useRouter();
+
   const {
     rooms, activeRoomId, setActiveRoom, deleteRoom, createRoom,
     collapsed, setCollapsed,
@@ -21,70 +24,83 @@ export default function Sidebar() {
 
   const toggleCollapse = () => setCollapsed(!collapsed);
 
+  // ✅ 홈 클릭: "처음 chat 진입"처럼 /chat으로 이동 + 새 대화 생성
+  const handleHomeClick = () => {
+    router.push('/chat');
+    createRoom();
+  };
+
   return (
     <aside className={`${s.wrap} ${collapsed ? s.collapsed : ''}`}>
       {/* Header */}
       <div className={s.header}>
         <div className={s.titleRow}>
-          {!collapsed &&
-          <div className={s.brand}>
-            <img src="/logo.png" className={s.fav} alt="REG AI" />
-          </div>
-          }
+          {!collapsed && (
+            <div className={s.brand}>
+              <img src="/logo.png" className={s.fav} alt="REG AI" />
+            </div>
+          )}
 
-        {/* ✅ 접기/펴기 버튼: 파란 배경 + 흰 화살표 */}
-        <button
-          onClick={toggleCollapse}
-          className={s.collapseBtn}
-          aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
-        >
-          {collapsed ? (
-            <ChevronRight
-              size={16}                 // ← viewBox 기준 사이즈 지정
-              strokeWidth={2}
-              color="#fff"              // ← lucide는 stroke=currentColor
-              style={{
-                width: 16, height: 16,  // ← 레이아웃 강제
-                minWidth: 16,
-                minHeight: 16,
-                flex: '0 0 16px',       // ← flex 수축 방지
-                display: 'block',
-              }}
-            />
-  ) : (
-    <ChevronLeft
-      size={16}
-      strokeWidth={2}
-      color="#fff"
-      style={{
-        width: 16, height: 16,
-        minWidth: 16,
-        minHeight: 16,
-        flex: '0 0 16px',
-        display: 'block',
-      }}
-    />
-  )}
-</button>
+          {/* ✅ 접기/펴기 버튼 */}
+          <button
+            onClick={toggleCollapse}
+            className={s.collapseBtn}
+            aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
+          >
+            {collapsed ? (
+              <ChevronRight
+                size={16}
+                strokeWidth={2}
+                color="#fff"
+                style={{
+                  width: 16, height: 16,
+                  minWidth: 16, minHeight: 16,
+                  flex: '0 0 16px',
+                  display: 'block',
+                }}
+              />
+            ) : (
+              <ChevronLeft
+                size={16}
+                strokeWidth={2}
+                color="#fff"
+                style={{
+                  width: 16, height: 16,
+                  minWidth: 16, minHeight: 16,
+                  flex: '0 0 16px',
+                  display: 'block',
+                }}
+              />
+            )}
+          </button>
         </div>
 
         {/* Nav */}
         <div className={s.nav}>
-          {/* <div className={s.navItem}> */}
-            {/* <div className={s.navLeft}> */}
-              {/* ✅ 집 로고 아이콘으로 교체 */}
-              {/* <Home className={s.iconSm} /> */}
-              {/* <span className={s.navText}>데일리 REG</span> */}
-            {/* </div> */}
-          {/* </div> */}
+          {/* ✅ Home 버튼 */}
+          <div
+            className={s.navItem}
+            role="button"
+            tabIndex={0}
+            onClick={handleHomeClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') handleHomeClick();
+            }}
+          >
+            <div className={s.navLeft}>
+              <Home className={s.iconSm} />
+              {!collapsed && <span className={s.navText}>Home</span>}
+            </div>
+          </div>
 
-          {/* <div className={s.navItem}> */}
-            {/* <div className={s.navLeft}> */}
-              {/* <Search className={s.iconSm} /> */}
-              {/* ✅ 항상 1줄로 */}
-              {/* <span className={s.navText}>채팅 검색</span> */}
-            {/* </div> */}
-          {/* </div> */}
+          {/* 필요하면 검색도 다시 살리기
+          <div className={s.navItem}>
+            <div className={s.navLeft}>
+              <Search className={s.iconSm} />
+              {!collapsed && <span className={s.navText}>채팅 검색</span>}
+            </div>
+          </div>
+          */}
         </div>
       </div>
 
