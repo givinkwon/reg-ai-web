@@ -1650,7 +1650,10 @@ export default function ChatArea() {
     e.preventDefault();
   };
 
-  const fetchWeeklySafetyNews = async () => {
+    const fetchWeeklySafetyNews = async () => {
+    // ✅ 로딩 버블 먼저 띄우기
+    beginMenuLoading('금주의 안전 뉴스');
+
     try {
       const params = new URLSearchParams();
 
@@ -1665,13 +1668,9 @@ export default function ChatArea() {
 
       if (!res.ok) {
         console.error('[ChatArea] safety-news error status:', res.status);
-        const errorMsg: ChatMessage = {
-          role: 'assistant',
-          content:
-            '금주의 안전 뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-        };
-        setMessages([...messages, errorMsg]);
-        setShowLanding(false);
+        endMenuLoadingError(
+          '금주의 안전 뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        );
         return;
       }
 
@@ -1739,78 +1738,66 @@ export default function ChatArea() {
         </div>
       `;
 
-      const newsMsg: ChatMessage = {
-        role: 'assistant',
-        content: html,
-      };
-
-      setMessages([...messages, newsMsg]);
-      setShowLanding(false);
+      // ✅ 로딩 버블(마지막 assistant)을 최종 HTML로 교체
+      endMenuLoadingSuccess(html);
     } catch (e) {
       console.error('[ChatArea] safety-news fetch error:', e);
-      const errorMsg: ChatMessage = {
-        role: 'assistant',
-        content: '금주의 안전 뉴스를 불러오는 중 오류가 발생했습니다.',
-      };
-      setMessages([...messages, errorMsg]);
-      setShowLanding(false);
+      endMenuLoadingError('금주의 안전 뉴스를 불러오는 중 오류가 발생했습니다.');
     }
   };
 
-  const fetchLawNoticeSummary = async () => {
+    const fetchLawNoticeSummary = async () => {
+    // ✅ 로딩 버블 먼저 띄우기
+    beginMenuLoading('입법 예고 요약');
+
     try {
-      const res = await fetch('/api/expect-law/latest');
-  
+      const res = await fetch('/api/expect-law/latest', { cache: 'no-store' });
+
       if (!res.ok) {
         console.error('[ChatArea] law-notice-summary error status:', res.status);
-        const errorMsg: ChatMessage = {
-          role: 'assistant',
-          content:
-            '입법 예고 요약을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-        };
-        setMessages([...messages, errorMsg]);
-        setShowLanding(false);
+        endMenuLoadingError(
+          '입법 예고 요약을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        );
         return;
       }
-  
+
       const data = (await res.json()) as LawNoticeSummaryResponse;
       console.log('[ChatArea] expect-law data =', data);
-  
+
       const cutoff = data.cutoff_date?.slice(0, 10);
       const run = data.run_date?.slice(0, 10);
-  
+
       const periodText =
         cutoff && run ? `${cutoff} ~ ${run}` : run || cutoff || '';
-  
+
       const titleHtml = periodText
         ? `📜 <strong>${periodText} 입법 예고 요약</strong>`
         : '📜 <strong>입법 예고 요약</strong>';
-  
+
       const metaParts: string[] = [];
-  
+
       if (typeof data.months_back === 'number') {
         metaParts.push(`최근 ${data.months_back}개월 기준`);
       }
-  
+
       if (typeof data.item_count === 'number') {
         metaParts.push(`입법예고 ${data.item_count}건 기준`);
       }
-  
+
       const metaHtml = metaParts.length
         ? `<div style="margin-top:4px; font-size:12px; opacity:0.8;">
              ${metaParts.join(' · ')}
            </div>`
         : '';
-  
+
       const digestText =
         data.digest || data.summary_kor || data.text?.summary_kor || '';
-  
-      // ✅ 여기서 marker 를 '참고 입법예고 목록' 으로
+
       const { summaryText, articlesText } = splitDigestForArticles(
         digestText,
         '참고 입법예고 목록',
       );
-  
+
       const summaryHtml = summaryText
         ? summaryText
             .split('\n')
@@ -1818,7 +1805,7 @@ export default function ChatArea() {
             .filter(Boolean)
             .join('<br />')
         : '';
-  
+
       const articlesHtml = articlesText
         ? articlesText
             .split('\n')
@@ -1826,9 +1813,7 @@ export default function ChatArea() {
             .filter(Boolean)
             .join('<br />')
         : '';
-  
-      // 🔥 summary / articles 를 data-section 으로 나누고
-      //    articles 는 display:none 으로 숨겨둔다 (우측 패널용)
+
       const html = `
         <div data-msg-type="notice-summary">
           <p>${titleHtml}</p>
@@ -1845,22 +1830,12 @@ export default function ChatArea() {
           }
         </div>
       `;
-  
-      const msg: ChatMessage = {
-        role: 'assistant',
-        content: html,
-      };
-  
-      setMessages([...messages, msg]);
-      setShowLanding(false);
+
+      // ✅ 로딩 버블(마지막 assistant)을 최종 HTML로 교체
+      endMenuLoadingSuccess(html);
     } catch (e) {
       console.error('[ChatArea] expect-law-summary fetch error:', e);
-      const errorMsg: ChatMessage = {
-        role: 'assistant',
-        content: '입법 예고 요약을 불러오는 중 오류가 발생했습니다.',
-      };
-      setMessages([...messages, errorMsg]);
-      setShowLanding(false);
+      endMenuLoadingError('입법 예고 요약을 불러오는 중 오류가 발생했습니다.');
     }
   };
   
@@ -1872,6 +1847,7 @@ export default function ChatArea() {
   };
 
   const handleQuickActionClick = (action: QuickAction) => {
+    if (menuLoading) return;
     // ✅ 문서 모드 초기화
     setDocMode(null);
     setReviewDoc(null);
@@ -2531,9 +2507,37 @@ export default function ChatArea() {
       items,
     };
   }
-  
-  
 
+  // ✅ 메뉴(안전뉴스/입법예고 등) 클릭 후 서버 응답 대기 로딩
+  const [menuLoading, setMenuLoading] = useState(false);
+
+  /**
+   * ✅ 서버에서 데이터가 와야 하는 "메뉴 액션" 공용 로딩 시작
+   * - assistant 말풍선 1개를 먼저 추가
+   * - 응답 오면 updateLastAssistant로 그 말풍선을 교체
+   */
+  const beginMenuLoading = (label: string) => {
+    setMenuLoading(true);
+    setShowLanding(false);
+
+    // 로딩 버블 하나 생성
+    addMessage({
+      role: 'assistant',
+      content: `⏳ ${label} 을 가져오고 있어요...`,
+    });
+  };
+
+  const endMenuLoadingSuccess = (finalHtml: string) => {
+    updateLastAssistant(finalHtml);
+    setMenuLoading(false);
+  };
+
+  const endMenuLoadingError = (msg: string) => {
+    // 안전하게 HTML로 감싸기 (assistant bubble은 HTML로 렌더됨)
+    updateLastAssistant(`<p>${msg}</p>`);
+    setMenuLoading(false);
+  };
+  
   return (
     <>
       <section className={s.wrap}>
@@ -2945,6 +2949,17 @@ export default function ChatArea() {
                     {statusMessage ||
                       LOADING_MESSAGES[loadingMessageIndex]}
                   </span>
+                  <span className={s.dots}>
+                    <span>•</span>
+                    <span>•</span>
+                    <span>•</span>
+                  </span>
+                </div>
+              )}
+
+              {menuLoading && (
+                <div className={s.loadingCard}>
+                  <span>로딩중입니다...</span>
                   <span className={s.dots}>
                     <span>•</span>
                     <span>•</span>
