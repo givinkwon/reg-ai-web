@@ -733,24 +733,30 @@ body[data-theme='dark'] .wrap {
   color: var(--muted);
   margin-bottom: 10px;
 }
-
 .quickGrid {
   display: grid;
   width: 100%;
   max-width: 840px;
-  justify-items: center;
+
+  /* ✅ 셀 폭에 맞춰 버튼이 동일하게 늘어나도록 */
+  justify-items: stretch;
+
   column-gap: 18px;
   row-gap: 14px;
+
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .quickBtn {
-  width: 230px;
-  height: 56px;
-  display: inline-flex;
+  /* ✅ 고정폭/inline-flex 제거 → 셀 폭 기준으로 통일 */
+  width: 100%;
+  min-height: 56px; /* height 대신 min-height로 통일감 + 줄바꿈 대응 */
+
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+
   padding: 0 20px;
   border-radius: 999px;
 
@@ -760,7 +766,9 @@ body[data-theme='dark'] .wrap {
 
   font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
+
+  /* ✅ 라벨이 길어도 버튼 크기 흔들리지 않게 */
+  box-sizing: border-box;
 
   box-shadow: var(--quick-shadow);
   cursor: pointer;
@@ -782,10 +790,13 @@ body[data-theme='dark'] .quickBtn:hover {
 .quickIconWrap {
   width: 28px;
   height: 28px;
+  flex: 0 0 28px; /* ✅ 고정 */
+
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
+
   border: 1px solid rgba(96, 165, 250, 0.55);
   background: rgba(96, 165, 250, 0.12);
 }
@@ -797,9 +808,15 @@ body[data-theme='dark'] .quickBtn:hover {
 }
 
 .quickLabel {
-  line-height: 1;
-}
+  line-height: 1.2;
+  text-align: left;
 
+  /* ✅ 길면 2줄까지만, 넘치면 ... */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 /* =========================================================
    13) 힌트 칩
    ========================================================= */
