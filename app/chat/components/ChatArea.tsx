@@ -2273,10 +2273,22 @@ export default function ChatArea() {
 
         const html = simpleMarkdownToHtml(finalText);
 
-        addMessage({
-          role: 'assistant',
-          content: html,
-        });
+        const beginMenuLoading = (label: string) => {
+          setMenuLoading(true);
+          setShowLanding(false);
+
+          addMessage({
+            role: 'assistant',
+            content: `
+              <div data-ai-kind="menu-loading">
+                <span>⏳ ${label}을 가져오고 있어요</span>
+                <span class="${s.dots}">
+                  <span>•</span><span>•</span><span>•</span>
+                </span>
+              </div>
+            `,
+          });
+        };
         break;
       }
 
@@ -2828,9 +2840,11 @@ export default function ChatArea() {
 
                 const isEduMaterial =
                   m.role === 'assistant' && m.content.includes('data-ai-kind="edu-material"');
-
-                const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial;
-
+                const isMenuLoadingMsg =
+                  m.role === 'assistant' && m.content?.includes('data-ai-kind="menu-loading"');
+                
+                const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial || isMenuLoadingMsg;
+                
                 if (isUser) {
                   return (
                     <div key={i} className={s.userRow}>
@@ -2949,17 +2963,6 @@ export default function ChatArea() {
                     {statusMessage ||
                       LOADING_MESSAGES[loadingMessageIndex]}
                   </span>
-                  <span className={s.dots}>
-                    <span>•</span>
-                    <span>•</span>
-                    <span>•</span>
-                  </span>
-                </div>
-              )}
-
-              {menuLoading && (
-                <div className={s.loadingCard}>
-                  <span>로딩중입니다...</span>
                   <span className={s.dots}>
                     <span>•</span>
                     <span>•</span>
