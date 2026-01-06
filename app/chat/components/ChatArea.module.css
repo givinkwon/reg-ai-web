@@ -717,6 +717,7 @@ body[data-theme='dark'] .wrap {
   align-items: center;
   padding: 32px 16px 24px;
   gap: 24px;
+  margin: 0 auto; 
 }
 
 .quickTitle {
@@ -735,8 +736,9 @@ body[data-theme='dark'] .wrap {
 }
 .quickGrid {
   display: grid;
-  width: 100%;
-  max-width: 840px;
+  width: 80%;
+  margin-left: 10%;
+  margin-right: 10%;
 
   /* ✅ 셀 폭에 맞춰 버튼이 동일하게 늘어나도록 */
   justify-items: stretch;
@@ -750,7 +752,7 @@ body[data-theme='dark'] .wrap {
 .quickBtn {
   /* ✅ 고정폭/inline-flex 제거 → 셀 폭 기준으로 통일 */
   width: 100%;
-  min-height: 56px; /* height 대신 min-height로 통일감 + 줄바꿈 대응 */
+  height: 56px; /* height 대신 min-height로 통일감 + 줄바꿈 대응 */
 
   display: flex;
   align-items: center;
@@ -866,6 +868,7 @@ body[data-theme='dark'] .hintChip {
    ========================================================= */
 .quickSection {
   margin-top: 16px;
+  width: 100%;
 }
 
 .quickSectionHeader {
@@ -873,6 +876,9 @@ body[data-theme='dark'] .hintChip {
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
+  width: 80%;
+  margin-left: 10%;
+  margin-right: 10%;
 }
 
 .quickSectionIcon {
@@ -1408,14 +1414,22 @@ body[data-theme='dark'] .safety-doc-download-badge {
     padding-top: 40px;
   }
 
+  .quickSectionHeader {
+    width: 100%;
+    margin-left: 0%;
+    margin-right: 0%;
+  }
+
   .quickGrid {
-    max-width: 640px;
+    width: 100%;
+    margin-left:0%;
+    margin-right:0%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .quickBtn {
     width: 100%;
-    justify-content: flex-start;
+    /* justify-content: flex-start; */
     padding: 0 16px;
   }
 }
@@ -1423,12 +1437,18 @@ body[data-theme='dark'] .safety-doc-download-badge {
 /* 아주 작은 모바일 */
 @media (max-width: 480px) {
   .quickTitle {
-    font-size: 20px;
+    font-size: 18px;
+  }
+
+  .quickSectionHeader {
+    width: 100%;
+    margin-left: 0%;
+    margin-right: 0%;
   }
 
   .quickBtn {
     padding: 8px 14px;
-    font-size: 12px;
+    font-size: 9px;
     height: 52px;
   }
 }
