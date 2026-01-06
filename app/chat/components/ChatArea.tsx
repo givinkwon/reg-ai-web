@@ -2532,10 +2532,16 @@ export default function ChatArea() {
     setMenuLoading(true);
     setShowLanding(false);
 
-    // 로딩 버블 하나 생성
     addMessage({
       role: 'assistant',
-      content: `⏳ ${label} 을 가져오고 있어요...`,
+      content: `
+        <div data-msg-state="loading" data-ai-kind="menu-loading">
+          <span>⏳ ${label}을 가져오고 있어요</span>
+          <span class="${s.dots}">
+            <span>•</span><span>•</span><span>•</span>
+          </span>
+        </div>
+      `,
     });
   };
 
@@ -2840,10 +2846,13 @@ export default function ChatArea() {
 
                 const isEduMaterial =
                   m.role === 'assistant' && m.content.includes('data-ai-kind="edu-material"');
-                const isMenuLoadingMsg =
-                  m.role === 'assistant' && m.content?.includes('data-ai-kind="menu-loading"');
-                
-                const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial || isMenuLoadingMsg;
+                const raw = m.role === 'assistant' ? (m.content || '') : '';
+                const isLoadingBubble =
+                  m.role === 'assistant' &&
+                  (raw.includes('data-msg-state="loading"') ||
+                  raw.includes('data-ai-kind="menu-loading"') ||
+                  htmlToText(raw).includes('을 가져오고 있어요'));
+                const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial || isLoadingBubble;
                 
                 if (isUser) {
                   return (
@@ -2868,7 +2877,7 @@ export default function ChatArea() {
                       dangerouslySetInnerHTML={{ __html: safeHtml }}
                     />
 
-                    {!hideActionRow && (
+                    {!menuLoading && !isLoadingBubble && !hideActionRow && (
                       <div className={s.actionRow}>
                         <div className={s.miniActions}>
                           {(!isSafetyNews && !isNoticeSummary) && (
