@@ -1851,18 +1851,23 @@ export default function ChatArea() {
 
   const ensureRoomExists = () => {
     const st = useChatStore.getState?.();
-    if (!st?.activeRoomId) {
-      st?.createRoom?.(); // createRoom이 activeRoomId까지 세팅한다고 가정
-    }
+    if (!st) return null;
+
+    // ✅ 이미 있으면 그걸 반환
+    if (st.activeRoomId) return st.activeRoomId;
+
+    // ❗️중요: createRoom이 roomId를 반환하도록 store를 고쳐야 함
+    const newId = st.createRoom?.();
+    return newId ?? useChatStore.getState?.().activeRoomId ?? null;
   };
 
-  const setSidebarTitle = (title: string) => {
+  const setSidebarTitle = (roomId: string | null, title: string) => {
+    if (!roomId) return;
     const st = useChatStore.getState?.();
-    const rid = st?.activeRoomId;
-    if (!rid) return;
-    if (st?.updateRoomTitle) st.updateRoomTitle(rid, title);
+    st?.updateRoomTitle?.(roomId, title);
   };
 
+  // ✅ QuickAction 클릭
   const handleQuickActionClick = (action: QuickAction) => {
     if (menuLoading) return;
 
@@ -1913,13 +1918,15 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 사고사례: [사고사례]YYYY/MM/DD  (원하면 날짜 제거 가능)
+    // ✅ 사고사례: [사고사례]YYYY/MM/DD
     if (action.id === 'accident_search') {
       ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`로 변경
+      queueMicrotask(() => setSidebarTitle(`[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`
 
       const intro: ChatMessage = { role: 'assistant', content: ACCIDENT_INTRO_TEXT };
-      setMessages(messages.length === 0 ? [intro] : [...messages, intro]);
+
+      // ✅ stale closure 방지
+      setMessages((prev) => (prev.length === 0 ? [intro] : [...prev, intro]));
 
       setActiveHintTask('accident_search');
       setActiveHints(pickRandomHints(ACCIDENT_HINTS, 3));
@@ -1928,7 +1935,7 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 문서검토 모드 진입: 제목은 “문서 선택” 시점에 세팅
+    // ✅ 문서검토 모드 진입
     if (action.id === 'doc_review') {
       setActiveHintTask(null);
       setActiveHints([]);
@@ -1937,7 +1944,7 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 문서생성 모드 진입: 제목은 “문서 선택” 시점에 세팅
+    // ✅ 문서생성 모드 진입
     if (action.id === 'doc_create') {
       setActiveHintTask(null);
       setActiveHints([]);
@@ -1960,7 +1967,7 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 나머지: 기존 로직 유지 (법령/가이드 해석)
+    // ✅ 법령/가이드 해석
     if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
       let hintTask: HintTask;
       let introText: string;
@@ -1977,7 +1984,9 @@ export default function ChatArea() {
       }
 
       const intro: ChatMessage = { role: 'assistant', content: introText };
-      setMessages(messages.length === 0 ? [intro] : [...messages, intro]);
+
+      // ✅ stale closure 방지
+      setMessages((prev) => (prev.length === 0 ? [intro] : [...prev, intro]));
 
       setActiveHints(pickRandomHints(pool, 3));
       setActiveHintTask(hintTask);
@@ -1995,7 +2004,7 @@ export default function ChatArea() {
     if (el) el.focus();
   };
 
-
+  // ✅ 힌트 클릭
   const handleHintClick = (task: HintTask, hint: string) => {
     // 🔒 1) 게스트 제한 체크
     if (shouldBlockGuestByLimit()) {
@@ -2008,31 +2017,36 @@ export default function ChatArea() {
       const prev = getGuestMsgCountFromCookie();
       setGuestMsgCountToCookie(prev + 1);
     }
-  
+
     let mappedTaskType: TaskType;
     if (task === 'edu_material') {
       mappedTaskType = 'edu_material';
     } else if (task === 'guideline_interpret') {
       mappedTaskType = 'guideline_interpret';
-    } else if (task === 'accident_search') {   
+    } else if (task === 'accident_search') {
       mappedTaskType = 'accident_search';
     } else {
       mappedTaskType = 'law_interpret';
     }
-  
+
     setSelectedTask(mappedTaskType);
-  
+
     sendMessage({
       taskType: mappedTaskType,
       overrideMessage: hint,
     });
-  
+
     setActiveHintTask(null);
     setActiveHints([]);
-  };  
+  };
 
+  // ✅ 안전문서 선택(문서생성/문서검토 공용)
+  // - docMode가 'create'면 doc_create, 'review'면 doc_review로 자동 분기
   const handleSelectSafetyDoc = (category: any, doc: any) => {
-    setSelectedTask('doc_review');
+    // ✅ docMode 기반으로 taskType 결정 (중요!)
+    const nextTask: TaskType = docMode === 'create' ? 'doc_create' : 'doc_review';
+
+    setSelectedTask(nextTask);
     setDocMode(null);
 
     const userMsg: ChatMessage = { role: 'user', content: doc.label };
@@ -2090,6 +2104,7 @@ export default function ChatArea() {
                       href="${d.url}"
                       ${d.filename ? `download="${d.filename}"` : 'download'}
                       rel="noopener"
+                      target="_blank"
                     >
                       <div class="safety-doc-download-left">
                         <span class="safety-doc-download-icon">${d.icon ?? '📄'}</span>
@@ -2120,18 +2135,14 @@ export default function ChatArea() {
 
     const aiMsg: ChatMessage = { role: 'assistant', content: assistantHtml };
 
-    setMessages([...messages, userMsg, aiMsg]);
+    // ✅ stale closure 방지
+    setMessages((prev) => [...prev, userMsg, aiMsg]);
 
     setInput('');
     const el = document.querySelector<HTMLInputElement>('.chat-input');
     if (el) el.focus();
   };
 
-
-
-  // ✅ 현재까지 user role 메시지 개수
-  const getUserMessageCount = () =>
-    messages.filter((m) => m.role === 'user').length;
 
   // ✅ 게스트 제한 체크 (3개 이상이면 true)
   const shouldBlockGuestByLimit = () => {
