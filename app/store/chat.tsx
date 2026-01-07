@@ -48,7 +48,6 @@ export type RightPanelData = {
 /* =========================
  * Const
  * ========================= */
-// NOTE: rooms/messages는 localStorage로 옮기므로 COOKIE_KEY는 더이상 사용하지 않음
 const COOKIE_COLLAPSE = 'regai_sidebar_collapsed';
 const STORAGE_KEY = 'regai_rooms_v1';
 const MAX_MSG_PER_ROOM = 30;
@@ -71,7 +70,6 @@ const storage = {
   set(payload: { rooms: Room[]; activeRoomId: string | null }) {
     if (typeof window === 'undefined') return;
     try {
-      // 방어: 메시지 개수/길이 제한
       const safeRooms = (payload.rooms || []).map((r) => ({
         ...r,
         messages: (r.messages || [])
@@ -108,10 +106,13 @@ const stripHtml = (html: string) => {
     .replace(/<\/p>/gi, '\n')
     .replace(/<li[^>]*>/gi, '- ')
     .replace(/<\/li>/gi, '\n');
+
   // 태그가 아닌 꺾쇠: <제1234호, 2023.7.19> → 〈제1234호, 2023.7.19〉
   s = s.replace(/<([^a-zA-Z\/!][^>]*)>/g, '〈$1〉');
+
   // 진짜 태그 제거
   s = s.replace(/<[^>]+>/g, '');
+
   // 엔티티/개행 정리
   return s
     .replace(/&nbsp;/g, ' ')
@@ -136,9 +137,7 @@ const normalize = (t: string) =>
 // ✅ 공통 URL 정리 유틸
 const normalizeUrl = (u: string) => {
   if (!u) return u;
-  // 꼬리문자 잘라내기
   let clean = u.replace(/[)\]\u3009>.,]+$/u, '');
-  // 특정 도메인은 https로 승격
   try {
     const url = new URL(clean);
     if (
@@ -197,25 +196,25 @@ const findFirstMatchIndex = (text: string, res: RegExp[]) => {
   return best;
 };
 
-/* ── 근거/서식 섹션 추출 ── */
+/* ── 근거 섹션 추출 ── */
 const cutEvidenceBlock = (text: string) => {
   // 0) 파싱 범위: 🔗 이전까지만
   const iconIdx = text.indexOf('🔗');
   const scope = iconIdx >= 0 ? text.slice(0, iconIdx) : text;
 
-  // 1) 헤더 후보(기존 2) 근거 + 신규 **근거** + 신규 ##/### 근거)
+  // 1) 헤더 후보
   const headerRes: RegExp[] = [
-    /^\s*(?:2\)|2\.|②)\s*근거\s*$/m,                // 기존
-    /^\s*(?:\*\*+)?\s*근거\s*(?:\*\*+)?\s*$/m,      // **근거**
-    /^\s*#{2,6}\s*근거\s*$/m,                       // ## 근거 / ### 근거
+    /^\s*(?:2\)|2\.|②)\s*근거\s*$/m,
+    /^\s*(?:\*\*+)?\s*근거\s*(?:\*\*+)?\s*$/m,
+    /^\s*#{2,6}\s*근거\s*$/m,
   ];
 
   const start = findFirstMatchIndex(scope, headerRes);
   if (start < 0) return '';
 
-  // 2) 근거 블록의 끝(다음 섹션 헤더가 나오면 거기서 끊기)
   const tail = scope.slice(start);
 
+  // 2) 다음 섹션 헤더를 만나면 끊기
   const endRes: RegExp[] = [
     /^\s*(?:3\)|3\.|③)\s*\S+/m,
     /^\s*(?:4\)|4\.|④)\s*\S+/m,
@@ -235,36 +234,25 @@ const cutEvidenceBlock = (text: string) => {
   return tail.slice(0, end).trim();
 };
 
-
-// "관련 별표/서식"이 있으면 그걸 우선 쓰고,
-// 없으면 "참고 기사 목록"을 forms 블록으로 사용한다.
+/* ── 서식 섹션 추출 ── */
 const cutFormsBlock = (text: string) => {
-  // 1) 기존: 관련 별표/서식 섹션
   const headerRe1 = /관련\s*(?:별표(?:\s*\/?\s*서식)?|서식)(?:\s*링크)?/iu;
   const nextRe = /\n\s*(?:###|답변\b|근거\b|\d+\))/iu;
 
   const block1 = cutSection(text, headerRe1, nextRe);
-  if (block1 && block1.trim().length > 0) {
-    return block1;
-  }
+  if (block1 && block1.trim().length > 0) return block1;
 
-  // 2) 신규: 참고 기사 목록 섹션 (요즘 나온 답변 형태)
   const headerRe2 = /참고\s*기사\s*목록/iu;
-  const block2 = cutSection(text, headerRe2, nextRe);
-  return block2;
+  return cutSection(text, headerRe2, nextRe);
 };
 
 /* ── 마크다운/불릿 장식 제거 ── */
 const stripMdDecorations = (s: string) => {
   return (s || '')
     .trim()
-    // 앞쪽 불릿/번호 제거 (*, -, •, 1), 1. 등)
     .replace(/^\s*(?:[-*•]|(?:\d+[\)\.]))\s+/, '')
-    // 굵게 **...** 제거(내용은 유지)
     .replace(/\*\*(.*?)\*\*/g, '$1')
-    // 인라인 코드 `...` 제거(내용은 유지)
     .replace(/`([^`]+)`/g, '$1')
-    // 남아있는 ** 토큰 제거(비정형 대비)
     .replace(/\*\*/g, '')
     .trim();
 };
@@ -273,23 +261,19 @@ const stripMdDecorations = (s: string) => {
 const parseEvidenceLine = (raw: string): EvidenceItem | null => {
   const url = urlOf(raw);
   const base0 = url ? raw.replace(url, '').trim() : raw;
-
-  // ✅ 불릿/마크다운 제거 후 파싱
   const base = stripMdDecorations(base0);
 
-  // “〔법〕 …” 또는 “[법] …”
   const lawM = base.match(/(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$)/);
   const { left, right } = splitByColon(base);
 
   if (lawM) {
     const law = lawM[1].trim();
-    const afterLaw = left.slice((lawM.index ?? 0) + law.length).trim(); // 제10조(…)
+    const afterLaw = left.slice((lawM.index ?? 0) + law.length).trim();
     const title = cleanTitle(afterLaw ? `${law} ${afterLaw}` : law);
     const snippet = right?.trim() || undefined;
     return { title, href: url, snippet };
   }
 
-  // 그 외(제n조 …)
   const title = cleanTitle(left);
   const snippet = right?.trim() || undefined;
   return title ? { title, href: url, snippet } : null;
@@ -301,10 +285,8 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
     .map((x) => x.trim())
     .filter(Boolean);
 
-  // ✅ 라인 정규화(불릿/마크다운 제거)
   const normalized = lines.map(stripMdDecorations).filter(Boolean);
 
-  // ✅ 후보 라인: 〔…〕 / […] / 제n조 / 부칙
   const candidates = normalized.filter((x) =>
     /^(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$|제\d+조|부칙)/.test(x),
   );
@@ -315,7 +297,6 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
     if (item?.title) items.push(item);
   }
 
-  // 후보가 0이면 fallback
   if (items.length === 0) {
     const scan = stripMdDecorations(block);
     const fallback = scan.match(/(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$).+?(?::\s*.+)?/g) || [];
@@ -339,29 +320,24 @@ const parseFormsList = (block: string): EvidenceItem[] => {
   let cur: EvidenceItem | null = null;
 
   for (const ln of lines) {
-    // 0) URL-only 라인
     const onlyUrl = ln.match(/^-?\s*(https?:\/\/[^\s)"'>\]]+)/i);
     if (onlyUrl) {
       if (cur) cur.href = normalizeUrl(onlyUrl[1]);
       continue;
     }
 
-    // 1) 번호 헤더만 새 아이템으로
     const head = ln.match(/^(\d+[.)])\s*(.+)$/);
     if (head) {
       if (cur) items.push(cur);
 
       const inlineUrl = urlOf(head[2]);
-      const titleOnly = inlineUrl
-        ? head[2].replace(inlineUrl, '').trim()
-        : head[2];
+      const titleOnly = inlineUrl ? head[2].replace(inlineUrl, '').trim() : head[2];
 
       cur = { title: cleanTitle(titleOnly) };
       if (inlineUrl) cur.href = normalizeUrl(inlineUrl);
       continue;
     }
 
-    // 2) 일반 텍스트 라인
     if (cur && !/^관련\s*(?:별표|서식)/.test(ln)) {
       const inlineUrl = urlOf(ln);
       const textOnly = inlineUrl ? ln.replace(inlineUrl, '').trim() : ln;
@@ -422,53 +398,6 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
 };
 
 /* =========================
- * ✅ Sidebar title prefix helpers
- * ========================= */
-type SidebarPrefix =
-  | '위험성평가'
-  | '사고사례'
-  | '문서검토'
-  | '문서생성'
-  | '교육자료'
-  | '안전뉴스'
-  | '입법예고';
-
-const formatYmdSlash = (d?: Date | number) => {
-  const dt = typeof d === 'number' ? new Date(d) : d ?? new Date();
-  const yyyy = String(dt.getFullYear());
-  const mm = String(dt.getMonth() + 1).padStart(2, '0');
-  const dd = String(dt.getDate()).padStart(2, '0');
-  return `${yyyy}/${mm}/${dd}`;
-};
-
-// 문서명은 슬래시/특수문자 최소한 방어
-const sanitizeDocName = (s?: string | null) =>
-  (s ?? '').replace(/[\\/:*?"<>|]/g, '').trim();
-
-// ✅ 네 규칙대로 타이틀 만들기
-export const buildPrefixedTitle = (args: {
-  prefix: SidebarPrefix;
-  date?: Date | number;          // 기본 오늘
-  docName?: string | null;       // 문서검토/문서생성에 사용
-}) => {
-  const p = `[${args.prefix}]`;
-  const day = formatYmdSlash(args.date);
-
-  if (args.prefix === '사고사례') {
-    return `${p}`; // ✅ [사고사례] 만
-  }
-
-  if (args.prefix === '문서검토' || args.prefix === '문서생성') {
-    const dn = sanitizeDocName(args.docName);
-    // docName이 없으면 날짜만이라도 붙이기(깨짐 방지)
-    return dn ? `${p}${dn}_${day}` : `${p}${day}`;
-  }
-
-  // 위험성평가 / 교육자료 / 안전뉴스 / 입법예고 등: [prefix]YYYY/MM/DD
-  return `${p}${day}`;
-};
-
-/* =========================
  * Store
  * ========================= */
 interface ChatStore {
@@ -486,10 +415,10 @@ interface ChatStore {
   setActiveRoom: (id: string) => void;
   deleteRoom: (id: string) => void;
 
-  // 기존: 비어있을 때만
+  // ✅ 타이틀: 비어있을 때만
   setActiveRoomTitleIfEmpty: (title: string) => void;
 
-  // ✅ 추가: 항상 덮어쓰기(QuickAction prefix 타이틀용)
+  // ✅ 타이틀: 무조건 덮어쓰기(QuickAction용)
   setActiveRoomTitle: (title: string) => void;
 
   appendToActive: (msg: ChatMessage) => void;
@@ -523,36 +452,40 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ messages: msgs });
     const { activeRoomId, rooms } = get();
     if (!activeRoomId) return;
+
     const idx = rooms.findIndex((r) => r.id === activeRoomId);
     if (idx < 0) return;
+
     const next = [...rooms];
     next[idx] = {
       ...next[idx],
       messages: msgs.slice(-MAX_MSG_PER_ROOM),
     };
+
     set({ rooms: next });
     get().saveToCookies();
   },
   addMessage: (msg) =>
     set((state) => {
       const last = state.messages[state.messages.length - 1];
-      if (last && last.role === msg.role && last.content === msg.content)
-        return state;
+      if (last && last.role === msg.role && last.content === msg.content) return state;
       return { messages: [...state.messages, msg] };
     }),
   clearMessages: () => {
     set({ messages: [] });
     const { activeRoomId, rooms } = get();
     if (!activeRoomId) return;
+
     const idx = rooms.findIndex((r) => r.id === activeRoomId);
     if (idx < 0) return;
+
     const next = [...rooms];
     next[idx] = { ...next[idx], messages: [] };
+
     set({ rooms: next });
     get().saveToCookies();
   },
 
-  // 마지막 assistant 말풍선의 content만 교체
   updateLastAssistant: (content: string) =>
     set((state) => {
       const msgs = [...state.messages];
@@ -582,11 +515,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         ...r,
         messages: Array.isArray(r.messages) ? r.messages : [],
       }));
+
       const activeRoomId = stored.activeRoomId || rooms[0]?.id || null;
 
-      // ⚠️ 참고: 원래 주석 처리돼 있는데,
-      // 화면 안정성 위해 activeRoomId/messages를 세팅하는게 보통은 맞음.
-      // (원치 않으면 그대로 둬도 됨)
       set({
         rooms,
         activeRoomId,
@@ -598,44 +529,42 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       console.warn('[loadFromCookies] failed:', e);
     }
   },
+
   saveToCookies: () => {
     const { rooms, activeRoomId, collapsed } = get();
-    // 1) 큰 데이터는 localStorage
     storage.set({ rooms, activeRoomId });
-    // 2) 작은 플래그만 쿠키
     try {
-      Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', {
-        expires: 365,
-      });
+      Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', { expires: 365 });
     } catch {}
   },
+
   createRoom: () => {
     const id = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const room: Room = {
-      id,
-      title: '새 대화',
-      createdAt: Date.now(),
-      messages: [],
-    };
+    const room: Room = { id, title: '새 대화', createdAt: Date.now(), messages: [] };
+
     set((s) => ({
       rooms: [room, ...s.rooms],
       activeRoomId: id,
       messages: [],
     }));
+
     get().saveToCookies();
     return id;
   },
+
   setActiveRoom: (id) => {
     const { rooms } = get();
     const r = rooms.find((x) => x.id === id);
     set({ activeRoomId: id, messages: r?.messages || [] });
     get().saveToCookies();
   },
+
   deleteRoom: (id) => {
     set((s) => {
       const filtered = s.rooms.filter((r) => r.id !== id);
       const nextActive =
         s.activeRoomId === id ? filtered[0]?.id ?? null : s.activeRoomId;
+
       return {
         rooms: filtered,
         activeRoomId: nextActive,
@@ -647,33 +576,31 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     get().saveToCookies();
   },
 
+  // ✅ 비어있을 때만
   setActiveRoomTitleIfEmpty: (title) => {
     set((s) => {
       const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
       if (idx < 0) return s;
+
       const r = s.rooms[idx];
       if (r.title && r.title !== '새 대화') return s;
+
       const next = [...s.rooms];
-      next[idx] = {
-        ...r,
-        title: title.trim().slice(0, 50) || '새 대화',
-      };
+      next[idx] = { ...r, title: title.trim().slice(0, 50) || '새 대화' };
       return { ...s, rooms: next };
     });
     get().saveToCookies();
   },
 
-  // ✅ 추가: prefix 타이틀은 “무조건” 업데이트해야 하므로 강제 세터 필요
+  // ✅ 무조건 덮어쓰기(QuickAction prefix 타이틀용)
   setActiveRoomTitle: (title) => {
     set((s) => {
       const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
       if (idx < 0) return s;
+
       const r = s.rooms[idx];
       const next = [...s.rooms];
-      next[idx] = {
-        ...r,
-        title: title.trim().slice(0, 50) || '새 대화',
-      };
+      next[idx] = { ...r, title: title.trim().slice(0, 50) || '새 대화' };
       return { ...s, rooms: next };
     });
     get().saveToCookies();
@@ -682,22 +609,27 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   appendToActive: (msg) => {
     set((s) => {
       if (!s.activeRoomId) return s;
+
       const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
       if (idx < 0) return s;
+
       const r = s.rooms[idx];
       const msgs = [...r.messages, msg].slice(-MAX_MSG_PER_ROOM);
+
       const next = [...s.rooms];
       next[idx] = { ...r, messages: msgs };
+
       return { ...s, rooms: next };
     });
     get().saveToCookies();
   },
+
   getActiveRoom: () => {
     const { rooms, activeRoomId } = get();
     return rooms.find((r) => r.id === activeRoomId) ?? null;
   },
 
-  /* 패널/데이터 */
+  /* 사이드바 상태 */
   collapsed: false,
   setCollapsed: (v) => {
     set({ collapsed: v });
@@ -706,15 +638,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   sidebarMobileOpen: false,
   setSidebarMobileOpen: (v) => set({ sidebarMobileOpen: v }),
 
+  /* 우측 패널 */
   rightOpen: false,
   setRightOpen: (v) => set({ rightOpen: v }),
   toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
-  openRightPanel: (v: boolean) => set({ rightOpen: v }),
+  openRightPanel: (v) => set({ rightOpen: v }),
 
   rightData: null,
   setRightData: (d) => set({ rightData: d }),
 
-  // 🔥 여기서 모드별로 분기 처리
   openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => {
     if (!html) {
       console.warn('[openRightFromHtml] empty html');
@@ -724,7 +656,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const mode: RightPanelMode = opts?.mode ?? 'evidence';
     console.log('[openRightFromHtml] mode =', mode);
 
-    // 🔹 뉴스 / 입법예고 / 사고사례 모드 → 파서 안 타고 그대로 newsHtml에 싣기
+    // 뉴스/입법예고/사고사례 → 그대로 싣기
     if (mode === 'news' || mode === 'lawNotice' || mode === 'accident') {
       const data: RightPanelData = {
         mode,
@@ -737,7 +669,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return;
     }
 
-    // 🔹 기본(evidence) 모드 → 기존 근거/서식 파서 사용
+    // evidence → 파싱
     const parsed = parseRightDataFromHtml(html);
     const data: RightPanelData = {
       ...parsed,
@@ -747,7 +679,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ rightData: data, rightOpen: true });
   },
 
-  // ✅ 로그인 모달 전역 상태
+  /* 로그인 모달 */
   showLoginModal: false,
-  setShowLoginModal: (open: boolean) => set({ showLoginModal: open }),
+  setShowLoginModal: (open) => set({ showLoginModal: open }),
 }));
