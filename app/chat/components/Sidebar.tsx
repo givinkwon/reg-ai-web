@@ -24,10 +24,9 @@ export default function Sidebar() {
 
   const toggleCollapse = () => setCollapsed(!collapsed);
 
-  // ✅ 홈 클릭: "처음 chat 진입"처럼 /chat으로 이동 + 새 대화 생성
   const handleHomeClick = () => {
-    router.push('/chat');
-    createRoom();
+    window.location.href = '/chat';
+    // 또는 window.location.reload();
   };
 
   return (

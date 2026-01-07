@@ -7,6 +7,9 @@ import AddDetailTaskModal from '../ui/AddDetailTaskModal';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 
+// ✅ 애니메이션 로딩 모달
+import AnimatedLoadingModal from '../ui/AnimatedLoadingModal';
+
 type Props = {
   draft: RiskAssessmentDraft;
   setDraft: React.Dispatch<React.SetStateAction<RiskAssessmentDraft>>;
@@ -193,6 +196,16 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
     // 같은 scope에서 중복 체크 방지
     if (cacheCheckedRef.current === scope) return;
+
+    // ✅ scope가 바뀌면 화면 목록을 비워서 로딩 모달 조건이 성립하게(=recommended 비어있으면 로딩)
+    //    (캐시가 있으면 바로 채워짐)
+    if (isMinorSwitch || isScopeSwitch) {
+      setRecommended([]);
+      setRecoError(null);
+      setRecoLoading(false);
+      autoAppliedRef.current = null;
+    }
+
     cacheCheckedRef.current = scope;
 
     const key = cacheKey(userEmail, currentMinor);
@@ -207,6 +220,9 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         if (!shouldOverwrite) return prev;
         return { ...prev, tasks: cached.tasks };
       });
+
+      // ✅ tasks가 복원된 경우에만 “이미 적용됨”으로 마킹 (여기서만 autoAppliedRef 세팅)
+      autoAppliedRef.current = scope;
     }
 
     // ✅ 2) 목록 복원
@@ -218,9 +234,6 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     setRecommended(Array.from(new Set(cachedReco.map(norm).filter(Boolean))));
     setRecoError(null);
     setRecoLoading(false);
-
-    // ✅ 캐시가 존재하는 scope에서는 auto-merge 재실행 방지
-    autoAppliedRef.current = scope;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minorCategory, user?.email, setDraft]);
 
@@ -317,6 +330,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
   // =========================
   // ✅ 4) 저장: tasks / recommended 바뀌면 캐시에 기록
+  //    - recommended만 있고 tasks가 아직 비어있는 “중간 상태”는 저장하지 않음(깨진 캐시 방지)
   // =========================
   useEffect(() => {
     if (!minorCategory) return;
@@ -324,6 +338,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const currentMinor = norm(minorCategory);
     const userEmail = user?.email ?? null;
     const key = cacheKey(userEmail, currentMinor);
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
 
     const tasksToSave = draft.tasks ?? [];
     const recoToSave =
@@ -332,6 +347,9 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         : Array.from(new Set(tasksToSave.map((t) => norm(t.title)).filter(Boolean)));
 
     if (tasksToSave.length === 0 && recoToSave.length === 0) return;
+
+    // ✅ recommended는 있는데 아직 auto-merge 전이면(=tasks 0 && autoAppliedRef !== scope) 저장 스킵
+    if (recoToSave.length > 0 && tasksToSave.length === 0 && autoAppliedRef.current !== scope) return;
 
     const payload = {
       v: 2 as const,
@@ -351,8 +369,21 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     return Array.from(new Set(draft.tasks.map((t) => norm(t.title)).filter(Boolean)));
   }, [recommended, draft.tasks]);
 
+  // ✅ 요구사항 그대로:
+  // - recommended(=표시할 목록)가 비어있으면 로딩창 ON
+  // - 캐시든 API든 채워지면 OFF
+  // - 단, 에러면 로딩창 OFF (에러 메시지 보여야 함)
+  const showLoadingModal = !!minorCategory && !recoError && displayList.length === 0;
+
   return (
     <div className={s.wrap}>
+      {/* ✅ recommended가 비어있으면 로딩 모달 */}
+      <AnimatedLoadingModal
+        open={showLoadingModal}
+        title="작업 목록을 불러오는 중…"
+        message="소분류 기준 세부작업을 불러와 자동으로 선택하고 있습니다."
+      />
+
       <div className={s.sectionHead}>
         <div>
           <div className={s.sectionTitle}>사전 준비 - 작업 파악</div>
