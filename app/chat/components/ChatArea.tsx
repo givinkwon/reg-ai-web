@@ -1841,108 +1841,127 @@ export default function ChatArea() {
   
   const [noticeToast, setNoticeToast] = useState<string | null>(null);
 
-  const showNotice = (msg: string) => {
-    setNoticeToast(msg);
-    window.setTimeout(() => setNoticeToast(null), 2500);
+  const formatToday = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}/${mm}/${dd}`;
   };
 
-  const handleQuickActionClick = (action: QuickAction) => {
+  const ensureRoomExists = () => {
+    const st = useChatStore.getState?.();
+    if (!st?.activeRoomId) {
+      st?.createRoom?.(); // createRoom이 activeRoomId까지 세팅한다고 가정
+    }
+  };
+
+  const setSidebarTitle = (title: string) => {
+    const st = useChatStore.getState?.();
+    const rid = st?.activeRoomId;
+    if (!rid) return;
+    if (st?.updateRoomTitle) st.updateRoomTitle(rid, title);
+  };
+
+ const handleQuickActionClick = (action: QuickAction) => {
     if (menuLoading) return;
+
     // ✅ 문서 모드 초기화
     setDocMode(null);
     setReviewDoc(null);
 
-    if (action.taskType) {
-      setSelectedTask(action.taskType);
-    }
+    if (action.taskType) setSelectedTask(action.taskType);
 
-    // ✅ 위험성평가 기능 준비중 알림
+    const today = formatToday();
+
+    const focusInput = () => {
+      setInput('');
+      const el = document.querySelector<HTMLInputElement>('.chat-input');
+      if (el) el.focus();
+    };
+
+    // ✅ 위험성평가: [위험성평가]YYYY/MM/DD
     if (action.id === 'risk_assessment') {
+      ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(`[위험성평가]${today}`));
+
       setShowRiskWizard(true);
       return;
     }
 
+    // ✅ 안전뉴스: [안전뉴스]
     if (action.id === 'today_accident') {
       setActiveHintTask(null);
       setActiveHints([]);
+
+      ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(`[안전뉴스]${today}`)); // 날짜 붙일지 말지는 취향인데, 너 규칙엔 날짜 언급 없어서 필요 없으면 제거해도 됨
+
       fetchWeeklySafetyNews();
       return;
     }
 
+    // ✅ 입법예고: [입법예고]
     if (action.id === 'notice_summary') {
       setActiveHintTask(null);
       setActiveHints([]);
+
+      ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(`[입법예고]${today}`)); // 위와 동일(날짜 원치 않으면 제거)
+
       fetchLawNoticeSummary();
       return;
     }
 
+    // ✅ 사고사례: [사고사례]
     if (action.id === 'accident_search') {
-      const intro: ChatMessage = {
-        role: 'assistant',
-        content: ACCIDENT_INTRO_TEXT,
-      };
+      ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(`[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`로만
 
-      if (messages.length === 0) {
-        setMessages([intro]);
-      } else {
-        setMessages([...messages, intro]);
-      }
+      const intro: ChatMessage = { role: 'assistant', content: ACCIDENT_INTRO_TEXT };
+      setMessages(messages.length === 0 ? [intro] : [...messages, intro]);
 
       setActiveHintTask('accident_search');
       setActiveHints(pickRandomHints(ACCIDENT_HINTS, 3));
 
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
-
+      focusInput();
       return;
     }
 
+    // ✅ 문서검토 모드 진입: 제목은 “문서 선택” 시점에 세팅해야 함(아래 3번에서 처리)
     if (action.id === 'doc_review') {
       setActiveHintTask(null);
       setActiveHints([]);
       setDocMode('review');
-
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
-
+      focusInput();
       return;
     }
 
+    // ✅ 문서생성 모드 진입: 제목은 “문서 선택” 시점에 세팅해야 함(아래 3번에서 처리)
     if (action.id === 'doc_create') {
       setActiveHintTask(null);
       setActiveHints([]);
       setDocMode('create');
-
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
+      focusInput();
       return;
     }
 
-    // ✅ 여기 새로 추가: "교육 자료 생성"은 패널 모드로
+    // ✅ 교육자료: [교육자료]YYYY/MM/DD
     if (action.id === 'edu_material') {
-      // 혹시 taskType 안 넣어놨으면 강제로라도 세팅
-      setSelectedTask('edu_material');
+      ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(`[교육자료]${today}`));
 
+      setSelectedTask('edu_material');
       setActiveHintTask(null);
       setActiveHints([]);
-
-      // docMode는 문서 생성/검토용이니까 굳이 안 써도 되지만 초기화는 유지
       setDocMode(null);
 
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
+      focusInput();
       return;
     }
 
-    // ✅ 나머지: 법령 / 가이드 해석용 기존 인트로 + 힌트 플로우
-    if (
-      action.id === 'law_interpret' ||
-      action.id === 'guideline_interpret'
-    ) {
+    // ✅ 나머지: 기존 로직 유지
+    if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
       let hintTask: HintTask;
       let introText: string;
       let pool: string[];
@@ -1957,28 +1976,16 @@ export default function ChatArea() {
         pool = GUIDELINE_HINTS;
       }
 
-      const intro: ChatMessage = {
-        role: 'assistant',
-        content: introText,
-      };
-
-      if (messages.length === 0) {
-        setMessages([intro]);
-      } else {
-        setMessages([...messages, intro]);
-      }
+      const intro: ChatMessage = { role: 'assistant', content: introText };
+      setMessages(messages.length === 0 ? [intro] : [...messages, intro]);
 
       setActiveHints(pickRandomHints(pool, 3));
       setActiveHintTask(hintTask);
 
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
-
+      focusInput();
       return;
     }
 
-    // 기본 동작
     setActiveHintTask(null);
     setActiveHints([]);
 
@@ -2687,11 +2694,16 @@ export default function ChatArea() {
                   <MakeSafetyDocs
                     mode={docMode === 'review' ? 'review' : 'create'}
                     onSelectDoc={(category, doc) => {
+                      ensureRoomExists();
+
+                      const today = formatToday();
+                      const label = (doc.label || doc.id || '문서').replace(/\s+/g, '');
+                      const prefix = docMode === 'review' ? '[문서검토]' : '[문서생성]';
+                      queueMicrotask(() => setSidebarTitle(`${prefix}${label}_${today}`));
+
                       if (docMode === 'create') {
-                        // ✅ 생성 모드: 선택 → 바로 프롬프트 안내
                         handleSelectSafetyDoc(category, doc);
                       } else if (docMode === 'review') {
-                        // ✅ 검토 모드: 어떤 문서인지 상태만 저장
                         setReviewDoc({ category, doc });
                       }
                     }}
