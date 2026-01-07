@@ -1863,7 +1863,7 @@ export default function ChatArea() {
     if (st?.updateRoomTitle) st.updateRoomTitle(rid, title);
   };
 
- const handleQuickActionClick = (action: QuickAction) => {
+  const handleQuickActionClick = (action: QuickAction) => {
     if (menuLoading) return;
 
     // ✅ 문서 모드 초기화
@@ -1889,34 +1889,34 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 안전뉴스: [안전뉴스]
+    // ✅ 안전뉴스: [안전뉴스]YYYY/MM/DD
     if (action.id === 'today_accident') {
       setActiveHintTask(null);
       setActiveHints([]);
 
       ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[안전뉴스]${today}`)); // 날짜 붙일지 말지는 취향인데, 너 규칙엔 날짜 언급 없어서 필요 없으면 제거해도 됨
+      queueMicrotask(() => setSidebarTitle(`[안전뉴스]${today}`));
 
       fetchWeeklySafetyNews();
       return;
     }
 
-    // ✅ 입법예고: [입법예고]
+    // ✅ 입법예고: [입법예고]YYYY/MM/DD
     if (action.id === 'notice_summary') {
       setActiveHintTask(null);
       setActiveHints([]);
 
       ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[입법예고]${today}`)); // 위와 동일(날짜 원치 않으면 제거)
+      queueMicrotask(() => setSidebarTitle(`[입법예고]${today}`));
 
       fetchLawNoticeSummary();
       return;
     }
 
-    // ✅ 사고사례: [사고사례]
+    // ✅ 사고사례: [사고사례]YYYY/MM/DD  (원하면 날짜 제거 가능)
     if (action.id === 'accident_search') {
       ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`로만
+      queueMicrotask(() => setSidebarTitle(`[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`로 변경
 
       const intro: ChatMessage = { role: 'assistant', content: ACCIDENT_INTRO_TEXT };
       setMessages(messages.length === 0 ? [intro] : [...messages, intro]);
@@ -1928,7 +1928,7 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 문서검토 모드 진입: 제목은 “문서 선택” 시점에 세팅해야 함(아래 3번에서 처리)
+    // ✅ 문서검토 모드 진입: 제목은 “문서 선택” 시점에 세팅
     if (action.id === 'doc_review') {
       setActiveHintTask(null);
       setActiveHints([]);
@@ -1937,7 +1937,7 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 문서생성 모드 진입: 제목은 “문서 선택” 시점에 세팅해야 함(아래 3번에서 처리)
+    // ✅ 문서생성 모드 진입: 제목은 “문서 선택” 시점에 세팅
     if (action.id === 'doc_create') {
       setActiveHintTask(null);
       setActiveHints([]);
@@ -1960,7 +1960,7 @@ export default function ChatArea() {
       return;
     }
 
-    // ✅ 나머지: 기존 로직 유지
+    // ✅ 나머지: 기존 로직 유지 (법령/가이드 해석)
     if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
       let hintTask: HintTask;
       let introText: string;
@@ -1986,6 +1986,7 @@ export default function ChatArea() {
       return;
     }
 
+    // 기본 동작
     setActiveHintTask(null);
     setActiveHints([]);
 
