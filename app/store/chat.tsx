@@ -263,7 +263,9 @@ const parseEvidenceLine = (raw: string): EvidenceItem | null => {
   const base0 = url ? raw.replace(url, '').trim() : raw;
   const base = stripMdDecorations(base0);
 
-  const lawM = base.match(/(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$)/);
+  // ✅ (버그 방지) 이상한 LaTeX 잔재 패턴 제거하고, 법령표시 〔...〕만 우선 지원
+  const lawM = base.match(/(〔.+?〕)/);
+
   const { left, right } = splitByColon(base);
 
   if (lawM) {
@@ -288,7 +290,7 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
   const normalized = lines.map(stripMdDecorations).filter(Boolean);
 
   const candidates = normalized.filter((x) =>
-    /^(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$|제\d+조|부칙)/.test(x),
+    /^(〔.+?〕|제\d+조|부칙)/.test(x),
   );
 
   const items: EvidenceItem[] = [];
@@ -299,9 +301,7 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
 
   if (items.length === 0) {
     const scan = stripMdDecorations(block);
-    const fallback =
-      scan.match(/(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$).+?(?::\s*.+)?/g) ||
-      [];
+    const fallback = scan.match(/(〔.+?〕).+?(?::\s*.+)?/g) || [];
     for (const raw of fallback) {
       const item = parseEvidenceLine(raw);
       if (item?.title) items.push(item);
@@ -403,7 +403,6 @@ type SetMessagesArg =
   | ChatMessage[]
   | ((prev: ChatMessage[]) => ChatMessage[]);
 
-
 /* =========================
  * Store
  * ========================= */
@@ -422,13 +421,8 @@ interface ChatStore {
   setActiveRoom: (id: string) => void;
   deleteRoom: (id: string) => void;
 
-  // ✅ 추가: 특정 roomId의 title 갱신 (ChatArea에서 roomId로 호출하는 용도)
   updateRoomTitle: (roomId: string, title: string) => void;
-
-  // ✅ 타이틀: 비어있을 때만
   setActiveRoomTitleIfEmpty: (title: string) => void;
-
-  // ✅ 타이틀: 무조건 덮어쓰기(QuickAction용)
   setActiveRoomTitle: (title: string) => void;
 
   appendToActive: (msg: ChatMessage) => void;
@@ -447,270 +441,292 @@ interface ChatStore {
   rightData: RightPanelData | null;
   setRightData: (d: RightPanelData | null) => void;
 
-  // ✅ 여기서 파서를 호출하고 패널을 띄움
   openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => void;
 
-  // ✅ 로그인 모달 전역 상태
   showLoginModal: boolean;
   setShowLoginModal: (open: boolean) => void;
 }
 
-export const useChatStore = create<ChatStore>((set, get) => ({
-  /* 메시지 */
-  messages: [],
-  setMessages: (arg) => {
-    const prev = get().messages;
-    const next = typeof arg === 'function' ? arg(prev) : arg;
+export const useChatStore = create<ChatStore>((set, get) => {
+  // ✅ 스트리밍 덮어쓰기(saveToCookies) 과다 호출 방지용
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleSave = (delayMs = 350) => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveTimer = null;
+      get().saveToCookies();
+    }, delayMs);
+  };
 
-    set({ messages: next });
+  type SaveMode = 'immediate' | 'debounced' | 'none';
 
-    const { activeRoomId, rooms } = get();
-    if (!activeRoomId) return;
+  // ✅ 핵심: messages + active room messages를 항상 함께 갱신
+  const mutateActiveMessages = (
+    updater: (prev: ChatMessage[]) => ChatMessage[],
+    opts?: { saveMode?: SaveMode },
+  ) => {
+    const saveMode: SaveMode = opts?.saveMode ?? 'immediate';
 
-    const idx = rooms.findIndex((r) => r.id === activeRoomId);
-    if (idx < 0) return;
-
-    const updatedRooms = [...rooms];
-    updatedRooms[idx] = {
-      ...updatedRooms[idx],
-      messages: next.slice(-MAX_MSG_PER_ROOM),
-    };
-
-    set({ rooms: updatedRooms });
-    get().saveToCookies();
-  },
-  addMessage: (msg) =>
-    set((state) => {
-      const last = state.messages[state.messages.length - 1];
-      if (last && last.role === msg.role && last.content === msg.content) return state;
-      return { messages: [...state.messages, msg] };
-    }),
-  clearMessages: () => {
-    set({ messages: [] });
-    const { activeRoomId, rooms } = get();
-    if (!activeRoomId) return;
-
-    const idx = rooms.findIndex((r) => r.id === activeRoomId);
-    if (idx < 0) return;
-
-    const next = [...rooms];
-    next[idx] = { ...next[idx], messages: [] };
-
-    set({ rooms: next });
-    get().saveToCookies();
-  },
-
-  updateLastAssistant: (content: string) =>
-    set((state) => {
-      const msgs = [...state.messages];
-      for (let i = msgs.length - 1; i >= 0; i--) {
-        if (msgs[i].role === 'assistant') {
-          msgs[i] = { ...msgs[i], content };
-          break;
-        }
-      }
-      return { messages: msgs };
-    }),
-
-  /* 방/저장 */
-  rooms: [],
-  activeRoomId: null,
-  loadFromCookies: () => {
-    try {
-      // 1) 작은 플래그는 쿠키에서
-      const collapsed = Cookies.get(COOKIE_COLLAPSE);
-      if (collapsed) set({ collapsed: collapsed === '1' });
-
-      // 2) 방/메시지는 localStorage에서
-      const stored = storage.get();
-      if (!stored) return;
-
-      const rooms = (stored.rooms || []).map((r) => ({
-        ...r,
-        messages: Array.isArray(r.messages) ? r.messages : [],
-      }));
-
-      const activeRoomId = stored.activeRoomId || rooms[0]?.id || null;
-
-      set({
-        rooms,
-        activeRoomId,
-        messages: activeRoomId
-          ? rooms.find((r) => r.id === activeRoomId)?.messages || []
-          : [],
-      });
-    } catch (e) {
-      console.warn('[loadFromCookies] failed:', e);
-    }
-  },
-
-  saveToCookies: () => {
-    const { rooms, activeRoomId, collapsed } = get();
-    storage.set({ rooms, activeRoomId });
-    try {
-      Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', { expires: 365 });
-    } catch {}
-  },
-
-  createRoom: () => {
-    const id = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const room: Room = { id, title: '새 대화', createdAt: Date.now(), messages: [] };
-
-    set((s) => ({
-      rooms: [room, ...s.rooms],
-      activeRoomId: id,
-      messages: [],
-    }));
-
-    get().saveToCookies();
-    return id;
-  },
-
-  setActiveRoom: (id) => {
-    const { rooms } = get();
-    const r = rooms.find((x) => x.id === id);
-    set({ activeRoomId: id, messages: r?.messages || [] });
-    get().saveToCookies();
-  },
-
-  deleteRoom: (id) => {
     set((s) => {
-      const filtered = s.rooms.filter((r) => r.id !== id);
-      const nextActive =
-        s.activeRoomId === id ? filtered[0]?.id ?? null : s.activeRoomId;
+      const nextMessages = updater(s.messages);
+
+      // active room이 없으면 messages만 갱신
+      if (!s.activeRoomId) {
+        return { ...s, messages: nextMessages };
+      }
+
+      const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
+      if (idx < 0) {
+        return { ...s, messages: nextMessages };
+      }
+
+      const nextRooms = [...s.rooms];
+      const r = nextRooms[idx];
+
+      nextRooms[idx] = {
+        ...r,
+        messages: nextMessages.slice(-MAX_MSG_PER_ROOM),
+      };
 
       return {
-        rooms: filtered,
-        activeRoomId: nextActive,
-        messages: nextActive
-          ? filtered.find((r) => r.id === nextActive)?.messages || []
-          : [],
+        ...s,
+        messages: nextMessages,
+        rooms: nextRooms,
       };
     });
-    get().saveToCookies();
-  },
 
-  // ✅ 추가: roomId로 title 업데이트 (ChatArea.tsx에서 st.updateRoomTitle(roomId, title) 대응)
-  updateRoomTitle: (roomId, title) => {
-    const nextTitle = title.trim().slice(0, 50) || '새 대화';
+    if (saveMode === 'immediate') get().saveToCookies();
+    else if (saveMode === 'debounced') scheduleSave();
+  };
 
-    set((s) => {
-      const idx = s.rooms.findIndex((r) => r.id === roomId);
-      if (idx < 0) return s;
+  return {
+    /* 메시지 */
+    messages: [],
 
-      const r = s.rooms[idx];
-      const next = [...s.rooms];
-      next[idx] = { ...r, title: nextTitle };
-      return { ...s, rooms: next };
-    });
+    setMessages: (arg) => {
+      mutateActiveMessages((prev) => {
+        const next = typeof arg === 'function' ? arg(prev) : arg;
+        return (next || []).slice(-MAX_MSG_PER_ROOM);
+      });
+    },
 
-    get().saveToCookies();
-  },
+    addMessage: (msg) => {
+      mutateActiveMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last && last.role === msg.role && last.content === msg.content) return prev;
+        return [...prev, msg].slice(-MAX_MSG_PER_ROOM);
+      });
+    },
 
-  // ✅ 비어있을 때만
-  setActiveRoomTitleIfEmpty: (title) => {
-    set((s) => {
-      const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
-      if (idx < 0) return s;
+    clearMessages: () => {
+      mutateActiveMessages(() => []);
+    },
 
-      const r = s.rooms[idx];
-      if (r.title && r.title !== '새 대화') return s;
+    // ✅ 스트리밍 덮어쓰기: room에도 반영 + 저장은 디바운스
+    updateLastAssistant: (content: string) => {
+      mutateActiveMessages(
+        (prev) => {
+          const next = [...prev];
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].role === 'assistant') {
+              next[i] = { ...next[i], content };
+              return next;
+            }
+          }
+          return prev;
+        },
+        { saveMode: 'debounced' },
+      );
+    },
 
-      const next = [...s.rooms];
-      next[idx] = { ...r, title: title.trim().slice(0, 50) || '새 대화' };
-      return { ...s, rooms: next };
-    });
-    get().saveToCookies();
-  },
+    /* 방/저장 */
+    rooms: [],
+    activeRoomId: null,
 
-  // ✅ 무조건 덮어쓰기(QuickAction prefix 타이틀용)
-  setActiveRoomTitle: (title) => {
-    set((s) => {
-      const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
-      if (idx < 0) return s;
+    loadFromCookies: () => {
+      try {
+        // 1) 작은 플래그는 쿠키에서
+        const collapsed = Cookies.get(COOKIE_COLLAPSE);
+        if (collapsed) set({ collapsed: collapsed === '1' });
 
-      const r = s.rooms[idx];
-      const next = [...s.rooms];
-      next[idx] = { ...r, title: title.trim().slice(0, 50) || '새 대화' };
-      return { ...s, rooms: next };
-    });
-    get().saveToCookies();
-  },
+        // 2) 방/메시지는 localStorage에서
+        const stored = storage.get();
+        if (!stored) return;
 
-  appendToActive: (msg) => {
-    set((s) => {
-      if (!s.activeRoomId) return s;
+        const rooms = (stored.rooms || []).map((r) => ({
+          ...r,
+          messages: Array.isArray(r.messages) ? r.messages : [],
+        }));
 
-      const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
-      if (idx < 0) return s;
+        const safeActive =
+          (stored.activeRoomId && rooms.some((r) => r.id === stored.activeRoomId)
+            ? stored.activeRoomId
+            : rooms[0]?.id) ?? null;
 
-      const r = s.rooms[idx];
-      const msgs = [...r.messages, msg].slice(-MAX_MSG_PER_ROOM);
+        set({
+          rooms,
+          activeRoomId: safeActive,
+          messages: safeActive
+            ? rooms.find((r) => r.id === safeActive)?.messages || []
+            : [],
+        });
+      } catch (e) {
+        console.warn('[loadFromCookies] failed:', e);
+      }
+    },
 
-      const next = [...s.rooms];
-      next[idx] = { ...r, messages: msgs };
+    saveToCookies: () => {
+      const { rooms, activeRoomId, collapsed } = get();
+      storage.set({ rooms, activeRoomId });
+      try {
+        Cookies.set(COOKIE_COLLAPSE, collapsed ? '1' : '0', { expires: 365 });
+      } catch {}
+    },
 
-      return { ...s, rooms: next };
-    });
-    get().saveToCookies();
-  },
+    createRoom: () => {
+      const id = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const room: Room = { id, title: '새 대화', createdAt: Date.now(), messages: [] };
 
-  getActiveRoom: () => {
-    const { rooms, activeRoomId } = get();
-    return rooms.find((r) => r.id === activeRoomId) ?? null;
-  },
+      set((s) => ({
+        rooms: [room, ...s.rooms],
+        activeRoomId: id,
+        messages: [],
+      }));
 
-  /* 사이드바 상태 */
-  collapsed: false,
-  setCollapsed: (v) => {
-    set({ collapsed: v });
-    get().saveToCookies();
-  },
-  sidebarMobileOpen: false,
-  setSidebarMobileOpen: (v) => set({ sidebarMobileOpen: v }),
+      get().saveToCookies();
+      return id;
+    },
 
-  /* 우측 패널 */
-  rightOpen: false,
-  setRightOpen: (v) => set({ rightOpen: v }),
-  toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
-  openRightPanel: (v) => set({ rightOpen: v }),
+    setActiveRoom: (id) => {
+      const { rooms } = get();
+      const r = rooms.find((x) => x.id === id);
+      set({ activeRoomId: id, messages: r?.messages || [] });
+      get().saveToCookies();
+    },
 
-  rightData: null,
-  setRightData: (d) => set({ rightData: d }),
+    deleteRoom: (id) => {
+      set((s) => {
+        const filtered = s.rooms.filter((r) => r.id !== id);
+        const nextActive =
+          s.activeRoomId === id ? filtered[0]?.id ?? null : s.activeRoomId;
 
-  openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => {
-    if (!html) {
-      console.warn('[openRightFromHtml] empty html');
-      return;
-    }
+        return {
+          rooms: filtered,
+          activeRoomId: nextActive,
+          messages: nextActive
+            ? filtered.find((r) => r.id === nextActive)?.messages || []
+            : [],
+        };
+      });
+      get().saveToCookies();
+    },
 
-    const mode: RightPanelMode = opts?.mode ?? 'evidence';
-    console.log('[openRightFromHtml] mode =', mode);
+    updateRoomTitle: (roomId, title) => {
+      const nextTitle = title.trim().slice(0, 50) || '새 대화';
 
-    // 뉴스/입법예고/사고사례 → 그대로 싣기
-    if (mode === 'news' || mode === 'lawNotice' || mode === 'accident') {
+      set((s) => {
+        const idx = s.rooms.findIndex((r) => r.id === roomId);
+        if (idx < 0) return s;
+
+        const r = s.rooms[idx];
+        const next = [...s.rooms];
+        next[idx] = { ...r, title: nextTitle };
+        return { ...s, rooms: next };
+      });
+
+      get().saveToCookies();
+    },
+
+    setActiveRoomTitleIfEmpty: (title) => {
+      set((s) => {
+        const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
+        if (idx < 0) return s;
+
+        const r = s.rooms[idx];
+        if (r.title && r.title !== '새 대화') return s;
+
+        const next = [...s.rooms];
+        next[idx] = { ...r, title: title.trim().slice(0, 50) || '새 대화' };
+        return { ...s, rooms: next };
+      });
+      get().saveToCookies();
+    },
+
+    setActiveRoomTitle: (title) => {
+      set((s) => {
+        const idx = s.rooms.findIndex((r) => r.id === s.activeRoomId);
+        if (idx < 0) return s;
+
+        const r = s.rooms[idx];
+        const next = [...s.rooms];
+        next[idx] = { ...r, title: title.trim().slice(0, 50) || '새 대화' };
+        return { ...s, rooms: next };
+      });
+      get().saveToCookies();
+    },
+
+    // ✅ 이제 "rooms만"이 아니라 messages/rooms 둘 다 같이 들어가게 통일
+    appendToActive: (msg) => {
+      get().addMessage(msg);
+    },
+
+    getActiveRoom: () => {
+      const { rooms, activeRoomId } = get();
+      return rooms.find((r) => r.id === activeRoomId) ?? null;
+    },
+
+    /* 사이드바 상태 */
+    collapsed: false,
+    setCollapsed: (v) => {
+      set({ collapsed: v });
+      get().saveToCookies();
+    },
+    sidebarMobileOpen: false,
+    setSidebarMobileOpen: (v) => set({ sidebarMobileOpen: v }),
+
+    /* 우측 패널 */
+    rightOpen: false,
+    setRightOpen: (v) => set({ rightOpen: v }),
+    toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
+    openRightPanel: (v) => set({ rightOpen: v }),
+
+    rightData: null,
+    setRightData: (d) => set({ rightData: d }),
+
+    openRightFromHtml: (html: string, opts?: { mode?: RightPanelMode }) => {
+      if (!html) {
+        console.warn('[openRightFromHtml] empty html');
+        return;
+      }
+
+      const mode: RightPanelMode = opts?.mode ?? 'evidence';
+      console.log('[openRightFromHtml] mode =', mode);
+
+      // 뉴스/입법예고/사고사례 → 그대로 싣기
+      if (mode === 'news' || mode === 'lawNotice' || mode === 'accident') {
+        const data: RightPanelData = {
+          mode,
+          evidence: [],
+          forms: [],
+          rawHtml: html,
+          newsHtml: html,
+        };
+        set({ rightData: data, rightOpen: true });
+        return;
+      }
+
+      // evidence → 파싱
+      const parsed = parseRightDataFromHtml(html);
       const data: RightPanelData = {
-        mode,
-        evidence: [],
-        forms: [],
-        rawHtml: html,
-        newsHtml: html,
+        ...parsed,
+        mode: 'evidence',
+        newsHtml: undefined,
       };
       set({ rightData: data, rightOpen: true });
-      return;
-    }
+    },
 
-    // evidence → 파싱
-    const parsed = parseRightDataFromHtml(html);
-    const data: RightPanelData = {
-      ...parsed,
-      mode: 'evidence',
-      newsHtml: undefined,
-    };
-    set({ rightData: data, rightOpen: true });
-  },
-
-  /* 로그인 모달 */
-  showLoginModal: false,
-  setShowLoginModal: (open) => set({ showLoginModal: open }),
-}));
+    /* 로그인 모달 */
+    showLoginModal: false,
+    setShowLoginModal: (open) => set({ showLoginModal: open }),
+  };
+});
