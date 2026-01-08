@@ -1,0 +1,61 @@
+.wrap {
+  height: 100%;
+  padding: 18px;
+}
+
+.header {
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+}
+
+.desc {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.table thead th {
+  text-align: left;
+  font-size: 12px;
+  opacity: 0.8;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 13px;
+}
+
+.thName { width: 60%; }
+.thDate { width: 20%; }
+.thDl { width: 20%; }
+
+.tdName { font-weight: 600; }
+.tdDate { opacity: 0.85; }
+.tdDl { text-align: left; }
+
+.empty {
+  padding: 18px 14px;
+  opacity: 0.75;
+}

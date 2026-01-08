@@ -8,25 +8,44 @@ import {
   ChevronRight,
   Trash2,
   Home,
+  Folder, // ✅ 추가
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import s from './Sidebar.module.css';
 import { useChatStore } from '../../store/chat';
-import { useRouter } from 'next/navigation';
+import { useUserStore } from '../../store/user'; // ✅ 추가
 
 export default function Sidebar() {
-  const router = useRouter();
+  const user = useUserStore((st) => st.user);
 
   const {
-    rooms, activeRoomId, setActiveRoom, deleteRoom, createRoom,
-    collapsed, setCollapsed,
+    rooms,
+    activeRoomId,
+    setActiveRoom,
+    deleteRoom,
+    createRoom,
+    collapsed,
+    setCollapsed,
+    setMainView,          // ✅ 추가
+    setShowLoginModal,    // ✅ 추가(이미 store에 있음)
   } = useChatStore();
 
   const toggleCollapse = () => setCollapsed(!collapsed);
 
   const handleHomeClick = () => {
+    // 홈 = 채팅 화면으로
+    setMainView('chat');
     window.location.href = '/chat';
-    // 또는 window.location.reload();
+  };
+
+  const handleDocsClick = () => {
+    // ✅ 로그인 아니면 모달
+    if (!user?.email) {
+      alert('로그인해야 내 문서함을 볼 수 있어요.');
+      setShowLoginModal(true);
+      return;
+    }
+    setMainView('docs');
   };
 
   return (
@@ -40,51 +59,28 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* ✅ 접기/펴기 버튼 */}
           <button
             onClick={toggleCollapse}
             className={s.collapseBtn}
             aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
           >
             {collapsed ? (
-              <ChevronRight
-                size={16}
-                strokeWidth={2}
-                color="#fff"
-                style={{
-                  width: 16, height: 16,
-                  minWidth: 16, minHeight: 16,
-                  flex: '0 0 16px',
-                  display: 'block',
-                }}
-              />
+              <ChevronRight size={16} strokeWidth={2} color="#fff" style={{ width: 16, height: 16 }} />
             ) : (
-              <ChevronLeft
-                size={16}
-                strokeWidth={2}
-                color="#fff"
-                style={{
-                  width: 16, height: 16,
-                  minWidth: 16, minHeight: 16,
-                  flex: '0 0 16px',
-                  display: 'block',
-                }}
-              />
+              <ChevronLeft size={16} strokeWidth={2} color="#fff" style={{ width: 16, height: 16 }} />
             )}
           </button>
         </div>
 
         {/* Nav */}
         <div className={s.nav}>
-          {/* ✅ Home 버튼 */}
+          {/* Home */}
           <div
             className={s.navItem}
             role="button"
             tabIndex={0}
             onClick={handleHomeClick}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') handleHomeClick();
-            }}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleHomeClick()}
           >
             <div className={s.navLeft}>
               <Home className={s.iconSm} />
@@ -92,14 +88,19 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* 필요하면 검색도 다시 살리기
-          <div className={s.navItem}>
+          {/* ✅ 문서함 */}
+          <div
+            className={s.navItem}
+            role="button"
+            tabIndex={0}
+            onClick={handleDocsClick}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDocsClick()}
+          >
             <div className={s.navLeft}>
-              <Search className={s.iconSm} />
-              {!collapsed && <span className={s.navText}>채팅 검색</span>}
+              <Folder className={s.iconSm} />
+              {!collapsed && <span className={s.navText}>문서함</span>}
             </div>
           </div>
-          */}
         </div>
       </div>
 
@@ -113,14 +114,20 @@ export default function Sidebar() {
             <div
               key={r.id}
               className={`${s.chatItem} ${active ? s.chatActive : ''}`}
-              onClick={() => setActiveRoom(r.id)}
+              onClick={() => {
+                setMainView('chat'); // ✅ 채팅방 클릭하면 채팅 화면으로 복귀
+                setActiveRoom(r.id);
+              }}
             >
               <MessageSquare className={active ? s.iconSmAccent : s.iconSmMuted} />
               <span className={s.chatText}>{r.title || '새 대화'}</span>
               {active && !collapsed && (
                 <button
                   className={s.deleteBtn}
-                  onClick={(e) => { e.stopPropagation(); deleteRoom(r.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteRoom(r.id);
+                  }}
                   aria-label="대화 삭제"
                 >
                   <Trash2 className={s.iconXsMuted} />
@@ -133,7 +140,13 @@ export default function Sidebar() {
 
       {/* New chat */}
       <div className={s.footer}>
-        <Button className={s.startBtn} onClick={() => createRoom()}>
+        <Button
+          className={s.startBtn}
+          onClick={() => {
+            setMainView('chat'); // ✅ 새 대화도 채팅 화면으로
+            createRoom();
+          }}
+        >
           <Plus className={s.plus} />
           <span className={s.startLabel}>Start new chat</span>
         </Button>

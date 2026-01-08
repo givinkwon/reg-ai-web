@@ -1,0 +1,93 @@
+'use client';
+
+import { Download } from 'lucide-react';
+import { useMemo } from 'react';
+import { Button } from '../../components/ui/button';
+import s from './DocumentVault.module.css';
+
+type DocItem = {
+  id: string;
+  name: string;
+  createdAt: number; // epoch ms
+  // 추후 API 붙이면 downloadUrl 같은 필드로 확장
+};
+
+function formatDate(ts: number) {
+  const d = new Date(ts);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export default function DocumentVault() {
+  // ✅ 임시 더미 데이터 (나중에 API로 교체)
+  const docs = useMemo<DocItem[]>(
+    () => [
+      { id: 'doc_1', name: '위험성평가_2026-01-08.xlsx', createdAt: Date.now() - 1000 * 60 * 60 * 2 },
+      { id: 'doc_2', name: '안전보건관리규정_초안.docx', createdAt: Date.now() - 1000 * 60 * 60 * 24 * 3 },
+      { id: 'doc_3', name: 'TBM_일지_양식.pdf', createdAt: Date.now() - 1000 * 60 * 60 * 24 * 10 },
+    ],
+    [],
+  );
+
+  // ✅ 임시 다운로드: 실제 파일 대신 텍스트를 파일로 내려받게 해둠
+  const handleDownload = (doc: DocItem) => {
+    const content = `임시 다운로드 파일입니다.\n\n문서명: ${doc.name}\n생성일: ${formatDate(doc.createdAt)}\nID: ${doc.id}\n\n(추후 API 연결 시 실제 파일로 대체)`;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.name.replace(/\.(xlsx|docx|pdf)$/i, '.txt'); // 임시니까 txt로
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className={s.wrap}>
+      <div className={s.header}>
+        <h2 className={s.title}>문서함</h2>
+        <p className={s.desc}>생성된 문서를 확인하고 다운로드할 수 있습니다.</p>
+      </div>
+
+      <div className={s.tableWrap}>
+        <table className={s.table}>
+          <thead>
+            <tr>
+              <th className={s.thName}>문서명</th>
+              <th className={s.thDate}>작성일</th>
+              <th className={s.thDl}>다운로드</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {docs.length === 0 ? (
+              <tr>
+                <td className={s.empty} colSpan={3}>
+                  아직 생성된 문서가 없습니다.
+                </td>
+              </tr>
+            ) : (
+              docs.map((d) => (
+                <tr key={d.id}>
+                  <td className={s.tdName}>{d.name}</td>
+                  <td className={s.tdDate}>{formatDate(d.createdAt)}</td>
+                  <td className={s.tdDl}>
+                    <Button variant="outline" size="sm" onClick={() => handleDownload(d)}>
+                      <Download size={16} />
+                      <span style={{ marginLeft: 8 }}>다운로드</span>
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}

@@ -394,7 +394,7 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
 };
 
 type SetMessagesArg = ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[]);
-
+export type MainView = 'chat' | 'docs';
 /* =========================
  * Store
  * ========================= */
@@ -441,6 +441,9 @@ interface ChatStore {
 
   showLoginModal: boolean;
   setShowLoginModal: (open: boolean) => void;
+
+  mainView: MainView;
+  setMainView: (v: MainView) => void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => {

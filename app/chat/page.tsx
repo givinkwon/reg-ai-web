@@ -7,6 +7,7 @@ import ChatArea from './components/ChatArea';
 import RightPanel from './components/RightPannel';
 import LoginPromptModal from './components/LoginPromptModal';
 import SignupExtraInfoModal from './components/SignupExtraInfoModal';
+import DocsVault from './components/DocsVault';
 
 import { useChatStore } from '../store/chat';
 import { initUserStore, useUserStore } from '../store/user';
@@ -18,6 +19,7 @@ export default function ChatPage() {
     setSidebarMobileOpen,
     showLoginModal,
     setShowLoginModal,
+    mainView, // ✅ 추가: 'chat' | 'docs'
   } = useChatStore();
 
   const user = useUserStore((st) => st.user);
@@ -36,8 +38,6 @@ export default function ChatPage() {
 
   /**
    * ✅ 새로고침 후에도 “가입 미완료”면 무조건 추가정보 모달을 띄우기
-   * - 케이스1) localStorage에 isSignupComplete=false로 저장돼있으면 즉시 띄움
-   * - 케이스2) isSignupComplete가 undefined(모름)으로 복원되면 서버에 재확인(refreshSignupStatus) 후 띄움
    */
   useEffect(() => {
     if (!initialized) return;
@@ -80,15 +80,14 @@ export default function ChatPage() {
 
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
+  const showDocs = mainView === 'docs';
+
   return (
     <div className={s.shell}>
       {/* 모바일 오버레이 (사이드바) */}
       {sidebarMobileOpen && (
         <>
-          <div
-            className={s.overlay}
-            onClick={() => setSidebarMobileOpen(false)}
-          />
+          <div className={s.overlay} onClick={() => setSidebarMobileOpen(false)} />
           <div className={s.sideFloat}>
             <Sidebar />
           </div>
@@ -100,23 +99,26 @@ export default function ChatPage() {
         <Sidebar />
       </div>
 
-      {/* 본문 */}
+      {/* 본문: ✅ chat/docs 분기 */}
       <div className={s.main}>
-        <ChatArea />
+        {showDocs ? (
+          <DocsVault
+            userEmail={user?.email ?? null}
+            onRequireLogin={() => setShowLoginModal(true)}
+          />
+        ) : (
+          <ChatArea />
+        )}
       </div>
 
-      {/* 오른쪽 근거 패널 */}
-      <div className={s.rightDesktop}>
-        <RightPanel />
-      </div>
+      {/* 오른쪽 근거 패널: 문서함에서는 숨김(원하면 유지 가능) */}
+      <div className={s.rightDesktop}>{showDocs ? null : <RightPanel />}</div>
 
       {/* ✅ 전역: 가입 미완료면 강제 추가정보 모달 */}
       {showExtraModal && accountEmail && (
         <SignupExtraInfoModal
           email={accountEmail}
           onComplete={() => {
-            // SignupExtraInfoModal 내부에서 서버 저장 완료 후 onComplete 호출됨
-            // ✅ 프론트도 즉시 완료로 반영(로컬스토리지 포함)
             const cur = useUserStore.getState().user;
             if (cur) setUser({ ...cur, isSignupComplete: true });
 
@@ -126,8 +128,7 @@ export default function ChatPage() {
         />
       )}
 
-      {/* ✅ 전역 상태 기반 로그인 모달
-          - 가입 미완료 강제 모달이 떠있을 때는 로그인 모달을 막는 게 안전 */}
+      {/* ✅ 전역 상태 기반 로그인 모달 */}
       {showLoginModal && !showExtraModal && (
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
