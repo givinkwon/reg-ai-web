@@ -1193,8 +1193,6 @@ export default function ChatArea() {
     regenerate,
   } = useChatController();
 
-  const [showLanding, setShowLanding] = useState(true);
-
   // ✅ user / clearFirebaseUser 도 같이 꺼내기
   const { selectedJobType, setSelectedJobType, user, clearFirebaseUser } =
     useUserStore();
@@ -2968,9 +2966,6 @@ export default function ChatArea() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, loading, menuLoading]);
-
-  // ====== init selectedJobType ======
-  const [showTypeModal, setShowTypeModal] = useState(false);
 
   useEffect(() => {
     const saved = Cookies.get('selectedJobType') as string | undefined;
