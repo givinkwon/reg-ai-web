@@ -1849,1870 +1849,1183 @@ export default function ChatArea() {
     return `${yyyy}/${mm}/${dd}`;
   };
 
-  // ✅ 방이 없으면 생성하고 roomId 반환
-  const ensureRoomExists = () => {
-    const st = useChatStore.getState?.();
-    if (!st) return null;
+// ✅ 메뉴(안전뉴스/입법예고 등) 클릭 후 서버 응답 대기 로딩
+const [menuLoading, setMenuLoading] = useState(false);
+const [showLanding, setShowLanding] = useState(true);
+/**
+ * ✅ “서버 응답 대기형 메뉴 액션”은
+ * 1) assistant 말풍선 1개 추가
+ * 2) 응답 오면 updateLastAssistant로 교체
+ */
+const beginMenuLoading = (label: string) => {
+  setMenuLoading(true);
+  setShowLanding(false);
 
-    // ✅ 이미 있으면 그걸 반환
-    if (st.activeRoomId) return st.activeRoomId;
+  addMessage({
+    role: 'assistant',
+    content: `
+      <div data-msg-state="loading" data-ai-kind="menu-loading">
+        <span>⏳ ${label}을 가져오고 있어요</span>
+        <span class="${s.dots}">
+          <span>•</span><span>•</span><span>•</span>
+        </span>
+      </div>
+    `,
+  });
+};
 
-    // ✅ createRoom이 roomId를 반환하도록 store가 구현되어 있어야 함
-    const newId = st.createRoom?.();
-    return newId ?? useChatStore.getState?.().activeRoomId ?? null;
-  };
+const endMenuLoadingSuccess = (finalHtml: string) => {
+  updateLastAssistant(finalHtml);
+  setMenuLoading(false);
+};
 
-  // ✅ roomId 기반 타이틀 변경
-  const setSidebarTitle = (roomId: string | null, title: string) => {
-    if (!roomId) return;
-    const st = useChatStore.getState?.();
-    st?.updateRoomTitle?.(roomId, title);
-  };
+const endMenuLoadingError = (msg: string) => {
+  updateLastAssistant(`<p>${msg}</p>`);
+  setMenuLoading(false);
+};
 
-  // ✅ QuickAction 클릭
-  const handleQuickActionClick = (action: QuickAction) => {
-    if (menuLoading) return;
+// ====== helpers ======
 
-    // ✅ 문서 모드 초기화
-    setDocMode(null);
-    setReviewDoc(null);
+// ✅ 방이 없으면 생성하고 roomId 반환 (store createRoom 반환값 사용)
+const ensureRoomExists = () => {
+  const st = useChatStore.getState?.();
+  if (!st) return null;
 
-    if (action.taskType) setSelectedTask(action.taskType);
+  if (st.activeRoomId) return st.activeRoomId;
 
-    const today = formatToday();
+  const newId = st.createRoom?.();
+  return newId ?? useChatStore.getState?.().activeRoomId ?? null;
+};
 
-    const focusInput = () => {
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
-    };
+// ✅ roomId 기반 타이틀 변경
+const setSidebarTitle = (roomId: string | null, title: string) => {
+  if (!roomId) return;
+  const st = useChatStore.getState?.();
+  st?.updateRoomTitle?.(roomId, title);
+};
 
-    // ✅ 위험성평가: [위험성평가]YYYY/MM/DD
-    if (action.id === 'risk_assessment') {
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[위험성평가]${today}`));
+// ✅ 게스트 제한 체크 (3개 이상이면 true)
+const shouldBlockGuestByLimit = () => {
+  if (user?.email) return false;
+  const count = getGuestMsgCountFromCookie();
+  const nextCount = count + 1;
+  return nextCount > GUEST_LIMIT;
+};
 
-      setShowRiskWizard(true);
-      return;
-    }
+// ====== file handlers ======
+const addAttachments = (files: File[]) => {
+  if (!files || files.length === 0) return;
+  setAttachments((prev) => [...prev, ...files]);
+};
 
-    // ✅ 안전뉴스: [안전뉴스]YYYY/MM/DD
-    if (action.id === 'today_accident') {
-      setActiveHintTask(null);
-      setActiveHints([]);
+const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (!e.target.files) return;
+  const files = Array.from(e.target.files);
+  addAttachments(files);
+  e.target.value = '';
+};
 
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[안전뉴스]${today}`));
+const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+};
 
-      fetchWeeklySafetyNews();
-      return;
-    }
+const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
+  e.preventDefault();
+  if (!e.dataTransfer.files) return;
+  const files = Array.from(e.dataTransfer.files);
+  addAttachments(files);
+};
 
-    // ✅ 입법예고: [입법예고]YYYY/MM/DD
-    if (action.id === 'notice_summary') {
-      setActiveHintTask(null);
-      setActiveHints([]);
+// ====== auth/menu ======
+const handleAccountButtonClick = () => {};
 
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[입법예고]${today}`));
+const handleLogout = () => {
+  // 프로젝트 로그아웃 로직이 있으면 여기에
+  // e.g., useUserStore.getState().logout()
+};
 
-      fetchLawNoticeSummary();
-      return;
-    }
+// ====== copy / regenerate ======
+const handleCopy = async (_idx: number, html: string) => {
+  try {
+    const text = htmlToText(html || '');
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  } catch {
+    setNoticeToast('복사에 실패했습니다.');
+    setTimeout(() => setNoticeToast(null), 1200);
+  }
+};
 
-    // ✅ 사고사례: [사고사례]YYYY/MM/DD
-    if (action.id === 'accident_search') {
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`
+const handleRegenerate = (assistantIndex: number) => {
+  // assistantIndex 이전의 가장 가까운 user 메시지를 찾아서 regenerate
+  const prev = [...messages]
+    .slice(0, assistantIndex)
+    .reverse()
+    .find((m) => m.role === 'user');
+  const q = (prev?.content || '').trim();
+  if (!q) return;
 
-      const intro: ChatMessage = { role: 'assistant', content: ACCIDENT_INTRO_TEXT };
+  regenerate(q);
+};
 
-      // ✅ stale closure 방지
-      setMessages((prev) => (prev.length === 0 ? [intro] : [...prev, intro]));
+// ====== quick actions ======
+const handleQuickActionClick = (action: QuickAction) => {
+  if (menuLoading) return;
 
-      setActiveHintTask('accident_search');
-      setActiveHints(pickRandomHints(ACCIDENT_HINTS, 3));
+  // ✅ 문서 모드 초기화
+  setDocMode(null);
+  setReviewDoc(null);
 
-      focusInput();
-      return;
-    }
+  if (action.taskType) setSelectedTask(action.taskType);
 
-    // ✅ 문서검토 모드 진입
-    if (action.id === 'doc_review') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-      setDocMode('review');
-      focusInput();
-      return;
-    }
+  const today = formatToday();
 
-    // ✅ 문서생성 모드 진입
-    if (action.id === 'doc_create') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-      setDocMode('create');
-      focusInput();
-      return;
-    }
-
-    // ✅ 교육자료: [교육자료]YYYY/MM/DD
-    if (action.id === 'edu_material') {
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[교육자료]${today}`));
-
-      setSelectedTask('edu_material');
-      setActiveHintTask(null);
-      setActiveHints([]);
-      setDocMode(null);
-
-      focusInput();
-      return;
-    }
-
-    // ✅ 법령/가이드 해석
-    if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
-      let hintTask: HintTask;
-      let introText: string;
-      let pool: string[];
-
-      if (action.id === 'law_interpret') {
-        hintTask = 'law_interpret';
-        introText = LAW_INTRO_TEXT;
-        pool = LAW_INTERPRET_HINTS;
-      } else {
-        hintTask = 'guideline_interpret';
-        introText = GUIDELINE_INTRO_TEXT;
-        pool = GUIDELINE_HINTS;
-      }
-
-      const intro: ChatMessage = { role: 'assistant', content: introText };
-
-      // ✅ stale closure 방지
-      setMessages((prev) => (prev.length === 0 ? [intro] : [...prev, intro]));
-
-      setActiveHints(pickRandomHints(pool, 3));
-      setActiveHintTask(hintTask);
-
-      focusInput();
-      return;
-    }
-
-    // 기본 동작
-    setActiveHintTask(null);
-    setActiveHints([]);
-
-    setInput(action.placeholder);
-    const el = document.querySelector<HTMLInputElement>('.chat-input');
-    if (el) el.focus();
-  };
-
-  // ✅ 힌트 클릭
-  const handleHintClick = (task: HintTask, hint: string) => {
-    // 🔒 1) 게스트 제한 체크
-    if (shouldBlockGuestByLimit()) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    // 🔒 2) 쿠키 카운트 +1
-    if (!user) {
-      const prev = getGuestMsgCountFromCookie();
-      setGuestMsgCountToCookie(prev + 1);
-    }
-
-    let mappedTaskType: TaskType;
-    if (task === 'edu_material') {
-      mappedTaskType = 'edu_material';
-    } else if (task === 'guideline_interpret') {
-      mappedTaskType = 'guideline_interpret';
-    } else if (task === 'accident_search') {
-      mappedTaskType = 'accident_search';
-    } else {
-      mappedTaskType = 'law_interpret';
-    }
-
-    setSelectedTask(mappedTaskType);
-
-    sendMessage({
-      taskType: mappedTaskType,
-      overrideMessage: hint,
-    });
-
-    setActiveHintTask(null);
-    setActiveHints([]);
-  };
-
-  // ✅ 안전문서 선택(문서생성/문서검토 공용)
-  // - docMode가 'create'면 doc_create, 'review'면 doc_review로 자동 분기
-  const handleSelectSafetyDoc = (category: any, doc: any) => {
-    // ✅ docMode 기반으로 taskType 결정 (중요!)
-    const nextTask: TaskType = docMode === 'create' ? 'doc_create' : 'doc_review';
-
-    setSelectedTask(nextTask);
-    setDocMode(null);
-
-    const userMsg: ChatMessage = { role: 'user', content: doc.label };
-
-    const guide = SAFETY_DOC_GUIDES[doc.id];
-
-    const intro = guide?.intro || `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
-
-    const fields =
-      guide?.fields?.length
-        ? guide.fields
-        : [
-            '· 문서의 목적과 작성 배경',
-            '· 적용 대상(사업장, 공정, 인원 등)',
-            '· 문서에 포함하고 싶은 주요 항목',
-          ];
-
-    const fieldsHtml = fields.map((f) => `<li>${f}</li>`).join('');
-
-    // ✅ downloads 배열 우선, 없으면 기존 downloadLabel/downloadUrl 호환
-    const downloads =
-      guide?.downloads?.length
-        ? guide.downloads
-        : guide?.downloadLabel && guide?.downloadUrl
-          ? [{ label: guide.downloadLabel, url: guide.downloadUrl, icon: '📄' }]
-          : [];
-
-    const getExt = (url: string) => {
-      const m = url.split('?')[0].match(/\.([a-z0-9]+)$/i);
-      return (m?.[1] || '').toUpperCase();
-    };
-
-    const getSubLabel = (ext: string) => {
-      if (ext === 'DOCX') return 'Word 문서';
-      if (ext === 'XLSX') return 'Excel 시트';
-      if (ext === 'PDF') return 'PDF 문서';
-      return '파일 다운로드';
-    };
-
-    const downloadsHtml =
-      downloads.length > 0
-        ? `
-          <div data-ai-kind="safety-doc-download" class="safety-doc-download-box">
-            <div class="safety-doc-download-title">서식 다운로드</div>
-
-            <div class="safety-doc-download-grid">
-              ${downloads
-                .map((d) => {
-                  const ext = getExt(d.url);
-                  const sub = getSubLabel(ext);
-                  return `
-                    <a
-                      class="safety-doc-download-card"
-                      href="${d.url}"
-                      ${d.filename ? `download="${d.filename}"` : 'download'}
-                      rel="noopener"
-                      target="_blank"
-                    >
-                      <div class="safety-doc-download-left">
-                        <span class="safety-doc-download-icon">${d.icon ?? '📄'}</span>
-                        <div class="safety-doc-download-meta">
-                          <div class="safety-doc-download-name">${d.label}</div>
-                          <div class="safety-doc-download-sub">${sub}</div>
-                        </div>
-                      </div>
-
-                      <div class="safety-doc-download-right">
-                        ${ext ? `<span class="safety-doc-download-badge">${ext}</span>` : ''}
-                        <span class="safety-doc-download-arrow">⬇</span>
-                      </div>
-                    </a>
-                  `;
-                })
-                .join('')}
-            </div>
-          </div>
-        `
-        : '';
-
-    const assistantHtml = `
-      <p>${intro}</p>
-      <ul>${fieldsHtml}</ul>
-      ${downloadsHtml}
-    `;
-
-    const aiMsg: ChatMessage = { role: 'assistant', content: assistantHtml };
-
-    // ✅ stale closure 방지
-    setMessages((prev) => [...prev, userMsg, aiMsg]);
-
+  const focusInput = () => {
     setInput('');
     const el = document.querySelector<HTMLInputElement>('.chat-input');
     if (el) el.focus();
   };
 
-  // ✅ 게스트 제한 체크 (3개 이상이면 true)
-  const shouldBlockGuestByLimit = () => {
-    // 로그인 했으면 제한 없음
-    if (user) return false;
-  
-    const count = getGuestMsgCountFromCookie(); // 지금까지 쿠키에 저장된 횟수
-    const nextCount = count + 1;               // 이번에 보내려는 것까지 포함
-  
-    console.log('[guest-limit]', { count, nextCount });
-  
-    // 3번까지 허용, 4번째부터 막기
-    return nextCount > GUEST_LIMIT;
-  };
-
-  // 문서 생성/검토 모드 상태
-  const [docMode, setDocMode] = useState<'create' | 'review' | null>(null);
-
-  // 검토 대상 문서 (카테고리 + 문서)
-  const [reviewDoc, setReviewDoc] = useState<{
-    category: SafetyDocCategory;
-    doc: SafetyDoc;
-  } | null>(null);
-
-  const isSafetyDocTask = docMode === 'create' || docMode === 'review';
-  const isEduTask = selectedTask === 'edu_material';
-  const isRiskTask = selectedTask === 'risk_assessment';
-
-  // 실제로 파일을 상태에 추가하는 공통 함수
-  const addAttachments = (files: File[]) => {
-    if (!files || files.length === 0) return;
-    setAttachments(prev => [...prev, ...files]);
-  };
-
-  const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-  
-    const files = Array.from(e.target.files);
-    addAttachments(files);
-  
-    // 같은 파일 다시 선택 가능하도록 초기화
-    e.target.value = '';
-  };
-
-  const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!e.dataTransfer.files) return;
-  
-    const files = Array.from(e.dataTransfer.files);
-    addAttachments(files);
-  };
-
-  function simpleMarkdownToHtml(md: string): string {
-    if (!md) return '';
-
-    let html = md;
-
-    // 코드블록
-    html = html.replace(/```([\s\S]*?)```/g, (_m, code) => {
-      return `<pre><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
-    });
-
-    // 헤딩
-    html = html.replace(/^### (.*)$/gim, '<h3>$1</h3>');
-    html = html.replace(/^## (.*)$/gim, '<h2>$1</h2>');
-    html = html.replace(/^# (.*)$/gim, '<h1>$1</h1>');
-
-    // 굵게 / 기울임
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-    // 리스트
-    html = html.replace(/^\s*-\s+(.*)$/gim, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
-
-    // 줄바꿈
-    html = html.replace(/\n{2,}/g, '</p><p>');
-    html = `<p>${html}</p>`;
-    html = html.replace(/<p><\/p>/g, '');
-
-    return html;
+  // ✅ 위험성평가: [위험성평가]YYYY/MM/DD
+  if (action.id === 'risk_assessment') {
+    const roomId = ensureRoomExists();
+    queueMicrotask(() => setSidebarTitle(roomId, `[위험성평가]${today}`));
+    setSelectedTask('risk_assessment');
+    return;
   }
 
-  async function pollDocReviewJob(
-    jobId: string,
-    threadId: string,
-    updateLastAssistant: (content: string) => void,
-    addMessage: (msg: { role: 'assistant' | 'user'; content: string }) => void,
-  ) {
-    const timeoutMs = 120_000;
-    const intervalMs = 2_000;
-    const startedAt = Date.now();
+  // ✅ 안전뉴스: [안전뉴스]YYYY/MM/DD
+  if (action.id === 'today_accident') {
+    setActiveHintTask(null);
+    setActiveHints([]);
 
-    // 단계별 status_message를 한 버블 안에서 누적해서 보여주고 싶으면 사용
-    const progressLines: string[] = [];
+    const roomId = ensureRoomExists();
+    queueMicrotask(() => setSidebarTitle(roomId, `[안전뉴스]${today}`));
 
-    while (true) {
-      const res = await fetch(
-        `/api/check-task?jobId=${encodeURIComponent(jobId)}`,
-        { cache: 'no-store' },
-      );
+    // ✅ 로딩 버블 1개 → 응답 오면 updateLastAssistant로 교체
+    beginMenuLoading('안전뉴스');
+
+    // ⚠️ 너 프로젝트에 있는 fetch 함수로 교체
+    // fetchWeeklySafetyNews()
+    //   .then((html) => endMenuLoadingSuccess(html))
+    //   .catch(() => endMenuLoadingError('안전뉴스를 불러오지 못했습니다.'));
+    endMenuLoadingError('fetchWeeklySafetyNews 연결 필요');
+
+    return;
+  }
+
+  // ✅ 입법예고: [입법예고]YYYY/MM/DD
+  if (action.id === 'notice_summary') {
+    setActiveHintTask(null);
+    setActiveHints([]);
+
+    const roomId = ensureRoomExists();
+    queueMicrotask(() => setSidebarTitle(roomId, `[입법예고]${today}`));
+
+    beginMenuLoading('입법예고');
+
+    // fetchLawNoticeSummary()
+    //   .then((html) => endMenuLoadingSuccess(html))
+    //   .catch(() => endMenuLoadingError('입법예고를 불러오지 못했습니다.'));
+    endMenuLoadingError('fetchLawNoticeSummary 연결 필요');
+
+    return;
+  }
+
+  // ✅ 사고사례: [사고사례]YYYY/MM/DD
+  if (action.id === 'accident_search') {
+    const roomId = ensureRoomExists();
+    queueMicrotask(() => setSidebarTitle(roomId, `[사고사례]${today}`));
+
+    // ✅ setMessages 금지 → addMessage로만 추가
+    addMessage({ role: 'assistant', content: ACCIDENT_INTRO_TEXT });
+
+    setActiveHintTask('accident_search');
+    setActiveHints(pickRandomHints(ACCIDENT_HINTS, 3));
+
+    focusInput();
+    return;
+  }
+
+  // ✅ 문서검토 모드 진입
+  if (action.id === 'doc_review') {
+    setActiveHintTask(null);
+    setActiveHints([]);
+    setDocMode('review');
+    focusInput();
+    return;
+  }
+
+  // ✅ 문서생성 모드 진입
+  if (action.id === 'doc_create') {
+    setActiveHintTask(null);
+    setActiveHints([]);
+    setDocMode('create');
+    focusInput();
+    return;
+  }
+
+  // ✅ 교육자료: [교육자료]YYYY/MM/DD
+  if (action.id === 'edu_material') {
+    const roomId = ensureRoomExists();
+    queueMicrotask(() => setSidebarTitle(roomId, `[교육자료]${today}`));
+
+    setSelectedTask('edu_material');
+    setActiveHintTask(null);
+    setActiveHints([]);
+    setDocMode(null);
+
+    focusInput();
+    return;
+  }
+
+  // ✅ 법령/가이드 해석
+  if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
+    let hintTask: HintTask;
+    let introText: string;
+    let pool: string[];
+
+    if (action.id === 'law_interpret') {
+      hintTask = 'law_interpret';
+      introText = LAW_INTRO_TEXT;
+      pool = LAW_INTERPRET_HINTS;
+    } else {
+      hintTask = 'guideline_interpret';
+      introText = GUIDELINE_INTRO_TEXT;
+      pool = GUIDELINE_HINTS;
+    }
+
+    // ✅ setMessages 금지 → addMessage
+    addMessage({ role: 'assistant', content: introText });
+
+    setActiveHints(pickRandomHints(pool, 3));
+    setActiveHintTask(hintTask);
+
+    focusInput();
+    return;
+  }
+
+  // 기본 동작
+  setActiveHintTask(null);
+  setActiveHints([]);
+
+  setInput(action.placeholder);
+  const el = document.querySelector<HTMLInputElement>('.chat-input');
+  if (el) el.focus();
+};
+
+// ✅ 힌트 클릭
+const handleHintClick = (task: HintTask, hint: string) => {
+  // 🔒 1) 게스트 제한 체크
+  if (shouldBlockGuestByLimit()) {
+    setShowLoginModal(true);
+    return;
+  }
+
+  // 🔒 2) 쿠키 카운트 +1
+  if (!user?.email) {
+    const prev = getGuestMsgCountFromCookie();
+    setGuestMsgCountToCookie(prev + 1);
+  }
+
+  let mappedTaskType: TaskType;
+  if (task === 'edu_material') mappedTaskType = 'edu_material';
+  else if (task === 'guideline_interpret') mappedTaskType = 'guideline_interpret';
+  else if (task === 'accident_search') mappedTaskType = 'accident_search';
+  else mappedTaskType = 'law_interpret';
+
+  setSelectedTask(mappedTaskType);
+
+  sendMessage({
+    taskType: mappedTaskType as any,
+    overrideMessage: hint,
+  });
+
+  setActiveHintTask(null);
+  setActiveHints([]);
+};
+
+// ✅ 안전문서 선택(문서생성/문서검토 공용)
+const handleSelectSafetyDoc = (category: any, doc: any) => {
+  ensureRoomExists();
+
+  const nextTask: TaskType = docMode === 'create' ? 'doc_create' : 'doc_review';
+  setSelectedTask(nextTask);
+  setDocMode(null);
+
+  const userMsg: ChatMessage = { role: 'user', content: doc.label };
+
+  const guide = SAFETY_DOC_GUIDES[doc.id];
+  const intro = guide?.intro || `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
+
+  const fields =
+    guide?.fields?.length
+      ? guide.fields
+      : ['· 문서의 목적과 작성 배경', '· 적용 대상(사업장, 공정, 인원 등)', '· 문서에 포함하고 싶은 주요 항목'];
+
+  const fieldsHtml = fields.map((f: string) => `<li>${f}</li>`).join('');
+
+  const downloads =
+    guide?.downloads?.length
+      ? guide.downloads
+      : guide?.downloadLabel && guide?.downloadUrl
+        ? [{ label: guide.downloadLabel, url: guide.downloadUrl, icon: '📄' }]
+        : [];
+
+  const getExt = (url: string) => {
+    const m = url.split('?')[0].match(/\.([a-z0-9]+)$/i);
+    return (m?.[1] || '').toUpperCase();
+  };
+
+  const getSubLabel = (ext: string) => {
+    if (ext === 'DOCX') return 'Word 문서';
+    if (ext === 'XLSX') return 'Excel 시트';
+    if (ext === 'PDF') return 'PDF 문서';
+    return '파일 다운로드';
+  };
+
+  const downloadsHtml =
+    downloads.length > 0
+      ? `
+        <div data-ai-kind="safety-doc-download" class="safety-doc-download-box">
+          <div class="safety-doc-download-title">서식 다운로드</div>
+          <div class="safety-doc-download-grid">
+            ${downloads
+              .map((d: any) => {
+                const ext = getExt(d.url);
+                const sub = getSubLabel(ext);
+                return `
+                  <a
+                    class="safety-doc-download-card"
+                    href="${d.url}"
+                    ${d.filename ? `download="${d.filename}"` : 'download'}
+                    rel="noopener"
+                    target="_blank"
+                  >
+                    <div class="safety-doc-download-left">
+                      <span class="safety-doc-download-icon">${d.icon ?? '📄'}</span>
+                      <div class="safety-doc-download-meta">
+                        <div class="safety-doc-download-name">${d.label}</div>
+                        <div class="safety-doc-download-sub">${sub}</div>
+                      </div>
+                    </div>
+                    <div class="safety-doc-download-right">
+                      ${ext ? `<span class="safety-doc-download-badge">${ext}</span>` : ''}
+                      <span class="safety-doc-download-arrow">⬇</span>
+                    </div>
+                  </a>
+                `;
+              })
+              .join('')}
+          </div>
+        </div>
+      `
+      : '';
+
+  const assistantHtml = `
+    <p>${intro}</p>
+    <ul>${fieldsHtml}</ul>
+    ${downloadsHtml}
+  `;
+
+  const aiMsg: ChatMessage = { role: 'assistant', content: assistantHtml };
+
+  // ✅ setMessages 금지 → addMessage 2번
+  addMessage(userMsg);
+  addMessage(aiMsg);
+
+  setInput('');
+  const el = document.querySelector<HTMLInputElement>('.chat-input');
+  if (el) el.focus();
+};
+
+// ====== send ======
+const handleSend = () => {
+  if (shouldBlockGuestByLimit()) {
+    setShowLoginModal(true);
+    return;
+  }
+
+  if (!user?.email) {
+    const prev = getGuestMsgCountFromCookie();
+    setGuestMsgCountToCookie(prev + 1);
+  }
+
+  // ✅ 첨부파일 포함 전송
+  const files = attachments.length > 0 ? attachments : undefined;
+
+  sendMessage({
+    taskType: selectedTask as any,
+    files,
+  });
+
+  setAttachments([]);
+  setActiveHintTask(null);
+  setActiveHints([]);
+};
+
+const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+};
+
+// ====== scroll ======
+useEffect(() => {
+  endRef.current?.scrollIntoView({ behavior: 'smooth' });
+}, [messages.length, loading, menuLoading]);
+
+// ====== init selectedJobType ======
+const [showTypeModal, setShowTypeModal] = useState(false);
+
+useEffect(() => {
+  const saved = Cookies.get('selectedJobType') as string | undefined;
+  if (saved) {
+    setSelectedJobType(saved as any);
+    setShowTypeModal(false);
+  } else {
+    setShowTypeModal(true);
+  }
+}, [setSelectedJobType]);
+
+// ====== public answer boot (setMessages 금지 → createRoom + addMessage) ======
+const bootOnce = useRef(false);
+
+useEffect(() => {
+  if (typeof window === 'undefined') return;
+  if (bootOnce.current) return;
+
+  const sp = new URLSearchParams(window.location.search);
+  const sharedId = sp.get('id') || sp.get('job_id');
+  if (!sharedId) return;
+
+  bootOnce.current = true;
+
+  (async () => {
+    try {
+      const res = await fetch(`/api/public-answer?id=${encodeURIComponent(sharedId)}`, {
+        cache: 'no-store',
+      });
 
       if (!res.ok) {
-        updateLastAssistant(
-          '문서 검토 결과를 가져오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-        );
-        break;
-      }
-
-      const data = await res.json();
-      const status: string | undefined = data.status;
-      const statusMessage: string | undefined = data.status_message;
-      const answer: string =
-        data.gpt_response || data.full_report || '';
-
-      const inProgress =
-        status === 'pending' ||
-        status === 'running' ||
-        status === 'retrieving' ||
-        status === 'generating_answer' ||
-        status === 'postprocessing';
-
-      // 🔹 진행 중일 때는 "같은 말풍선"만 업데이트
-      if (inProgress) {
-        if (statusMessage && !progressLines.includes(statusMessage)) {
-          progressLines.push(statusMessage);
-          // 여러 단계가 있으면 줄바꿈으로 누적해서 보여주기
-          updateLastAssistant(progressLines.join('\n'));
-        }
-
-        if (Date.now() - startedAt > timeoutMs) {
-          updateLastAssistant(
-            '문서 검토가 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요.',
-          );
-          break;
-        }
-
-        await new Promise((r) => setTimeout(r, intervalMs));
-        continue;
-      }
-
-      // ✅ 완료: 여기서만 "새 assistant 메시지(최종 답변)" 추가
-      if (status === 'done') {
-        const finalText =
-          answer ||
-          '문서 검토 결과를 불러왔지만, 내용이 비어 있습니다.';
-
-        const html = simpleMarkdownToHtml(finalText);
-
-        const beginMenuLoading = (label: string) => {
-          setMenuLoading(true);
-          setShowLanding(false);
-
-          addMessage({
-            role: 'assistant',
-            content: `
-              <div data-ai-kind="menu-loading">
-                <span>⏳ ${label}을 가져오고 있어요</span>
-                <span class="${s.dots}">
-                  <span>•</span><span>•</span><span>•</span>
-                </span>
-              </div>
-            `,
-          });
-        };
-        break;
-      }
-
-      // ❌ 에러
-      if (status === 'error') {
-        updateLastAssistant(
-          data.error ||
-            data.error_message ||
-            '문서 검토 중 오류가 발생했습니다. 담당자에게 문의해 주세요.',
-        );
-        break;
-      }
-
-      // 알 수 없는 상태
-      updateLastAssistant(
-        `문서 검토 작업 상태를 알 수 없습니다. (status=${String(status)})`,
-      );
-      break;
-    }
-  }
-
-  const [showRiskWizard, setShowRiskWizard] = useState(false);
-
-  useEffect(() => {
-    const saved = Cookies.get('selectedJobType') as string | undefined;
-    if (saved) {
-      setSelectedJobType(saved);
-      setShowTypeModal(false);
-    } else {
-      setShowTypeModal(true);
-    }
-  }, [setSelectedJobType]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (bootOnce.current) return;
-
-    const sp = new URLSearchParams(window.location.search);
-    const sharedId = sp.get('id') || sp.get('job_id');
-    if (!sharedId) return;
-
-    bootOnce.current = true;
-
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/public-answer?id=${encodeURIComponent(sharedId)}`,
-          { cache: 'no-store' },
-        );
-
-        if (!res.ok) {
-          setMessages([
-            {
-              role: 'assistant',
-              content:
-                '공유된 답변을 불러오지 못했습니다. 링크가 만료되었거나 잘못된 ID일 수 있어요.',
-            },
-          ]);
-          return;
-        }
-
-        const data = (await res.json()) as {
-          job_id: string;
-          category?: 'environment' | 'infosec' | string;
-          question?: string;
-          answer_html?: string;
-          created_at?: string;
-        };
-
-        const question = (data.question || '').trim();
-        const answerHtml = (data.answer_html || '').trim();
-
-        if (
-          data.category &&
-          (data.category === 'environment' || data.category === 'infosec')
-        ) {
-          Cookies.set('selectedJobType', data.category, { expires: 7 });
-          setSelectedJobType(data.category);
-        }
-
-        const initialMsgs: {
-          role: 'user' | 'assistant';
-          content: string;
-        }[] = [];
-        if (question)
-          initialMsgs.push({ role: 'user', content: question });
-        else
-          initialMsgs.push({
-            role: 'user',
-            content: '(공유 링크로 불러온 질문)',
-          });
-
-        if (answerHtml)
-          initialMsgs.push({ role: 'assistant', content: answerHtml });
-        else
-          initialMsgs.push({
-            role: 'assistant',
-            content: '답변 본문이 비어 있습니다.',
-          });
-
-        setMessages(initialMsgs);
-      } catch (e) {
-        console.error('[ChatArea] public/answer fetch error:', e);
-        setMessages([
-          {
-            role: 'assistant',
-            content: '공유된 답변을 불러오는 중 오류가 발생했습니다.',
-          },
-        ]);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (messages.length === 0) {
-      setActiveHintTask(null);
-      setActiveHints([]);
-    }
-  }, [messages.length]);
-
-  const updateLastAssistant = useChatStore((s) => s.updateLastAssistant);
-
-  const [selectedEduMaterialId, setSelectedEduMaterialId] = useState<string | null>(null);
-
-  type EduSelectParams = {
-    category: SafetyEduCategory;
-    material: SafetyEduMaterial;
-    guide: SafetyEduGuide;
-  };
-
-  const buildEduGuideHtml = ({ category, material, guide }: EduSelectParams) => { 
-    const bullets = guide.bulletPoints
-      .map((b) => b.replace(/^·\s?/, ''))
-      .map((b) => `<li>${b}</li>`)
-      .join('');
-
-    return `
-      <div data-ai-kind="edu-material">
-        <div style="font-weight:700; margin-bottom:6px;">
-          ${material.title}
-          <span style="color:#9ca3af; font-weight:600; margin-left:6px;">
-            ${category.title}
-          </span>
-        </div>
-
-        <div style="margin-bottom:10px;">${guide.intro}</div>
-
-        <ul style="margin:0 0 12px 18px;">
-          ${bullets}
-        </ul>
-
-        <a href="${guide.downloadUrl}" target="_blank" rel="noopener noreferrer"
-          style="display:inline-block; padding:10px 12px; border:1px solid #334155; border-radius:12px; text-decoration:none;">
-          ⬇️ ${guide.downloadLabel}
-        </a>
-      </div>
-    `;
-  };
-
-
-  const handleSelectSafetyEduMaterial = ({
-    category,
-    material,
-    guide,
-  }: {
-    category: any;
-    material: any;
-    guide: any;
-  }) => {
-    // 선택 표시(옵션)
-    setSelectedEduMaterialId(material.id);
-
-    // ✅ 1) 유저 메시지 추가 (이게 “유저가 선택했다”처럼 보이게 함)
-    // addMessage({
-    //   role: 'user',
-    //   content: `[교육자료 찾기] ${material.title}`,
-    // });
-
-    // // ✅ 2) assistant 메시지 추가 (이게 “시스템이 답변”처럼 보이게 함)
-    // addMessage({
-    //   role: 'assistant',
-    //   content: buildEduGuideHtml({ category, material, guide }),
-    // });
-  };
-
-  function getFilenameFromDisposition(cd: string | null) {
-    if (!cd) return null;
-  
-    // filename*=UTF-8''... 우선
-    const m1 = /filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i.exec(cd);
-    if (m1?.[1]) {
-      try {
-        return decodeURIComponent(m1[1].trim().replace(/^"+|"+$/g, ''));
-      } catch {
-        return m1[1].trim().replace(/^"+|"+$/g, '');
-      }
-    }
-  
-    // filename="..."
-    const m2 = /filename\s*=\s*("?)([^";]+)\1/i.exec(cd);
-    if (m2?.[2]) return m2[2].trim();
-  
-    return null;
-  }
-
-  function buildExcelPayload(draft: any, email: string) {
-    const items: any[] = [];
-  
-    for (const t of draft.tasks || []) {
-      for (const p of t.processes || []) {
-        for (const h of p.hazards || []) {
-          items.push({
-            process_name: (t.title || '').trim(),
-            sub_process: (p.title || '').trim(),
-            risk_situation_result: (h.title || '').trim(),
-            judgement: h.judgement ?? '중',
-            current_control_text: h.current_control_text ?? '',
-            mitigation_text: h.mitigation_text ?? '', // 네가 controls를 “개선대책”으로 쓰면 여기로
-          });
-        }
-      }
-    }
-  
-    return {
-      email,
-      dateISO: draft.meta?.dateISO ?? null,
-      items,
-    };
-  }
-
-  // ✅ 메뉴(안전뉴스/입법예고 등) 클릭 후 서버 응답 대기 로딩
-  const [menuLoading, setMenuLoading] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
-  /**
-   * ✅ “서버 응답 대기형 메뉴 액션”은
-   * 1) assistant 말풍선 1개 추가
-   * 2) 응답 오면 updateLastAssistant로 교체
-   */
-  const beginMenuLoading = (label: string) => {
-    setMenuLoading(true);
-    setShowLanding(false);
-
-    addMessage({
-      role: 'assistant',
-      content: `
-        <div data-msg-state="loading" data-ai-kind="menu-loading">
-          <span>⏳ ${label}을 가져오고 있어요</span>
-          <span class="${s.dots}">
-            <span>•</span><span>•</span><span>•</span>
-          </span>
-        </div>
-      `,
-    });
-  };
-
-  const endMenuLoadingSuccess = (finalHtml: string) => {
-    updateLastAssistant(finalHtml);
-    setMenuLoading(false);
-  };
-
-  const endMenuLoadingError = (msg: string) => {
-    updateLastAssistant(`<p>${msg}</p>`);
-    setMenuLoading(false);
-  };
-
-  // ====== helpers ======
-
-  // ✅ 방이 없으면 생성하고 roomId 반환 (store createRoom 반환값 사용)
-  const ensureRoomExists = () => {
-    const st = useChatStore.getState?.();
-    if (!st) return null;
-
-    if (st.activeRoomId) return st.activeRoomId;
-
-    const newId = st.createRoom?.();
-    return newId ?? useChatStore.getState?.().activeRoomId ?? null;
-  };
-
-  // ✅ roomId 기반 타이틀 변경
-  const setSidebarTitle = (roomId: string | null, title: string) => {
-    if (!roomId) return;
-    const st = useChatStore.getState?.();
-    st?.updateRoomTitle?.(roomId, title);
-  };
-
-  // ✅ 게스트 제한 체크 (3개 이상이면 true)
-  const shouldBlockGuestByLimit = () => {
-    if (user?.email) return false;
-    const count = getGuestMsgCountFromCookie();
-    const nextCount = count + 1;
-    return nextCount > GUEST_LIMIT;
-  };
-
-  // ====== file handlers ======
-  const addAttachments = (files: File[]) => {
-    if (!files || files.length === 0) return;
-    setAttachments((prev) => [...prev, ...files]);
-  };
-
-  const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const files = Array.from(e.target.files);
-    addAttachments(files);
-    e.target.value = '';
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
-  const handleDropFiles = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!e.dataTransfer.files) return;
-    const files = Array.from(e.dataTransfer.files);
-    addAttachments(files);
-  };
-
-  // ====== auth/menu ======
-  const handleAccountButtonClick = () => {};
-
-  const handleLogout = () => {
-    // 프로젝트 로그아웃 로직이 있으면 여기에
-    // e.g., useUserStore.getState().logout()
-  };
-
-  // ====== copy / regenerate ======
-  const handleCopy = async (_idx: number, html: string) => {
-    try {
-      const text = htmlToText(html || '');
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      setNoticeToast('복사에 실패했습니다.');
-      setTimeout(() => setNoticeToast(null), 1200);
-    }
-  };
-
-  const handleRegenerate = (assistantIndex: number) => {
-    // assistantIndex 이전의 가장 가까운 user 메시지를 찾아서 regenerate
-    const prev = [...messages]
-      .slice(0, assistantIndex)
-      .reverse()
-      .find((m) => m.role === 'user');
-    const q = (prev?.content || '').trim();
-    if (!q) return;
-
-    regenerate(q);
-  };
-
-  // ====== quick actions ======
-  const handleQuickActionClick = (action: QuickAction) => {
-    if (menuLoading) return;
-
-    // ✅ 문서 모드 초기화
-    setDocMode(null);
-    setReviewDoc(null);
-
-    if (action.taskType) setSelectedTask(action.taskType);
-
-    const today = formatToday();
-
-    const focusInput = () => {
-      setInput('');
-      const el = document.querySelector<HTMLInputElement>('.chat-input');
-      if (el) el.focus();
-    };
-
-    // ✅ 위험성평가: [위험성평가]YYYY/MM/DD
-    if (action.id === 'risk_assessment') {
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[위험성평가]${today}`));
-      setSelectedTask('risk_assessment');
-      return;
-    }
-
-    // ✅ 안전뉴스: [안전뉴스]YYYY/MM/DD
-    if (action.id === 'today_accident') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[안전뉴스]${today}`));
-
-      // ✅ 로딩 버블 1개 → 응답 오면 updateLastAssistant로 교체
-      beginMenuLoading('안전뉴스');
-
-      // ⚠️ 너 프로젝트에 있는 fetch 함수로 교체
-      // fetchWeeklySafetyNews()
-      //   .then((html) => endMenuLoadingSuccess(html))
-      //   .catch(() => endMenuLoadingError('안전뉴스를 불러오지 못했습니다.'));
-      endMenuLoadingError('fetchWeeklySafetyNews 연결 필요');
-
-      return;
-    }
-
-    // ✅ 입법예고: [입법예고]YYYY/MM/DD
-    if (action.id === 'notice_summary') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[입법예고]${today}`));
-
-      beginMenuLoading('입법예고');
-
-      // fetchLawNoticeSummary()
-      //   .then((html) => endMenuLoadingSuccess(html))
-      //   .catch(() => endMenuLoadingError('입법예고를 불러오지 못했습니다.'));
-      endMenuLoadingError('fetchLawNoticeSummary 연결 필요');
-
-      return;
-    }
-
-    // ✅ 사고사례: [사고사례]YYYY/MM/DD
-    if (action.id === 'accident_search') {
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[사고사례]${today}`));
-
-      // ✅ setMessages 금지 → addMessage로만 추가
-      addMessage({ role: 'assistant', content: ACCIDENT_INTRO_TEXT });
-
-      setActiveHintTask('accident_search');
-      setActiveHints(pickRandomHints(ACCIDENT_HINTS, 3));
-
-      focusInput();
-      return;
-    }
-
-    // ✅ 문서검토 모드 진입
-    if (action.id === 'doc_review') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-      setDocMode('review');
-      focusInput();
-      return;
-    }
-
-    // ✅ 문서생성 모드 진입
-    if (action.id === 'doc_create') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-      setDocMode('create');
-      focusInput();
-      return;
-    }
-
-    // ✅ 교육자료: [교육자료]YYYY/MM/DD
-    if (action.id === 'edu_material') {
-      const roomId = ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(roomId, `[교육자료]${today}`));
-
-      setSelectedTask('edu_material');
-      setActiveHintTask(null);
-      setActiveHints([]);
-      setDocMode(null);
-
-      focusInput();
-      return;
-    }
-
-    // ✅ 법령/가이드 해석
-    if (action.id === 'law_interpret' || action.id === 'guideline_interpret') {
-      let hintTask: HintTask;
-      let introText: string;
-      let pool: string[];
-
-      if (action.id === 'law_interpret') {
-        hintTask = 'law_interpret';
-        introText = LAW_INTRO_TEXT;
-        pool = LAW_INTERPRET_HINTS;
-      } else {
-        hintTask = 'guideline_interpret';
-        introText = GUIDELINE_INTRO_TEXT;
-        pool = GUIDELINE_HINTS;
-      }
-
-      // ✅ setMessages 금지 → addMessage
-      addMessage({ role: 'assistant', content: introText });
-
-      setActiveHints(pickRandomHints(pool, 3));
-      setActiveHintTask(hintTask);
-
-      focusInput();
-      return;
-    }
-
-    // 기본 동작
-    setActiveHintTask(null);
-    setActiveHints([]);
-
-    setInput(action.placeholder);
-    const el = document.querySelector<HTMLInputElement>('.chat-input');
-    if (el) el.focus();
-  };
-
-  // ✅ 힌트 클릭
-  const handleHintClick = (task: HintTask, hint: string) => {
-    // 🔒 1) 게스트 제한 체크
-    if (shouldBlockGuestByLimit()) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    // 🔒 2) 쿠키 카운트 +1
-    if (!user?.email) {
-      const prev = getGuestMsgCountFromCookie();
-      setGuestMsgCountToCookie(prev + 1);
-    }
-
-    let mappedTaskType: TaskType;
-    if (task === 'edu_material') mappedTaskType = 'edu_material';
-    else if (task === 'guideline_interpret') mappedTaskType = 'guideline_interpret';
-    else if (task === 'accident_search') mappedTaskType = 'accident_search';
-    else mappedTaskType = 'law_interpret';
-
-    setSelectedTask(mappedTaskType);
-
-    sendMessage({
-      taskType: mappedTaskType as any,
-      overrideMessage: hint,
-    });
-
-    setActiveHintTask(null);
-    setActiveHints([]);
-  };
-
-  // ✅ 안전문서 선택(문서생성/문서검토 공용)
-  const handleSelectSafetyDoc = (category: any, doc: any) => {
-    ensureRoomExists();
-
-    const nextTask: TaskType = docMode === 'create' ? 'doc_create' : 'doc_review';
-    setSelectedTask(nextTask);
-    setDocMode(null);
-
-    const userMsg: ChatMessage = { role: 'user', content: doc.label };
-
-    const guide = SAFETY_DOC_GUIDES[doc.id];
-    const intro = guide?.intro || `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
-
-    const fields =
-      guide?.fields?.length
-        ? guide.fields
-        : ['· 문서의 목적과 작성 배경', '· 적용 대상(사업장, 공정, 인원 등)', '· 문서에 포함하고 싶은 주요 항목'];
-
-    const fieldsHtml = fields.map((f: string) => `<li>${f}</li>`).join('');
-
-    const downloads =
-      guide?.downloads?.length
-        ? guide.downloads
-        : guide?.downloadLabel && guide?.downloadUrl
-          ? [{ label: guide.downloadLabel, url: guide.downloadUrl, icon: '📄' }]
-          : [];
-
-    const getExt = (url: string) => {
-      const m = url.split('?')[0].match(/\.([a-z0-9]+)$/i);
-      return (m?.[1] || '').toUpperCase();
-    };
-
-    const getSubLabel = (ext: string) => {
-      if (ext === 'DOCX') return 'Word 문서';
-      if (ext === 'XLSX') return 'Excel 시트';
-      if (ext === 'PDF') return 'PDF 문서';
-      return '파일 다운로드';
-    };
-
-    const downloadsHtml =
-      downloads.length > 0
-        ? `
-          <div data-ai-kind="safety-doc-download" class="safety-doc-download-box">
-            <div class="safety-doc-download-title">서식 다운로드</div>
-            <div class="safety-doc-download-grid">
-              ${downloads
-                .map((d: any) => {
-                  const ext = getExt(d.url);
-                  const sub = getSubLabel(ext);
-                  return `
-                    <a
-                      class="safety-doc-download-card"
-                      href="${d.url}"
-                      ${d.filename ? `download="${d.filename}"` : 'download'}
-                      rel="noopener"
-                      target="_blank"
-                    >
-                      <div class="safety-doc-download-left">
-                        <span class="safety-doc-download-icon">${d.icon ?? '📄'}</span>
-                        <div class="safety-doc-download-meta">
-                          <div class="safety-doc-download-name">${d.label}</div>
-                          <div class="safety-doc-download-sub">${sub}</div>
-                        </div>
-                      </div>
-                      <div class="safety-doc-download-right">
-                        ${ext ? `<span class="safety-doc-download-badge">${ext}</span>` : ''}
-                        <span class="safety-doc-download-arrow">⬇</span>
-                      </div>
-                    </a>
-                  `;
-                })
-                .join('')}
-            </div>
-          </div>
-        `
-        : '';
-
-    const assistantHtml = `
-      <p>${intro}</p>
-      <ul>${fieldsHtml}</ul>
-      ${downloadsHtml}
-    `;
-
-    const aiMsg: ChatMessage = { role: 'assistant', content: assistantHtml };
-
-    // ✅ setMessages 금지 → addMessage 2번
-    addMessage(userMsg);
-    addMessage(aiMsg);
-
-    setInput('');
-    const el = document.querySelector<HTMLInputElement>('.chat-input');
-    if (el) el.focus();
-  };
-
-  // ====== send ======
-  const handleSend = () => {
-    if (shouldBlockGuestByLimit()) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    if (!user?.email) {
-      const prev = getGuestMsgCountFromCookie();
-      setGuestMsgCountToCookie(prev + 1);
-    }
-
-    // ✅ 첨부파일 포함 전송
-    const files = attachments.length > 0 ? attachments : undefined;
-
-    sendMessage({
-      taskType: selectedTask as any,
-      files,
-    });
-
-    setAttachments([]);
-    setActiveHintTask(null);
-    setActiveHints([]);
-  };
-
-  const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // ====== scroll ======
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, loading, menuLoading]);
-
-  useEffect(() => {
-    const saved = Cookies.get('selectedJobType') as string | undefined;
-    if (saved) {
-      setSelectedJobType(saved as any);
-      setShowTypeModal(false);
-    } else {
-      setShowTypeModal(true);
-    }
-  }, [setSelectedJobType]);
-
-  // ====== public answer boot (setMessages 금지 → createRoom + addMessage) ======
-  const bootOnce = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (bootOnce.current) return;
-
-    const sp = new URLSearchParams(window.location.search);
-    const sharedId = sp.get('id') || sp.get('job_id');
-    if (!sharedId) return;
-
-    bootOnce.current = true;
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/public-answer?id=${encodeURIComponent(sharedId)}`, {
-          cache: 'no-store',
-        });
-
-        if (!res.ok) {
-          // ✅ 기존 setMessages 대신: 새 room 만들고 메시지 추가
-          useChatStore.getState().createRoom();
-          addMessage({
-            role: 'assistant',
-            content: '공유된 답변을 불러오지 못했습니다. 링크가 만료되었거나 잘못된 ID일 수 있어요.',
-          });
-          return;
-        }
-
-        const data = (await res.json()) as {
-          job_id: string;
-          category?: 'environment' | 'infosec' | string;
-          question?: string;
-          answer_html?: string;
-          created_at?: string;
-        };
-
-        const question = (data.question || '').trim();
-        const answerHtml = (data.answer_html || '').trim();
-
-        if (data.category && (data.category === 'environment' || data.category === 'infosec')) {
-          Cookies.set('selectedJobType', data.category, { expires: 7 });
-          setSelectedJobType(data.category as any);
-        }
-
-        // ✅ 새 방을 하나 만들고(=기존 대화 “대체” 효과) 메시지 주입
+        // ✅ 기존 setMessages 대신: 새 room 만들고 메시지 추가
         useChatStore.getState().createRoom();
-
-        addMessage({
-          role: 'user',
-          content: question || '(공유 링크로 불러온 질문)',
-        });
-
         addMessage({
           role: 'assistant',
-          content: answerHtml || '답변 본문이 비어 있습니다.',
+          content: '공유된 답변을 불러오지 못했습니다. 링크가 만료되었거나 잘못된 ID일 수 있어요.',
         });
-      } catch (e) {
-        console.error('[ChatArea] public/answer fetch error:', e);
-        useChatStore.getState().createRoom();
-        addMessage({ role: 'assistant', content: '공유된 답변을 불러오는 중 오류가 발생했습니다.' });
+        return;
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // messages가 비면 힌트 리셋
-  useEffect(() => {
-    if (messages.length === 0) {
-      setActiveHintTask(null);
-      setActiveHints([]);
-    }
-  }, [messages.length]);
+      const data = (await res.json()) as {
+        job_id: string;
+        category?: 'environment' | 'infosec' | string;
+        question?: string;
+        answer_html?: string;
+        created_at?: string;
+      };
 
-  // ====== risk wizard helpers ======
-  function getFilenameFromDisposition(cd: string | null) {
-    if (!cd) return null;
+      const question = (data.question || '').trim();
+      const answerHtml = (data.answer_html || '').trim();
 
-    const m1 = /filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i.exec(cd);
-    if (m1?.[1]) {
-      try {
-        return decodeURIComponent(m1[1].trim().replace(/^"+|"+$/g, ''));
-      } catch {
-        return m1[1].trim().replace(/^"+|"+$/g, '');
+      if (data.category && (data.category === 'environment' || data.category === 'infosec')) {
+        Cookies.set('selectedJobType', data.category, { expires: 7 });
+        setSelectedJobType(data.category as any);
       }
+
+      // ✅ 새 방을 하나 만들고(=기존 대화 “대체” 효과) 메시지 주입
+      useChatStore.getState().createRoom();
+
+      addMessage({
+        role: 'user',
+        content: question || '(공유 링크로 불러온 질문)',
+      });
+
+      addMessage({
+        role: 'assistant',
+        content: answerHtml || '답변 본문이 비어 있습니다.',
+      });
+    } catch (e) {
+      console.error('[ChatArea] public/answer fetch error:', e);
+      useChatStore.getState().createRoom();
+      addMessage({ role: 'assistant', content: '공유된 답변을 불러오는 중 오류가 발생했습니다.' });
     }
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
-    const m2 = /filename\s*=\s*("?)([^";]+)\1/i.exec(cd);
-    if (m2?.[2]) return m2[2].trim();
+// messages가 비면 힌트 리셋
+useEffect(() => {
+  if (messages.length === 0) {
+    setActiveHintTask(null);
+    setActiveHints([]);
+  }
+}, [messages.length]);
 
-    return null;
+// ====== risk wizard helpers ======
+function getFilenameFromDisposition(cd: string | null) {
+  if (!cd) return null;
+
+  const m1 = /filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i.exec(cd);
+  if (m1?.[1]) {
+    try {
+      return decodeURIComponent(m1[1].trim().replace(/^"+|"+$/g, ''));
+    } catch {
+      return m1[1].trim().replace(/^"+|"+$/g, '');
+    }
   }
 
-  function buildExcelPayload(draft: any, email: string) {
-    const items: any[] = [];
+  const m2 = /filename\s*=\s*("?)([^";]+)\1/i.exec(cd);
+  if (m2?.[2]) return m2[2].trim();
 
-    for (const t of draft.tasks || []) {
-      for (const p of t.processes || []) {
-        for (const h of p.hazards || []) {
-          items.push({
-            process_name: (t.title || '').trim(),
-            sub_process: (p.title || '').trim(),
-            risk_situation_result: (h.title || '').trim(),
-            judgement: h.judgement ?? '중',
-            current_control_text: h.current_control_text ?? '',
-            mitigation_text: h.mitigation_text ?? '',
-          });
-        }
+  return null;
+}
+
+function buildExcelPayload(draft: any, email: string) {
+  const items: any[] = [];
+
+  for (const t of draft.tasks || []) {
+    for (const p of t.processes || []) {
+      for (const h of p.hazards || []) {
+        items.push({
+          process_name: (t.title || '').trim(),
+          sub_process: (p.title || '').trim(),
+          risk_situation_result: (h.title || '').trim(),
+          judgement: h.judgement ?? '중',
+          current_control_text: h.current_control_text ?? '',
+          mitigation_text: h.mitigation_text ?? '',
+        });
       }
     }
-
-    return {
-      email,
-      dateISO: draft.meta?.dateISO ?? null,
-      items,
-    };
   }
 
-  // ====== edu selection (현재는 UI 선택만 표시) ======
-  const [selectedEduMaterialId, setSelectedEduMaterialId] = useState<string | null>(null);
-
-  const handleSelectSafetyEduMaterial = ({
-    category,
-    material,
-    guide,
-  }: {
-    category: SafetyEduCategory;
-    material: SafetyEduMaterial;
-    guide: SafetyEduGuide;
-  }) => {
-    setSelectedEduMaterialId(material.id);
+  return {
+    email,
+    dateISO: draft.meta?.dateISO ?? null,
+    items,
   };
+}
 
-  // ====== render ======
-  const currentTaskMeta = useMemo(() => {
-    if (!selectedTask) return null;
-    const found = QUICK_ACTIONS.find((a) => a.taskType === selectedTask);
-    return found ? { label: found.label } : { label: selectedTask };
-  }, [selectedTask]);
+// ====== edu selection (현재는 UI 선택만 표시) ======
+const [selectedEduMaterialId, setSelectedEduMaterialId] = useState<string | null>(null);
 
-  return (
-    <>
-      <section className={s.wrap}>
-        {/* Header */}
-        <div className={s.header}>
-          <div className={s.headerLeft}>
-            <div className={s.productName}>REG AI</div>
-            <div className={s.chatTitle}>
-              {messages.length > 0 && messages[0].role === 'user'
-                ? htmlToText(messages[0].content).slice(0, 24) || '새 대화'
-                : '새 대화'}
-            </div>
-          </div>
+const handleSelectSafetyEduMaterial = ({
+  category,
+  material,
+  guide,
+}: {
+  category: SafetyEduCategory;
+  material: SafetyEduMaterial;
+  guide: SafetyEduGuide;
+}) => {
+  setSelectedEduMaterialId(material.id);
+};
 
-          <div className={s.headerRight}>
-            {user?.email ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={s.settingsBtn}
-                    onClick={handleAccountButtonClick}
-                  >
-                    <User2 className={s.iconXs} />
-                    <span className={s.accountLabel}>{user.email ?? '계정'}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>내 계정</DropdownMenuLabel>
-                  {user.email && <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className={s.iconXs} />
-                    <span>로그아웃</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className={s.settingsBtn}
-                onClick={() => setShowLoginModal(true)}
-              >
-                <Settings className={s.iconXs} />
-                로그인
-              </Button>
-            )}
+// ====== render ======
+const currentTaskMeta = useMemo(() => {
+  if (!selectedTask) return null;
+  const found = QUICK_ACTIONS.find((a) => a.taskType === selectedTask);
+  return found ? { label: found.label } : { label: selectedTask };
+}, [selectedTask]);
+
+return (
+  <>
+    <section className={s.wrap}>
+      {/* Header */}
+      <div className={s.header}>
+        <div className={s.headerLeft}>
+          <div className={s.productName}>REG AI</div>
+          <div className={s.chatTitle}>
+            {messages.length > 0 && messages[0].role === 'user'
+              ? htmlToText(messages[0].content).slice(0, 24) || '새 대화'
+              : '새 대화'}
           </div>
         </div>
 
-        {/* Body */}
-        <div className={s.body}>
-          <div className={s.stream}>
-            <div className={s.streamInner}>
-              {messages.length === 0 && (
-                <>
-                  {isRiskTask ? (
-                    <div className={s.docWrap}>
-                      <RiskAssessmentWizard
-                        onClose={() => setSelectedTask(null)}
-                        onSubmit={async (draft: any) => {
-                          try {
-                            if (!user?.email) {
-                              alert('로그인해주세요');
-                              return;
-                            }
+        <div className={s.headerRight}>
+          {user?.email ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={s.settingsBtn}
+                  onClick={handleAccountButtonClick}
+                >
+                  <User2 className={s.iconXs} />
+                  <span className={s.accountLabel}>{user.email ?? '계정'}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>내 계정</DropdownMenuLabel>
+                {user.email && <DropdownMenuItem disabled>{user.email}</DropdownMenuItem>}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className={s.iconXs} />
+                  <span>로그아웃</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className={s.settingsBtn}
+              onClick={() => setShowLoginModal(true)}
+            >
+              <Settings className={s.iconXs} />
+              로그인
+            </Button>
+          )}
+        </div>
+      </div>
 
-                            const payload = buildExcelPayload(draft, user.email);
+      {/* Body */}
+      <div className={s.body}>
+        <div className={s.stream}>
+          <div className={s.streamInner}>
+            {messages.length === 0 && (
+              <>
+                {isRiskTask ? (
+                  <div className={s.docWrap}>
+                    <RiskAssessmentWizard
+                      onClose={() => setSelectedTask(null)}
+                      onSubmit={async (draft: any) => {
+                        try {
+                          if (!user?.email) {
+                            alert('로그인해주세요');
+                            return;
+                          }
 
-                            const res = await fetch('/api/risk-assessment?endpoint=export-excel', {
+                          const payload = buildExcelPayload(draft, user.email);
+
+                          const res = await fetch('/api/risk-assessment?endpoint=export-excel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                          });
+
+                          if (!res.ok) {
+                            const t = await res.text();
+                            throw new Error(t || '엑셀 생성 실패');
+                          }
+
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+
+                          const a = document.createElement('a');
+                          a.href = url;
+
+                          const cd = res.headers.get('content-disposition');
+                          const filename =
+                            getFilenameFromDisposition(cd) ||
+                            `위험성평가_${draft.meta?.dateISO || 'today'}.xlsx`;
+
+                          a.download = filename;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+
+                          setSelectedTask(null);
+                        } catch (e: any) {
+                          console.error(e);
+                          alert(e?.message || '엑셀 다운로드에 실패했습니다.');
+                        }
+                      }}
+                    />
+                  </div>
+                ) : isEduTask ? (
+                  <MakeSafetyEduMaterials
+                    onSelectMaterial={handleSelectSafetyEduMaterial}
+                    selectedMaterialId={selectedEduMaterialId}
+                  />
+                ) : isSafetyDocTask ? (
+                  <MakeSafetyDocs
+                    mode={docMode === 'review' ? 'review' : 'create'}
+                    onSelectDoc={(category: any, doc: any) => {
+                      const roomId = ensureRoomExists();
+
+                      const today = formatToday();
+                      const label = (doc.label || doc.id || '문서').replace(/\s+/g, '');
+                      const prefix = docMode === 'review' ? '[문서검토]' : '[문서생성]';
+
+                      queueMicrotask(() => setSidebarTitle(roomId, `${prefix}${label}_${today}`));
+
+                      if (docMode === 'create') {
+                        handleSelectSafetyDoc(category, doc);
+                      } else if (docMode === 'review') {
+                        setReviewDoc({ category, doc });
+                      }
+                    }}
+                    selectedDocId={docMode === 'review' && reviewDoc ? reviewDoc.doc.id : null}
+                    renderSelectedDocPane={(category: any, doc: any) =>
+                      docMode === 'review' ? (
+                        <DocReviewUploadPane
+                          category={category}
+                          doc={doc}
+                          onUploadAndAsk={async ({ category, doc, files }: any) => {
+                            ensureRoomExists();
+
+                            addMessage({
+                              role: 'user',
+                              content: `[문서 검토 요청] "${doc.label}" 문서를 업로드했습니다. 검토 결과를 알려주세요.`,
+                            });
+
+                            // ✅ progress 버블 1개
+                            addMessage({
+                              role: 'assistant',
+                              content: '📂 업로드된 문서 확인 및 검토 프롬프트 생성 중',
+                            });
+
+                            const form = new FormData();
+                            files.forEach((f: File) => form.append('files', f));
+                            form.append('task_type', 'safety_doc_review');
+                            form.append('safety_doc_id', doc.id);
+                            form.append('safety_doc_label', doc.label);
+                            form.append('category_id', category.id);
+                            form.append('category_title', category.title);
+
+                            const res = await fetch('/api/start-doc-review', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify(payload),
+                              body: form,
                             });
 
                             if (!res.ok) {
-                              const t = await res.text();
-                              throw new Error(t || '엑셀 생성 실패');
+                              updateLastAssistant(
+                                '문서 검토 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+                              );
+                              return;
                             }
 
-                            const blob = await res.blob();
-                            const url = window.URL.createObjectURL(blob);
+                            const { job_id } = await res.json();
 
-                            const a = document.createElement('a');
-                            a.href = url;
+                            // ✅ doc review는 여기서 간단 폴링 (진행중엔 updateLastAssistant)
+                            const timeoutMs = 120_000;
+                            const intervalMs = 2_000;
+                            const startedAt = Date.now();
+                            const progressLines: string[] = [];
 
-                            const cd = res.headers.get('content-disposition');
-                            const filename =
-                              getFilenameFromDisposition(cd) ||
-                              `위험성평가_${draft.meta?.dateISO || 'today'}.xlsx`;
+                            while (true) {
+                              const stRes = await fetch(
+                                `/api/check-task?jobId=${encodeURIComponent(job_id)}`,
+                                { cache: 'no-store' },
+                              );
 
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            window.URL.revokeObjectURL(url);
-
-                            setSelectedTask(null);
-                          } catch (e: any) {
-                            console.error(e);
-                            alert(e?.message || '엑셀 다운로드에 실패했습니다.');
-                          }
-                        }}
-                      />
-                    </div>
-                  ) : isEduTask ? (
-                    <MakeSafetyEduMaterials
-                      onSelectMaterial={handleSelectSafetyEduMaterial}
-                      selectedMaterialId={selectedEduMaterialId}
-                    />
-                  ) : isSafetyDocTask ? (
-                    <MakeSafetyDocs
-                      mode={docMode === 'review' ? 'review' : 'create'}
-                      onSelectDoc={(category: any, doc: any) => {
-                        const roomId = ensureRoomExists();
-
-                        const today = formatToday();
-                        const label = (doc.label || doc.id || '문서').replace(/\s+/g, '');
-                        const prefix = docMode === 'review' ? '[문서검토]' : '[문서생성]';
-
-                        queueMicrotask(() => setSidebarTitle(roomId, `${prefix}${label}_${today}`));
-
-                        if (docMode === 'create') {
-                          handleSelectSafetyDoc(category, doc);
-                        } else if (docMode === 'review') {
-                          setReviewDoc({ category, doc });
-                        }
-                      }}
-                      selectedDocId={docMode === 'review' && reviewDoc ? reviewDoc.doc.id : null}
-                      renderSelectedDocPane={(category: any, doc: any) =>
-                        docMode === 'review' ? (
-                          <DocReviewUploadPane
-                            category={category}
-                            doc={doc}
-                            onUploadAndAsk={async ({ category, doc, files }: any) => {
-                              ensureRoomExists();
-
-                              addMessage({
-                                role: 'user',
-                                content: `[문서 검토 요청] "${doc.label}" 문서를 업로드했습니다. 검토 결과를 알려주세요.`,
-                              });
-
-                              // ✅ progress 버블 1개
-                              addMessage({
-                                role: 'assistant',
-                                content: '📂 업로드된 문서 확인 및 검토 프롬프트 생성 중',
-                              });
-
-                              const form = new FormData();
-                              files.forEach((f: File) => form.append('files', f));
-                              form.append('task_type', 'safety_doc_review');
-                              form.append('safety_doc_id', doc.id);
-                              form.append('safety_doc_label', doc.label);
-                              form.append('category_id', category.id);
-                              form.append('category_title', category.title);
-
-                              const res = await fetch('/api/start-doc-review', {
-                                method: 'POST',
-                                body: form,
-                              });
-
-                              if (!res.ok) {
+                              if (!stRes.ok) {
                                 updateLastAssistant(
-                                  '문서 검토 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-                                );
-                                return;
-                              }
-
-                              const { job_id } = await res.json();
-
-                              // ✅ doc review는 여기서 간단 폴링 (진행중엔 updateLastAssistant)
-                              const timeoutMs = 120_000;
-                              const intervalMs = 2_000;
-                              const startedAt = Date.now();
-                              const progressLines: string[] = [];
-
-                              while (true) {
-                                const stRes = await fetch(
-                                  `/api/check-task?jobId=${encodeURIComponent(job_id)}`,
-                                  { cache: 'no-store' },
-                                );
-
-                                if (!stRes.ok) {
-                                  updateLastAssistant(
-                                    '문서 검토 결과를 가져오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-                                  );
-                                  break;
-                                }
-
-                                const data = await stRes.json();
-                                const status: string | undefined = data.status;
-                                const statusMsg: string | undefined = data.status_message;
-                                const answer: string = data.gpt_response || data.full_report || '';
-
-                                const inProgress =
-                                  status === 'pending' ||
-                                  status === 'running' ||
-                                  status === 'retrieving' ||
-                                  status === 'generating_answer' ||
-                                  status === 'postprocessing';
-
-                                if (inProgress) {
-                                  if (statusMsg && !progressLines.includes(statusMsg)) {
-                                    progressLines.push(statusMsg);
-                                    updateLastAssistant(progressLines.join('<br/>'));
-                                  }
-                                  if (Date.now() - startedAt > timeoutMs) {
-                                    updateLastAssistant(
-                                      '문서 검토가 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요.',
-                                    );
-                                    break;
-                                  }
-                                  await new Promise((r) => setTimeout(r, intervalMs));
-                                  continue;
-                                }
-
-                                if (status === 'done') {
-                                  updateLastAssistant(
-                                    (answer || '문서 검토 결과를 불러왔지만, 내용이 비어 있습니다.').replace(
-                                      /\n/g,
-                                      '<br/>',
-                                    ),
-                                  );
-                                  break;
-                                }
-
-                                if (status === 'error') {
-                                  updateLastAssistant(
-                                    data.error ||
-                                      data.error_message ||
-                                      '문서 검토 중 오류가 발생했습니다. 담당자에게 문의해 주세요.',
-                                  );
-                                  break;
-                                }
-
-                                updateLastAssistant(
-                                  `문서 검토 작업 상태를 알 수 없습니다. (status=${String(status)})`,
+                                  '문서 검토 결과를 가져오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
                                 );
                                 break;
                               }
-                            }}
-                          />
-                        ) : null
-                      }
-                    />
-                  ) : (
-                    <div className={s.quickWrap}>
-                      <div className={s.quickTitle}>무엇을 도와드릴까요?</div>
 
-                      {QUICK_ACTION_GROUPS.map((group: any) => {
-                        const GroupIcon = group.icon;
-                        return (
-                          <div key={group.id} className={s.quickSection}>
-                            <div className={s.quickSectionHeader}>
-                              <GroupIcon className={s.quickSectionIcon} />
-                              <span className={s.quickSectionTitle}>{group.title}</span>
-                            </div>
+                              const data = await stRes.json();
+                              const status: string | undefined = data.status;
+                              const statusMsg: string | undefined = data.status_message;
+                              const answer: string = data.gpt_response || data.full_report || '';
 
-                            <div className={s.quickGrid}>
-                              {group.items.map((id: string) => {
-                                const action = QUICK_ACTIONS_MAP[id];
-                                if (!action) return null;
-                                const Icon = action.icon;
-                                return (
-                                  <button
-                                    key={action.id}
-                                    type="button"
-                                    className={s.quickBtn}
-                                    onClick={() => handleQuickActionClick(action)}
-                                  >
-                                    <span className={s.quickIconWrap}>
-                                      <Icon className={s.quickIcon} />
-                                    </span>
-                                    <span className={s.quickLabel}>{action.label}</span>
-                                  </button>
+                              const inProgress =
+                                status === 'pending' ||
+                                status === 'running' ||
+                                status === 'retrieving' ||
+                                status === 'generating_answer' ||
+                                status === 'postprocessing';
+
+                              if (inProgress) {
+                                if (statusMsg && !progressLines.includes(statusMsg)) {
+                                  progressLines.push(statusMsg);
+                                  updateLastAssistant(progressLines.join('<br/>'));
+                                }
+                                if (Date.now() - startedAt > timeoutMs) {
+                                  updateLastAssistant(
+                                    '문서 검토가 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요.',
+                                  );
+                                  break;
+                                }
+                                await new Promise((r) => setTimeout(r, intervalMs));
+                                continue;
+                              }
+
+                              if (status === 'done') {
+                                updateLastAssistant(
+                                  (answer || '문서 검토 결과를 불러왔지만, 내용이 비어 있습니다.').replace(
+                                    /\n/g,
+                                    '<br/>',
+                                  ),
                                 );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
+                                break;
+                              }
 
-              {messages.map((m, i) => {
-                const isUser = m.role === 'user';
+                              if (status === 'error') {
+                                updateLastAssistant(
+                                  data.error ||
+                                    data.error_message ||
+                                    '문서 검토 중 오류가 발생했습니다. 담당자에게 문의해 주세요.',
+                                );
+                                break;
+                              }
 
-                let isSafetyNews = false;
-                let isNoticeSummary = false;
-                let isAccidentCases = false;
-                let safetyArticlesHtml: string | null = null;
-                let noticeArticlesHtml: string | null = null;
-                let safeHtml: string;
-
-                if (m.role === 'assistant') {
-                  const rawHtml = m.content || '';
-
-                  isAccidentCases = hasAccidentCasesInHtml(rawHtml);
-
-                  if (isSafetyNewsHtml(rawHtml)) {
-                    isSafetyNews = true;
-                    safeHtml = extractSafetySummaryHtml(rawHtml);
-                    safetyArticlesHtml = extractSafetyArticlesHtml(rawHtml);
-                  } else if (isNoticeSummaryHtml(rawHtml)) {
-                    isNoticeSummary = true;
-                    safeHtml = extractNoticeSummaryHtml(rawHtml);
-                    noticeArticlesHtml = extractNoticeArticlesHtml(rawHtml);
-                  } else {
-                    safeHtml = cutHtmlBeforeEvidence(rawHtml);
-                  }
-                } else {
-                  safeHtml = m.content;
-                }
-
-                const isIntro =
-                  m.role === 'assistant' &&
-                  (m.content === LAW_INTRO_TEXT ||
-                    m.content === GUIDELINE_INTRO_TEXT ||
-                    m.content === DOC_CREATE_INTRO_TEXT ||
-                    m.content === EDU_INTRO_TEXT ||
-                    m.content === DOC_REVIEW_INTRO_TEXT ||
-                    m.content === ACCIDENT_INTRO_TEXT);
-
-                const plain = m.role === 'assistant' ? htmlToText(m.content || '') : '';
-                const isSafetyDocDownload =
-                  m.role === 'assistant' && /양식\s*\((DOCX|XLSX)\)\s*다운로드/.test(plain);
-
-                const isEduMaterial =
-                  m.role === 'assistant' && (m.content || '').includes('data-ai-kind="edu-material"');
-
-                const raw = m.role === 'assistant' ? m.content || '' : '';
-                const isLoadingBubble =
-                  m.role === 'assistant' &&
-                  (raw.includes('data-msg-state="loading"') ||
-                    raw.includes('data-ai-kind="menu-loading"') ||
-                    htmlToText(raw).includes('을 가져오고 있어요'));
-
-                const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial || isLoadingBubble;
-
-                if (isUser) {
-                  return (
-                    <div key={i} className={s.userRow}>
-                      <div className={s.userBubble}>
-                        <div
-                          className={s.userContent}
-                          dangerouslySetInnerHTML={{ __html: m.content }}
-                        />
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={i} className={s.aiRow}>
-                    <div
-                      ref={(el) => {
-                        contentRefs.current[i] = el;
-                      }}
-                      className={s.aiBubble}
-                      dangerouslySetInnerHTML={{ __html: safeHtml }}
-                    />
-
-                    {!menuLoading && !isLoadingBubble && !hideActionRow && (
-                      <div className={s.actionRow}>
-                        <div className={s.miniActions}>
-                          {!isSafetyNews && !isNoticeSummary && (
-                            <div className={s.miniActions}>
-                              <button
-                                className={s.iconBtn}
-                                title="다시 생성"
-                                onClick={() => handleRegenerate(i)}
-                              >
-                                <RotateCcw className={s.iconAction} />
-                              </button>
-                              <button
-                                className={s.iconBtn}
-                                title="복사"
-                                onClick={() => handleCopy(i, m.content)}
-                              >
-                                <Copy className={s.iconAction} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <button
-                          className={s.evidenceBtn}
-                          onClick={() => {
-                            if (isSafetyNews) {
-                              const htmlForRight =
-                                safetyArticlesHtml && safetyArticlesHtml.trim().length > 0
-                                  ? safetyArticlesHtml
-                                  : extractSafetyArticlesHtml(m.content) || m.content;
-
-                              openRightFromHtml(htmlForRight, { mode: 'news' });
-                            } else if (isNoticeSummary) {
-                              const htmlForRight =
-                                noticeArticlesHtml && noticeArticlesHtml.trim().length > 0
-                                  ? noticeArticlesHtml
-                                  : extractNoticeArticlesHtml(m.content) || m.content;
-
-                              openRightFromHtml(htmlForRight, { mode: 'lawNotice' });
-                            } else if (isAccidentCases) {
-                              openRightFromHtml(m.content, { mode: 'accident' });
-                            } else {
-                              openRightFromHtml(m.content, { mode: 'evidence' });
+                              updateLastAssistant(
+                                `문서 검토 작업 상태를 알 수 없습니다. (status=${String(status)})`,
+                              );
+                              break;
                             }
                           }}
-                        >
-                          {isSafetyNews
-                            ? '참고 기사 목록 확인하기'
-                            : isNoticeSummary
-                              ? '참고 입법예고 목록 확인하기'
-                              : isAccidentCases
-                                ? '참고 사고사례 확인하기'
-                                : '근거 및 서식 확인하기'}
-                        </button>
-                      </div>
-                    )}
+                        />
+                      ) : null
+                    }
+                  />
+                ) : (
+                  <div className={s.quickWrap}>
+                    <div className={s.quickTitle}>무엇을 도와드릴까요?</div>
+
+                    {QUICK_ACTION_GROUPS.map((group: any) => {
+                      const GroupIcon = group.icon;
+                      return (
+                        <div key={group.id} className={s.quickSection}>
+                          <div className={s.quickSectionHeader}>
+                            <GroupIcon className={s.quickSectionIcon} />
+                            <span className={s.quickSectionTitle}>{group.title}</span>
+                          </div>
+
+                          <div className={s.quickGrid}>
+                            {group.items.map((id: string) => {
+                              const action = QUICK_ACTIONS_MAP[id];
+                              if (!action) return null;
+                              const Icon = action.icon;
+                              return (
+                                <button
+                                  key={action.id}
+                                  type="button"
+                                  className={s.quickBtn}
+                                  onClick={() => handleQuickActionClick(action)}
+                                >
+                                  <span className={s.quickIconWrap}>
+                                    <Icon className={s.quickIcon} />
+                                  </span>
+                                  <span className={s.quickLabel}>{action.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {messages.map((m, i) => {
+              const isUser = m.role === 'user';
+
+              let isSafetyNews = false;
+              let isNoticeSummary = false;
+              let isAccidentCases = false;
+              let safetyArticlesHtml: string | null = null;
+              let noticeArticlesHtml: string | null = null;
+              let safeHtml: string;
+
+              if (m.role === 'assistant') {
+                const rawHtml = m.content || '';
+
+                isAccidentCases = hasAccidentCasesInHtml(rawHtml);
+
+                if (isSafetyNewsHtml(rawHtml)) {
+                  isSafetyNews = true;
+                  safeHtml = extractSafetySummaryHtml(rawHtml);
+                  safetyArticlesHtml = extractSafetyArticlesHtml(rawHtml);
+                } else if (isNoticeSummaryHtml(rawHtml)) {
+                  isNoticeSummary = true;
+                  safeHtml = extractNoticeSummaryHtml(rawHtml);
+                  noticeArticlesHtml = extractNoticeArticlesHtml(rawHtml);
+                } else {
+                  safeHtml = cutHtmlBeforeEvidence(rawHtml);
+                }
+              } else {
+                safeHtml = m.content;
+              }
+
+              const isIntro =
+                m.role === 'assistant' &&
+                (m.content === LAW_INTRO_TEXT ||
+                  m.content === GUIDELINE_INTRO_TEXT ||
+                  m.content === DOC_CREATE_INTRO_TEXT ||
+                  m.content === EDU_INTRO_TEXT ||
+                  m.content === DOC_REVIEW_INTRO_TEXT ||
+                  m.content === ACCIDENT_INTRO_TEXT);
+
+              const plain = m.role === 'assistant' ? htmlToText(m.content || '') : '';
+              const isSafetyDocDownload =
+                m.role === 'assistant' && /양식\s*\((DOCX|XLSX)\)\s*다운로드/.test(plain);
+
+              const isEduMaterial =
+                m.role === 'assistant' && (m.content || '').includes('data-ai-kind="edu-material"');
+
+              const raw = m.role === 'assistant' ? m.content || '' : '';
+              const isLoadingBubble =
+                m.role === 'assistant' &&
+                (raw.includes('data-msg-state="loading"') ||
+                  raw.includes('data-ai-kind="menu-loading"') ||
+                  htmlToText(raw).includes('을 가져오고 있어요'));
+
+              const hideActionRow = isIntro || isSafetyDocDownload || isEduMaterial || isLoadingBubble;
+
+              if (isUser) {
+                return (
+                  <div key={i} className={s.userRow}>
+                    <div className={s.userBubble}>
+                      <div
+                        className={s.userContent}
+                        dangerouslySetInnerHTML={{ __html: m.content }}
+                      />
+                    </div>
                   </div>
                 );
-              })}
+              }
 
-              {activeHintTask && activeHints.length > 0 && (
-                <div className={s.hintWrap}>
-                  {activeHints.map((hint, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className={s.hintChip}
-                      onClick={() => handleHintClick(activeHintTask, hint)}
-                    >
-                      {hint}
-                    </button>
-                  ))}
+              return (
+                <div key={i} className={s.aiRow}>
+                  <div
+                    ref={(el) => {
+                      contentRefs.current[i] = el;
+                    }}
+                    className={s.aiBubble}
+                    dangerouslySetInnerHTML={{ __html: safeHtml }}
+                  />
+
+                  {!menuLoading && !isLoadingBubble && !hideActionRow && (
+                    <div className={s.actionRow}>
+                      <div className={s.miniActions}>
+                        {!isSafetyNews && !isNoticeSummary && (
+                          <div className={s.miniActions}>
+                            <button
+                              className={s.iconBtn}
+                              title="다시 생성"
+                              onClick={() => handleRegenerate(i)}
+                            >
+                              <RotateCcw className={s.iconAction} />
+                            </button>
+                            <button
+                              className={s.iconBtn}
+                              title="복사"
+                              onClick={() => handleCopy(i, m.content)}
+                            >
+                              <Copy className={s.iconAction} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        className={s.evidenceBtn}
+                        onClick={() => {
+                          if (isSafetyNews) {
+                            const htmlForRight =
+                              safetyArticlesHtml && safetyArticlesHtml.trim().length > 0
+                                ? safetyArticlesHtml
+                                : extractSafetyArticlesHtml(m.content) || m.content;
+
+                            openRightFromHtml(htmlForRight, { mode: 'news' });
+                          } else if (isNoticeSummary) {
+                            const htmlForRight =
+                              noticeArticlesHtml && noticeArticlesHtml.trim().length > 0
+                                ? noticeArticlesHtml
+                                : extractNoticeArticlesHtml(m.content) || m.content;
+
+                            openRightFromHtml(htmlForRight, { mode: 'lawNotice' });
+                          } else if (isAccidentCases) {
+                            openRightFromHtml(m.content, { mode: 'accident' });
+                          } else {
+                            openRightFromHtml(m.content, { mode: 'evidence' });
+                          }
+                        }}
+                      >
+                        {isSafetyNews
+                          ? '참고 기사 목록 확인하기'
+                          : isNoticeSummary
+                            ? '참고 입법예고 목록 확인하기'
+                            : isAccidentCases
+                              ? '참고 사고사례 확인하기'
+                              : '근거 및 서식 확인하기'}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+              );
+            })}
 
-              {loading && (
-                <div className={s.loadingCard}>
-                  <span>{statusMessage || LOADING_MESSAGES[loadingMessageIndex]}</span>
-                  <span className={s.dots}>
-                    <span>•</span>
-                    <span>•</span>
-                    <span>•</span>
-                  </span>
-                </div>
-              )}
+            {activeHintTask && activeHints.length > 0 && (
+              <div className={s.hintWrap}>
+                {activeHints.map((hint, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={s.hintChip}
+                    onClick={() => handleHintClick(activeHintTask, hint)}
+                  >
+                    {hint}
+                  </button>
+                ))}
+              </div>
+            )}
 
-              <div ref={endRef} />
-              <div className={s.bottomSpacer} />
-            </div>
+            {loading && (
+              <div className={s.loadingCard}>
+                <span>{statusMessage || LOADING_MESSAGES[loadingMessageIndex]}</span>
+                <span className={s.dots}>
+                  <span>•</span>
+                  <span>•</span>
+                  <span>•</span>
+                </span>
+              </div>
+            )}
+
+            <div ref={endRef} />
+            <div className={s.bottomSpacer} />
           </div>
+        </div>
 
-          {/* Right Panel */}
-          {rightOpen && (
-            <RightPanel open={rightOpen} mode={rightMode} html={rightHtml} onClose={() => setRightOpen(false)} />
-          )}
+        {/* Right Panel */}
+        {rightOpen && (
+          <RightPanel open={rightOpen} mode={rightMode} html={rightHtml} onClose={() => setRightOpen(false)} />
+        )}
 
-          {attachments.length > 0 && (
-            <div className={s.attachList}>
-              {attachments.map((file, idx) => (
-                <div key={idx} className={s.attachChip}>
-                  <Paperclip className={s.attachIcon} />
-                  <span className={s.attachName}>{file.name}</span>
+        {attachments.length > 0 && (
+          <div className={s.attachList}>
+            {attachments.map((file, idx) => (
+              <div key={idx} className={s.attachChip}>
+                <Paperclip className={s.attachIcon} />
+                <span className={s.attachName}>{file.name}</span>
+                <button
+                  type="button"
+                  className={s.attachRemove}
+                  onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                  aria-label="첨부 삭제"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className={s.inputRow} onDragOver={handleDragOver} onDrop={handleDropFiles}>
+          <div className={s.inputWrap}>
+            <div className={s.inputShell}>
+              <button
+                type="button"
+                className={s.plusBtn}
+                onClick={() => setShowTaskModal(true)}
+                aria-label="작업 선택"
+                title="작업 선택"
+              >
+                <Plus className={s.plusIcon} />
+              </button>
+
+              {currentTaskMeta && (
+                <div className={s.taskChip}>
+                  <Search className={s.taskChipIcon} />
+                  <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
                   <button
                     type="button"
-                    className={s.attachRemove}
-                    onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
-                    aria-label="첨부 삭제"
+                    className={s.taskChipClose}
+                    onClick={() => setSelectedTask(null)}
+                    aria-label="작업 태그 제거"
                   >
                     ×
                   </button>
                 </div>
-              ))}
+              )}
+
+              <input
+                className={`${s.input} ${currentTaskMeta ? s.inputHasChip : ''} chat-input`}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKey}
+                placeholder="질문을 입력하거나 파일을 끌어다 놓으세요"
+              />
             </div>
-          )}
+          </div>
 
-          <div className={s.inputRow} onDragOver={handleDragOver} onDrop={handleDropFiles}>
-            <div className={s.inputWrap}>
-              <div className={s.inputShell}>
-                <button
-                  type="button"
-                  className={s.plusBtn}
-                  onClick={() => setShowTaskModal(true)}
-                  aria-label="작업 선택"
-                  title="작업 선택"
-                >
-                  <Plus className={s.plusIcon} />
-                </button>
+          <button
+            type="button"
+            className={s.attachBtn}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="파일 첨부"
+          >
+            <Paperclip className={s.iconMd} />
+          </button>
 
-                {currentTaskMeta && (
-                  <div className={s.taskChip}>
-                    <Search className={s.taskChipIcon} />
-                    <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
-                    <button
-                      type="button"
-                      className={s.taskChipClose}
-                      onClick={() => setSelectedTask(null)}
-                      aria-label="작업 태그 제거"
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
+          <button onClick={handleSend} className={s.sendBtn} aria-label="전송">
+            <ArrowUp className={s.iconMdAccent} />
+          </button>
 
-                <input
-                  className={`${s.input} ${currentTaskMeta ? s.inputHasChip : ''} chat-input`}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={onKey}
-                  placeholder="질문을 입력하거나 파일을 끌어다 놓으세요"
-                />
-              </div>
-            </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleAddFiles}
+          />
+        </div>
 
+        {copied && <div className={s.toast}>복사되었습니다</div>}
+      </div>
+    </section>
+
+    {/* 작업 선택 모달 */}
+    {showTaskModal && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="작업 선택"
+        className={s.typeModalOverlay}
+        onClick={() => setShowTaskModal(false)}
+      >
+        <div className={s.taskModal} onClick={(e) => e.stopPropagation()}>
+          <div className={s.typeHeader}>
+            <h3 className={s.typeTitle}>작업 유형을 선택하세요</h3>
             <button
               type="button"
-              className={s.attachBtn}
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="파일 첨부"
+              className={s.typeCloseBtn}
+              onClick={() => setShowTaskModal(false)}
+              aria-label="작업 선택창 닫기"
             >
-              <Paperclip className={s.iconMd} />
+              <span className={s.typeCloseIcon} aria-hidden="true">
+                ×
+              </span>
             </button>
-
-            <button onClick={handleSend} className={s.sendBtn} aria-label="전송">
-              <ArrowUp className={s.iconMdAccent} />
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              style={{ display: 'none' }}
-              onChange={handleAddFiles}
-            />
           </div>
 
-          {copied && <div className={s.toast}>복사되었습니다</div>}
-        </div>
-      </section>
-
-      {/* 작업 선택 모달 */}
-      {showTaskModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="작업 선택"
-          className={s.typeModalOverlay}
-          onClick={() => setShowTaskModal(false)}
-        >
-          <div className={s.taskModal} onClick={(e) => e.stopPropagation()}>
-            <div className={s.typeHeader}>
-              <h3 className={s.typeTitle}>작업 유형을 선택하세요</h3>
-              <button
-                type="button"
-                className={s.typeCloseBtn}
-                onClick={() => setShowTaskModal(false)}
-                aria-label="작업 선택창 닫기"
-              >
-                <span className={s.typeCloseIcon} aria-hidden="true">
-                  ×
-                </span>
-              </button>
-            </div>
-
-            <div className={s.taskGrid}>
-              {QUICK_ACTIONS.map((action: any) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className={s.taskCard}
-                    onClick={() => {
-                      handleQuickActionClick(action);
-                      setShowTaskModal(false);
-                    }}
-                  >
-                    <Icon className={s.taskCardIcon} />
-                    <span className={s.taskLabel}>{action.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className={s.taskGrid}>
+            {QUICK_ACTIONS.map((action: any) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  className={s.taskCard}
+                  onClick={() => {
+                    handleQuickActionClick(action);
+                    setShowTaskModal(false);
+                  }}
+                >
+                  <Icon className={s.taskCardIcon} />
+                  <span className={s.taskLabel}>{action.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* 로그인 모달 */}
-      {showLoginModal && <LoginPromptModal onClose={() => setShowLoginModal(false)} />}
-      {noticeToast && <div className={s.toast}>{noticeToast}</div>}
-    </>
-  );
-  }
+    {/* 로그인 모달 */}
+    {showLoginModal && <LoginPromptModal onClose={() => setShowLoginModal(false)} />}
+    {noticeToast && <div className={s.toast}>{noticeToast}</div>}
+  </>
+);
+}
