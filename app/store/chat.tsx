@@ -399,12 +399,17 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
   };
 };
 
+type SetMessagesArg =
+  | ChatMessage[]
+  | ((prev: ChatMessage[]) => ChatMessage[]);
+
+
 /* =========================
  * Store
  * ========================= */
 interface ChatStore {
   messages: ChatMessage[];
-  setMessages: (msgs: ChatMessage[]) => void;
+  setMessages: (arg: SetMessagesArg) => void;
   addMessage: (msg: ChatMessage) => void;
   clearMessages: () => void;
   updateLastAssistant: (content: string) => void;
@@ -453,21 +458,25 @@ interface ChatStore {
 export const useChatStore = create<ChatStore>((set, get) => ({
   /* 메시지 */
   messages: [],
-  setMessages: (msgs) => {
-    set({ messages: msgs });
+  setMessages: (arg) => {
+    const prev = get().messages;
+    const next = typeof arg === 'function' ? arg(prev) : arg;
+
+    set({ messages: next });
+
     const { activeRoomId, rooms } = get();
     if (!activeRoomId) return;
 
     const idx = rooms.findIndex((r) => r.id === activeRoomId);
     if (idx < 0) return;
 
-    const next = [...rooms];
-    next[idx] = {
-      ...next[idx],
-      messages: msgs.slice(-MAX_MSG_PER_ROOM),
+    const updatedRooms = [...rooms];
+    updatedRooms[idx] = {
+      ...updatedRooms[idx],
+      messages: next.slice(-MAX_MSG_PER_ROOM),
     };
 
-    set({ rooms: next });
+    set({ rooms: updatedRooms });
     get().saveToCookies();
   },
   addMessage: (msg) =>
