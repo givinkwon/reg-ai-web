@@ -2708,12 +2708,13 @@ export default function ChatArea() {
                   <MakeSafetyDocs
                     mode={docMode === 'review' ? 'review' : 'create'}
                     onSelectDoc={(category, doc) => {
-                      ensureRoomExists();
+                      const roomId = ensureRoomExists();
 
                       const today = formatToday();
                       const label = (doc.label || doc.id || '문서').replace(/\s+/g, '');
                       const prefix = docMode === 'review' ? '[문서검토]' : '[문서생성]';
-                      queueMicrotask(() => setSidebarTitle(`${prefix}${label}_${today}`));
+
+                      queueMicrotask(() => setSidebarTitle(roomId, `${prefix}${label}_${today}`));
 
                       if (docMode === 'create') {
                         handleSelectSafetyDoc(category, doc);
