@@ -54,6 +54,7 @@ const TYPE_META: Record<string, { label: string; emoji: string }> = {
 
 type TaskType =
   | 'law_research'
+  | 'doc_create'
   | 'doc_review'
   | 'risk_assessment'
   | 'law_interpret'
