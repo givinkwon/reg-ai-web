@@ -299,7 +299,9 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
 
   if (items.length === 0) {
     const scan = stripMdDecorations(block);
-    const fallback = scan.match(/(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$).+?(?::\s*.+)?/g) || [];
+    const fallback =
+      scan.match(/(〔.+?〕|$begin:math:display$\.\+\?$end:math:display$).+?(?::\s*.+)?/g) ||
+      [];
     for (const raw of fallback) {
       const item = parseEvidenceLine(raw);
       if (item?.title) items.push(item);
@@ -414,6 +416,9 @@ interface ChatStore {
   createRoom: () => string;
   setActiveRoom: (id: string) => void;
   deleteRoom: (id: string) => void;
+
+  // ✅ 추가: 특정 roomId의 title 갱신 (ChatArea에서 roomId로 호출하는 용도)
+  updateRoomTitle: (roomId: string, title: string) => void;
 
   // ✅ 타이틀: 비어있을 때만
   setActiveRoomTitleIfEmpty: (title: string) => void;
@@ -573,6 +578,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           : [],
       };
     });
+    get().saveToCookies();
+  },
+
+  // ✅ 추가: roomId로 title 업데이트 (ChatArea.tsx에서 st.updateRoomTitle(roomId, title) 대응)
+  updateRoomTitle: (roomId, title) => {
+    const nextTitle = title.trim().slice(0, 50) || '새 대화';
+
+    set((s) => {
+      const idx = s.rooms.findIndex((r) => r.id === roomId);
+      if (idx < 0) return s;
+
+      const r = s.rooms[idx];
+      const next = [...s.rooms];
+      next[idx] = { ...r, title: nextTitle };
+      return { ...s, rooms: next };
+    });
+
     get().saveToCookies();
   },
 
