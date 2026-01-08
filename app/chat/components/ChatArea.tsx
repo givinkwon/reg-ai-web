@@ -64,7 +64,8 @@ type TaskType =
 
 const TASK_META: Record<TaskType, { label: string }> = {
   law_research: { label: '법령 조사' },
-  doc_review: { label: '안전 문서 생성/검토' },
+  doc_create: { label: '안전 문서 생성' },
+  doc_review: { label: '안전 문서 검토' },
   risk_assessment: { label: '위험성 평가' },
   law_interpret: { label: 'AI 법령 해석' },
   edu_material: { label: '교육자료 찾기' },
