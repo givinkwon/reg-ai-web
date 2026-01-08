@@ -11,6 +11,7 @@ type MonItem = { doc_type: string; doc_id: string; title: string };
 // 서버에 허용되는 task_type 값들
 type ServerTaskType =
 | 'law_research'
+| 'doc_create'
 | 'doc_review'
 | 'risk_assessment'
 | 'law_interpret'
