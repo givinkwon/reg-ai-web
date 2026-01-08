@@ -128,12 +128,10 @@
 }
 
 .closeBtn {
-  width: 36px;
-  height: 36px;
   border-radius: 12px;
   border: 1px solid var(--ra-border);
   background: var(--ra-surface-2);
-  color: var(--ra-text);
+  color: black;
   cursor: pointer;
   font-size: 20px;
   line-height: 0;

@@ -396,10 +396,53 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
 type SetMessagesArg = ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[]);
 export type MainView = 'chat' | 'docs';
 
+export type WeeklyNewsModalState = {
+  open: boolean;
+  category?: string; // 'environment' | 'infosec' 등
+};
+
+export type NewsArticlesModalState = {
+  open: boolean;
+  title?: string;
+  html?: string; // 기사 목록 HTML
+};
+
+export type LawNoticeArticle = {
+  title: string;
+  url?: string;
+};
+
+export type LawNoticeArticlesModalState = {
+  open: boolean;
+  title?: string;
+  items?: LawNoticeArticle[];
+};
+
+
 /* =========================
  * Store
  * ========================= */
 interface ChatStore {
+  weeklyNewsModal: WeeklyNewsModalState;
+  openWeeklyNewsModal: (category?: string) => void;
+  closeWeeklyNewsModal: () => void;
+
+  newsArticlesModal: NewsArticlesModalState;
+  openNewsArticlesModal: (html: string, title?: string) => void;
+  closeNewsArticlesModal: () => void;
+
+  openNoticeSummaryModal: () => void;
+  closeNoticeSummaryModal: () => void;
+
+  openLawNoticeArticlesModal: (items: LawNoticeArticle[], title?: string) => void;
+  closeLawNoticeArticlesModal: () => void;
+
+  // ✅ 입법예고 요약 모달
+  noticeSummaryModal: { open: boolean };
+
+  // ✅ 입법예고 기사 목록 모달
+  lawNoticeArticlesModal: LawNoticeArticlesModalState;
+  
   messages: ChatMessage[];
   setMessages: (arg: SetMessagesArg) => void;
   addMessage: (msg: ChatMessage) => void;
@@ -411,7 +454,7 @@ interface ChatStore {
   loadFromCookies: () => void; // 내부 구현은 localStorage 사용
   saveToCookies: () => void; // 내부 구현은 localStorage 사용 + 쿠키(접힘만)
   createRoom: () => string;
-  setActiveRoom: (id: string) => void;
+  setActiveRoom: (id: string | null) => void;
   deleteRoom: (id: string) => void;
 
   updateRoomTitle: (roomId: string, title: string) => void;
@@ -498,6 +541,70 @@ export const useChatStore = create<ChatStore>((set, get) => {
   };
 
   return {
+    weeklyNewsModal: { open: false, category: undefined },
+
+    openWeeklyNewsModal: (category) =>
+      set({ weeklyNewsModal: { open: true, category } }),
+
+    closeWeeklyNewsModal: () =>
+      set({ weeklyNewsModal: { open: false, category: undefined } }),
+
+    newsArticlesModal: { open: false, title: undefined, html: undefined },
+
+    openNewsArticlesModal: (html, title) => {
+      if (!html) return;
+      set({
+        newsArticlesModal: {
+          open: true,
+          html,
+          title: title ?? '참고 기사 목록',
+        },
+      });
+    },
+
+    closeNewsArticlesModal: () => {
+      set({ newsArticlesModal: { open: false, title: undefined, html: undefined } });
+    },
+
+    lawNoticeSummaryModal: {
+      open: false,
+      title: '입법 예고 요약',
+      metaText: '',
+      summaryHtml: '',
+      loading: false,
+      error: null,
+    },
+
+    // ✅ 입법예고 요약 모달 (open/close)
+    noticeSummaryModal: { open: false },
+
+    openNoticeSummaryModal: () => {
+      set({ noticeSummaryModal: { open: true } });
+    },
+
+    closeNoticeSummaryModal: () => {
+      set({ noticeSummaryModal: { open: false } });
+    },
+
+    // ✅ 입법예고 기사 목록 모달 (items + title)
+    lawNoticeArticlesModal: { open: false, title: undefined, items: undefined },
+
+    openLawNoticeArticlesModal: (items, title) => {
+      set({
+        lawNoticeArticlesModal: {
+          open: true,
+          title: title ?? '입법예고 관련 기사',
+          items: items ?? [],
+        },
+      });
+    },
+
+    closeLawNoticeArticlesModal: () => {
+      set({
+        lawNoticeArticlesModal: { open: false, title: undefined, items: undefined },
+      });
+    },
+
     /* 메시지 */
     messages: [],
 
@@ -563,8 +670,8 @@ export const useChatStore = create<ChatStore>((set, get) => {
 
         set({
           rooms,
-          activeRoomId: safeActive,
-          messages: safeActive ? rooms.find((r) => r.id === safeActive)?.messages || [] : [],
+          // activeRoomId: safeActive,
+          // messages: safeActive ? rooms.find((r) => r.id === safeActive)?.messages || [] : [],
         });
       } catch (e) {
         console.warn('[loadFromCookies] failed:', e);
@@ -594,11 +701,18 @@ export const useChatStore = create<ChatStore>((set, get) => {
     },
 
     setActiveRoom: (id) => {
+      if (!id) {
+        set({ activeRoomId: null, messages: [] });
+        get().saveToCookies();
+        return;
+      }
+    
       const { rooms } = get();
       const r = rooms.find((x) => x.id === id);
       set({ activeRoomId: id, messages: r?.messages || [] });
       get().saveToCookies();
     },
+    
 
     deleteRoom: (id) => {
       set((s) => {

@@ -24,6 +24,26 @@ export type SafetyDocCategory = {
 // ======================
 export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
   {
+    id: 'daily-check',
+    title: '일상점검·작업관리',
+    description:
+      'TBM 활동일지, 보호구 지급대장, 작업 계획표 등의 서류를 작성할 수 있어요',
+    docs: [
+      { id: 'tbm-log', label: 'TBM활동일지' },
+      { id: 'heat-illness-control-sheet', label: '온열질환관리표' },
+      { id: 'ppe-issue-ledger', label: '보호구 지급 대장' },
+      { id: 'work-plan', label: '작업계획서' },
+      { id: 'work-permit', label: '작업허가서' },
+      { id: 'daily-safety-council-minutes', label: '안전보건 협의체 회의록' },
+      {
+        id: 'msds-list',
+        label: '물질안전보건자료목록표(MSDS)',
+      },
+      { id: 'work-stop-request-log', label: '작업중지요청 기록대장' },
+      { id: 'work-stop-request-form', label: '작업중지 요청서' },
+    ],
+  },
+  {
     id: 'edu-plan',
     title: '교육·안전관리 계획/평가 관련',
     description:
@@ -49,26 +69,6 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
       { id: 'safety-council-minutes', label: '안전보건 협의체 회의록' },
       { id: 'safety-fair-meeting-minutes', label: '안전공정회의 회의록' },
       { id: 'suggestion-hearing-form', label: '건의사항 청취표' },
-    ],
-  },
-  {
-    id: 'daily-check',
-    title: '일상점검·작업관리',
-    description:
-      'TBM 활동일지, 보호구 지급대장, 작업 계획표 등의 서류를 작성할 수 있어요',
-    docs: [
-      { id: 'tbm-log', label: 'TBM활동일지' },
-      { id: 'heat-illness-control-sheet', label: '온열질환관리표' },
-      { id: 'ppe-issue-ledger', label: '보호구 지급 대장' },
-      { id: 'work-plan', label: '작업계획서' },
-      { id: 'work-permit', label: '작업허가서' },
-      { id: 'daily-safety-council-minutes', label: '안전보건 협의체 회의록' },
-      {
-        id: 'msds-list',
-        label: '물질안전보건자료목록표(MSDS)',
-      },
-      { id: 'work-stop-request-log', label: '작업중지요청 기록대장' },
-      { id: 'work-stop-request-form', label: '작업중지 요청서' },
     ],
   },
   {

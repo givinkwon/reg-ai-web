@@ -45,7 +45,11 @@ import RiskAssessmentWizard, {
   type RiskAssessmentDraft,
   draftToPrompt,
 } from './risk-assessment/RiskAssessmentWizard'
-import RiskAssessmentWizardModal from './risk-assessment/RiskAssessmentWizardModal';
+
+import { useLawNoticeModal } from './law-notice/UseLawNoticeModal';
+import LawNoticeSummaryModal from './law-notice/LawNoticeSummaryModal';
+import LawNoticeArticlesModal from './law-notice/LawNoticeArticlesModal';
+
 
 const TYPE_META: Record<string, { label: string; emoji: string }> = {
   environment: { label: '환경/안전', emoji: '🌱' },
@@ -1093,34 +1097,6 @@ export const SAFETY_EDU_GUIDES_RAW: Record<string, SafetyEduGuide> = {
   },
 };
 
-type SafetyNewsResponse = {
-  id: string;
-  category?: string;
-  period?: string | null;
-  batch_date?: string;
-  digest: string;
-  source_count?: number | null;
-};
-type LawNoticeSummaryResponse = {
-  id?: string | null;
-  run_date?: string | null;
-  cutoff_date?: string | null;
-  months_back?: number | null;
-  item_count?: number | null;
-
-  // 예전 safety-news 스타일
-  digest?: string | null;
-
-  // 혹시 백엔드가 평탄화해서 줄 수도 있음
-  summary_kor?: string | null;
-
-  // 지금 실제로 오는 구조(text.summary_kor)
-  text?: {
-    summary_kor?: string;
-    [key: string]: any;
-  } | null;
-};
-
 type QuickActionGroup = {
   id: string;
   title: string;
@@ -1296,31 +1272,8 @@ export default function ChatArea() {
     '산업재해 발생 시 응급조치, 보고, 재발방지 대책 수립까지 단계별 실무지침을 정리해줘.',
   ];
 
-  const DOC_CREATE_HINTS: string[] = [
-    '위험성평가서',
-    '작업허가서(밀폐공간 작업)',
-    '지게차 작업 안전점검표',
-    '정기 안전보건교육 일지',
-    'TBM(작업 전 안전회의) 회의록',
-    '산업재해 발생 보고서',
-    '보호구 지급·관리대장',
-    '도급·하도급 안전보건협의체 회의록',
-    '위험성평가 결과 개선조치 관리대장',
-    '화학물질 취급 작업 표준작업지침서(SOP)',
-  ];
-
   const EDU_INTRO_TEXT =
     '신입·정기 교육에 쓸 수 있는 산업안전/보건 교육자료 개요를 REA AI가 만들어드려요. 어떤 교육이 필요하신가요?';
-
-  const EDU_MATERIAL_HINTS: string[] = [
-    '신입 직원 대상 기본 산업안전/보건 교육자료',
-    '위험성평가 방법과 절차를 설명하는 교육자료',
-    '지게차·크레인 작업자 안전수칙 교육자료',
-    '화학물질 취급 작업자를 위한 유해위험·보호구 교육자료',
-    '중대재해처벌법의 주요 내용과 경영책임자 의무를 설명하는 교육자료',
-    '도급·하도급 현장의 안전보건 책임과 의무를 설명하는 교육자료',
-    '밀폐공간 작업 안전수칙과 사고사례를 포함한 교육자료',
-  ];
 
   const ACCIDENT_INTRO_TEXT =
   'KOSHA 사고사례 DB에서 원하는 설비·공정과 관련된 사고사례를 찾아 개요와 재발방지대책까지 정리해드려요. 어떤 사고사례를 찾고 싶으신가요?';
@@ -1363,18 +1316,8 @@ export default function ChatArea() {
     }
   };
 
-  const chooseType = (id: string) => {
-    Cookies.set('selectedJobType', id, { expires: 7 });
-    setSelectedJobType(id);
-    setShowTypeModal(false);
-  };
-
-  const cur =
-    TYPE_META[selectedJobType ?? ''] ?? { label: '분야 선택', emoji: '💼' };
-
   const currentTaskMeta = selectedTask ? TASK_META[selectedTask] : null;
 
-  // HTML -> 텍스트 (백업용)
   const htmlToText = (html: string) => {
     try {
       const clean = html.replace(/<br\s*\/?>/gi, '\n');
@@ -1511,10 +1454,6 @@ export default function ChatArea() {
     };
   };
 
-  const isSafetyNewsHtml = (html: string) => {
-    return html.includes('data-msg-type="safety-news"');
-  };
-
   // 🔹 추가: 사고사례 섹션이 있는지 체크
   const hasAccidentCasesInHtml = (html: string) => {
     if (!html) return false;
@@ -1634,6 +1573,10 @@ export default function ChatArea() {
     setActiveHintTask(null);
     setActiveHints([]);
 
+    if (selectedTask == 'guideline_interpret' || selectedTask == 'law_interpret' || selectedTask == 'accident_search') {
+      queueMicrotask(() => setSidebarTitle(`${input}`));
+    }
+
     sendMessage({
       taskType: selectedTask || undefined,
       files: attachments,
@@ -1648,193 +1591,34 @@ export default function ChatArea() {
     e.preventDefault();
   };
 
-  const fetchWeeklySafetyNews = async () => {
-    // ✅ 로딩 버블 먼저 띄우기
-    beginMenuLoading('금주의 안전 뉴스');
+  const { openWeeklyNewsModal, openNoticeSummaryModal } = useChatStore();
+  const {
+    open: noticeOpen,
+    articlesOpen,
+    loading: noticeLoading,
+    error: noticeError,
+    title: noticeTitle,
+    metaText: noticeMetaText,
+    summaryHtml: noticeSummaryHtml,
+    articles: noticeArticles,
+    hasArticles: noticeHasArticles,
+    fetchLatest: fetchLatestNotice,
+    close: closeNotice,
+    openArticles: openNoticeArticles,
+    closeArticles: closeNoticeArticles,
+  } = useLawNoticeModal();
+  
+  const fetchWeeklySafetyNews = () => {
+    const category =
+      selectedJobType === 'environment' || selectedJobType === 'infosec'
+        ? selectedJobType
+        : undefined;
+  
+    openWeeklyNewsModal(category);
+  }; 
 
-    try {
-      const params = new URLSearchParams();
-
-      if (selectedJobType === 'environment' || selectedJobType === 'infosec') {
-        params.set('category', selectedJobType);
-      }
-
-      const qs = params.toString();
-      const url = `/api/safety-news/latest${qs ? `?${qs}` : ''}`;
-
-      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-
-      if (!res.ok) {
-        console.error('[ChatArea] safety-news error status:', res.status);
-        endMenuLoadingError(
-          '금주의 안전 뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-        );
-        return;
-      }
-
-      const data = (await res.json()) as SafetyNewsResponse;
-
-      const periodText =
-        (data.period && data.period.trim()) ||
-        (data.batch_date && data.batch_date.slice(0, 10)) ||
-        '';
-
-      const titleHtml = periodText
-        ? `🔔 <strong>${periodText} 금주의 안전 뉴스</strong>`
-        : '🔔 <strong>금주의 안전 뉴스</strong>';
-
-      const metaParts: string[] = [];
-
-      if (data.category && TYPE_META[data.category]) {
-        const meta = TYPE_META[data.category];
-        metaParts.push(`${meta.emoji} ${meta.label}`);
-      }
-
-      if (typeof data.source_count === 'number') {
-        metaParts.push(`기사 ${data.source_count}건 기준`);
-      }
-
-      const metaHtml = metaParts.length
-        ? `<div style="margin-top:4px; font-size:12px; opacity:0.8;">
-             ${metaParts.join(' · ')}
-           </div>`
-        : '';
-
-      const digestText = data.digest || '';
-      const { summaryText, articlesText } = splitDigestForArticles(digestText);
-
-      const summaryHtml = summaryText
-        ? summaryText
-            .split('\n')
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .join('<br />')
-        : '';
-
-      const articlesHtml = articlesText
-        ? articlesText
-            .split('\n')
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .join('<br />')
-        : '';
-
-      const html = `
-        <div data-msg-type="safety-news">
-          <p>${titleHtml}</p>
-          ${metaHtml}
-          ${
-            summaryHtml
-              ? `<div style="margin-top:8px;" data-section="summary">${summaryHtml}</div>`
-              : ''
-          }
-          ${
-            articlesHtml
-              ? `<div style="margin-top:12px; display:none;" data-section="articles">${articlesHtml}</div>`
-              : ''
-          }
-        </div>
-      `;
-
-      // ✅ 로딩 버블(마지막 assistant)을 최종 HTML로 교체
-      endMenuLoadingSuccess(html);
-    } catch (e) {
-      console.error('[ChatArea] safety-news fetch error:', e);
-      endMenuLoadingError('금주의 안전 뉴스를 불러오는 중 오류가 발생했습니다.');
-    }
-  };
-
-  const fetchLawNoticeSummary = async () => {
-    // ✅ 로딩 버블 먼저 띄우기
-    beginMenuLoading('입법 예고 요약');
-
-    try {
-      const res = await fetch('/api/expect-law/latest', { cache: 'no-store' });
-
-      if (!res.ok) {
-        console.error('[ChatArea] law-notice-summary error status:', res.status);
-        endMenuLoadingError(
-          '입법 예고 요약을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-        );
-        return;
-      }
-
-      const data = (await res.json()) as LawNoticeSummaryResponse;
-      console.log('[ChatArea] expect-law data =', data);
-
-      const cutoff = data.cutoff_date?.slice(0, 10);
-      const run = data.run_date?.slice(0, 10);
-
-      const periodText =
-        cutoff && run ? `${cutoff} ~ ${run}` : run || cutoff || '';
-
-      const titleHtml = periodText
-        ? `📜 <strong>${periodText} 입법 예고 요약</strong>`
-        : '📜 <strong>입법 예고 요약</strong>';
-
-      const metaParts: string[] = [];
-
-      if (typeof data.months_back === 'number') {
-        metaParts.push(`최근 ${data.months_back}개월 기준`);
-      }
-
-      if (typeof data.item_count === 'number') {
-        metaParts.push(`입법예고 ${data.item_count}건 기준`);
-      }
-
-      const metaHtml = metaParts.length
-        ? `<div style="margin-top:4px; font-size:12px; opacity:0.8;">
-             ${metaParts.join(' · ')}
-           </div>`
-        : '';
-
-      const digestText =
-        data.digest || data.summary_kor || data.text?.summary_kor || '';
-
-      const { summaryText, articlesText } = splitDigestForArticles(
-        digestText,
-        '참고 입법예고 목록',
-      );
-
-      const summaryHtml = summaryText
-        ? summaryText
-            .split('\n')
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .join('<br />')
-        : '';
-
-      const articlesHtml = articlesText
-        ? articlesText
-            .split('\n')
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .join('<br />')
-        : '';
-
-      const html = `
-        <div data-msg-type="notice-summary">
-          <p>${titleHtml}</p>
-          ${metaHtml}
-          ${
-            summaryHtml
-              ? `<div style="margin-top:8px;" data-section="summary">${summaryHtml}</div>`
-              : ''
-          }
-          ${
-            articlesHtml
-              ? `<div style="margin-top:12px; display:none;" data-section="articles">${articlesHtml}</div>`
-              : ''
-          }
-        </div>
-      `;
-
-      // ✅ 로딩 버블(마지막 assistant)을 최종 HTML로 교체
-      endMenuLoadingSuccess(html);
-    } catch (e) {
-      console.error('[ChatArea] expect-law-summary fetch error:', e);
-      endMenuLoadingError('입법 예고 요약을 불러오는 중 오류가 발생했습니다.');
-    }
+  const fetchNoticeSummary = () => {
+    fetchLatestNotice();
   };
 
   const [noticeToast, setNoticeToast] = useState<string | null>(null);
@@ -1892,27 +1676,15 @@ export default function ChatArea() {
 
     // ✅ 안전뉴스: [안전뉴스]
     if (action.id === 'today_accident') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[안전뉴스]${today}`));
-
       fetchWeeklySafetyNews();
       return;
     }
 
     // ✅ 입법예고: [입법예고]
     if (action.id === 'notice_summary') {
-      setActiveHintTask(null);
-      setActiveHints([]);
-
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[입법예고]${today}`));
-
-      fetchLawNoticeSummary();
+      fetchNoticeSummary();
       return;
-    }
+    }    
 
     // ✅ 사고사례: [사고사례]
     if (action.id === 'accident_search') {
@@ -2018,10 +1790,13 @@ export default function ChatArea() {
       mappedTaskType = 'edu_material';
     } else if (task === 'guideline_interpret') {
       mappedTaskType = 'guideline_interpret';
+      queueMicrotask(() => setSidebarTitle(`${hint}`));
     } else if (task === 'accident_search') {
       mappedTaskType = 'accident_search';
+      queueMicrotask(() => setSidebarTitle(`${hint}`));
     } else {
       mappedTaskType = 'law_interpret';
+      queueMicrotask(() => setSidebarTitle(`${hint}`));
     }
 
     setSelectedTask(mappedTaskType);
@@ -2130,10 +1905,6 @@ export default function ChatArea() {
     const el = document.querySelector<HTMLInputElement>('.chat-input');
     if (el) el.focus();
   };
-
-  // ✅ 현재까지 user role 메시지 개수
-  const getUserMessageCount = () =>
-    messages.filter((m) => m.role === 'user').length;
 
   // ✅ 게스트 제한 체크 (3개 이상이면 true)
   const shouldBlockGuestByLimit = () => {
@@ -2413,41 +2184,6 @@ export default function ChatArea() {
   const updateLastAssistant = useChatStore((s) => s.updateLastAssistant);
 
   const [selectedEduMaterialId, setSelectedEduMaterialId] = useState<string | null>(null);
-
-  type EduSelectParams = {
-    category: SafetyEduCategory;
-    material: SafetyEduMaterial;
-    guide: SafetyEduGuide;
-  };
-
-  const buildEduGuideHtml = ({ category, material, guide }: EduSelectParams) => {
-    const bullets = guide.bulletPoints
-      .map((b) => b.replace(/^·\s?/, ''))
-      .map((b) => `<li>${b}</li>`)
-      .join('');
-
-    return `
-      <div data-ai-kind="edu-material">
-        <div style="font-weight:700; margin-bottom:6px;">
-          ${material.title}
-          <span style="color:#9ca3af; font-weight:600; margin-left:6px;">
-            ${category.title}
-          </span>
-        </div>
-
-        <div style="margin-bottom:10px;">${guide.intro}</div>
-
-        <ul style="margin:0 0 12px 18px;">
-          ${bullets}
-        </ul>
-
-        <a href="${guide.downloadUrl}" target="_blank" rel="noopener noreferrer"
-          style="display:inline-block; padding:10px 12px; border:1px solid #334155; border-radius:12px; text-decoration:none;">
-          ⬇️ ${guide.downloadLabel}
-        </a>
-      </div>
-    `;
-  };
 
   const handleSelectSafetyEduMaterial = ({
     category,
@@ -2797,28 +2533,19 @@ export default function ChatArea() {
                 let isSafetyNews = false;
                 let isNoticeSummary = false;
                 let isAccidentCases = false;
-                let safetyArticlesHtml: string | null = null;
-                let noticeArticlesHtml: string | null = null;
                 let safeHtml: string;
 
                 if (m.role === 'assistant') {
                   const rawHtml = m.content || '';
+                  const text = (m.content ?? '').replace(/<[^>]*>/g, '').trim();
+                  if (text.length === 0) {
+                    return null; // ✅ 빈 assistant는 아예 렌더하지 않음
+                  }
 
                   // 🔹 사고사례 섹션 있는지 먼저 체크
                   isAccidentCases = hasAccidentCasesInHtml(rawHtml);
 
-                  if (isSafetyNewsHtml(rawHtml)) {
-                    isSafetyNews = true;
-                    safeHtml = extractSafetySummaryHtml(rawHtml);
-                    safetyArticlesHtml = extractSafetyArticlesHtml(rawHtml);
-                  } else if (isNoticeSummaryHtml(rawHtml)) {
-                    // ✅ 입법예고 요약
-                    isNoticeSummary = true;
-                    safeHtml = extractNoticeSummaryHtml(rawHtml); // 본문(제목+요약)만
-                    noticeArticlesHtml = extractNoticeArticlesHtml(rawHtml); // 우측 패널용
-                  } else {
-                    safeHtml = cutHtmlBeforeEvidence(rawHtml);
-                  }
+                  safeHtml = cutHtmlBeforeEvidence(rawHtml);
                 } else {
                   safeHtml = m.content;
                 }
@@ -2899,26 +2626,7 @@ export default function ChatArea() {
                         <button
                           className={s.evidenceBtn}
                           onClick={() => {
-                            if (isSafetyNews) {
-                              const htmlForRight =
-                                safetyArticlesHtml && safetyArticlesHtml.trim().length > 0
-                                  ? safetyArticlesHtml
-                                  : extractSafetyArticlesHtml(m.content) || m.content;
-
-                              openRightFromHtml(htmlForRight, {
-                                mode: 'news',
-                              });
-                            } else if (isNoticeSummary) {
-                              // ✅ 입법예고용: 제목만 + 링크 리스트
-                              const htmlForRight =
-                                noticeArticlesHtml && noticeArticlesHtml.trim().length > 0
-                                  ? noticeArticlesHtml
-                                  : extractNoticeArticlesHtml(m.content) || m.content;
-
-                              openRightFromHtml(htmlForRight, {
-                                mode: 'lawNotice',
-                              });
-                            } else if (isAccidentCases) {
+                            if (isAccidentCases) {
                               openRightFromHtml(m.content, {
                                 mode: 'accident',
                               });
@@ -2929,11 +2637,7 @@ export default function ChatArea() {
                             }
                           }}
                         >
-                          {isSafetyNews
-                            ? '참고 기사 목록 확인하기'
-                            : isNoticeSummary
-                              ? '참고 입법예고 목록 확인하기'
-                              : isAccidentCases
+                          {isAccidentCases
                                 ? '참고 사고사례 확인하기'
                                 : '근거 및 서식 확인하기'}
                         </button>
@@ -3110,6 +2814,28 @@ export default function ChatArea() {
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
       {noticeToast && <div className={s.toast}>{noticeToast}</div>}
+
+            {/* ✅ 입법예고 요약 모달 */}
+            <LawNoticeSummaryModal
+        open={noticeOpen}
+        onClose={closeNotice}
+        title={noticeTitle}
+        metaText={noticeMetaText}
+        loading={noticeLoading}
+        error={noticeError}
+        summaryHtml={noticeSummaryHtml}
+        hasArticles={noticeHasArticles}
+        onOpenArticles={openNoticeArticles}
+      />
+
+      {/* ✅ 참고 입법예고 목록 모달 */}
+      <LawNoticeArticlesModal
+        open={articlesOpen}
+        onClose={closeNoticeArticles}
+        title="참고 입법예고 목록"
+        items={noticeArticles}
+      />
+
     </>
   );
 }

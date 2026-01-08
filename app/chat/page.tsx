@@ -12,6 +12,8 @@ import DocsVault from './components/DocsVault';
 import { useChatStore } from '../store/chat';
 import { initUserStore, useUserStore } from '../store/user';
 import s from './page.module.css';
+import WeeklySafetyNewsModal from './components/news/WeeklySafetyNewsModal';
+import NewsArticlesModal from './components/news/NewsArticlesModal';
 
 export default function ChatPage() {
   const {
@@ -132,6 +134,8 @@ export default function ChatPage() {
       {showLoginModal && !showExtraModal && (
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
+      <WeeklySafetyNewsModal />
+      <NewsArticlesModal />
     </div>
   );
 }

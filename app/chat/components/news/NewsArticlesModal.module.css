@@ -1,0 +1,178 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+  
+  .modal {
+    width: min(860px, calc(100% - 24px));
+    max-height: min(80vh, 720px);
+    overflow: hidden;
+    padding: 1% 2% 1% 2%;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: white;
+    color: #e5e7eb;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  }
+  
+  .title {
+    font-weight: 800;
+    font-size: 14px;
+    color: black;
+  }
+  
+  .close {
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: transparent;
+    color: black;
+    cursor: pointer;
+  }
+  
+  .meta {
+    padding: 10px 14px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  }
+  
+  .badge {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    background: rgba(96, 165, 250, 0.12);
+  }
+  
+  .dim {
+    font-size: 12px;
+    opacity: 0.75;
+  }
+  
+  .body {
+    padding: 14px;
+    overflow: auto;
+  }
+  
+  .section {
+    margin-bottom: 14px;
+  }
+  
+  .sectionTitle {
+    font-weight: 900;
+    font-size: 13px;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+  
+  .text p {
+    margin: 0 0 8px;
+    line-height: 1.6;
+    font-size: 13px;
+  }
+  
+  .loading {
+    opacity: 0.85;
+    padding: 10px 0;
+  }
+  
+  .error {
+    border: 1px solid rgba(255, 120, 120, 0.25);
+    background: rgba(255, 120, 120, 0.06);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  
+  .retry {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: transparent;
+    color: #e5e7eb;
+    cursor: pointer;
+  }
+  
+  .empty {
+    opacity: 0.75;
+    font-size: 13px;
+  }
+  
+  /* WeeklySafetyNewsModal.module.css 추가 */
+
+.html {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text, #e5e7eb);
+}
+
+.footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.articlesBtn {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: rgba(96, 165, 250, 0.12);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.articlesBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.newsList{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .newsItem{
+    border: 1px solid #EAEDF5;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #fff;
+    margin-bottom: 10px;
+  }
+  
+  .newsLink{
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    text-decoration: none;
+    color: #303650;
+  }
+  
+  .newsIndex{
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7493;
+    margin-top: 2px;
+  }
+  
+  .newsTitle{
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  

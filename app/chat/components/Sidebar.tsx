@@ -33,11 +33,12 @@ export default function Sidebar() {
   const toggleCollapse = () => setCollapsed(!collapsed);
 
   const handleHomeClick = () => {
-    // 홈 = 채팅 화면으로
-    setMainView('chat');
-    window.location.href = '/chat';
+    const st = useChatStore.getState();
+    st.setMainView('chat');
+    st.setActiveRoom(null);         // ✅ activeRoomId 비우기 + messages 초기화
+    st.setSidebarMobileOpen(false);
   };
-
+  
   const handleDocsClick = () => {
     // ✅ 로그인 아니면 모달
     if (!user?.email) {
