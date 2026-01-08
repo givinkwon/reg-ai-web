@@ -395,6 +395,7 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
 
 type SetMessagesArg = ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[]);
 export type MainView = 'chat' | 'docs';
+
 /* =========================
  * Store
  * ========================= */
@@ -414,8 +415,6 @@ interface ChatStore {
   deleteRoom: (id: string) => void;
 
   updateRoomTitle: (roomId: string, title: string) => void;
-
-  // ✅ 추가: ChatArea 호환용 alias
   setRoomTitle: (roomId: string, title: string) => void;
 
   setActiveRoomTitleIfEmpty: (title: string) => void;
@@ -631,7 +630,6 @@ export const useChatStore = create<ChatStore>((set, get) => {
       get().saveToCookies();
     },
 
-    // ✅ 추가: ChatArea 호환용 alias
     setRoomTitle: (roomId, title) => {
       get().updateRoomTitle(roomId, title);
     },
@@ -664,7 +662,6 @@ export const useChatStore = create<ChatStore>((set, get) => {
       get().saveToCookies();
     },
 
-    // ✅ 이제 "rooms만"이 아니라 messages/rooms 둘 다 같이 들어가게 통일
     appendToActive: (msg) => {
       get().addMessage(msg);
     },
@@ -727,5 +724,9 @@ export const useChatStore = create<ChatStore>((set, get) => {
     /* 로그인 모달 */
     showLoginModal: false,
     setShowLoginModal: (open) => set({ showLoginModal: open }),
+
+    // ✅✅✅ 여기 추가 안 해서 타입에러 났던 부분
+    mainView: 'chat',
+    setMainView: (v) => set({ mainView: v }),
   };
 });

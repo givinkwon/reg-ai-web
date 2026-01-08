@@ -3,7 +3,7 @@
 import { Download } from 'lucide-react';
 import { useMemo } from 'react';
 import { Button } from '../../components/ui/button';
-import s from './DocumentVault.module.css';
+import s from './DocsVault.module.css';
 
 type DocItem = {
   id: string;
@@ -20,20 +20,60 @@ function formatDate(ts: number) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export default function DocumentVault() {
+type Props = {
+  userEmail: string | null;
+  onRequireLogin: () => void;
+};
+
+export default function DocsVault({ userEmail, onRequireLogin }: Props) {
+  // ✅ 로그인 안 되어 있으면 안내 화면
+  if (!userEmail) {
+    return (
+      <section className={s.wrap}>
+        <div className={s.header}>
+          <h2 className={s.title}>문서함</h2>
+          <p className={s.desc}>내 문서함을 보려면 로그인이 필요합니다.</p>
+        </div>
+
+        <div className={s.loginBox}>
+          <div className={s.loginTitle}>로그인이 필요합니다</div>
+          <div className={s.loginDesc}>
+            문서 생성/다운로드 이력은 계정에 저장됩니다. 로그인 후 이용해 주세요.
+          </div>
+
+          <Button onClick={onRequireLogin}>로그인하기</Button>
+        </div>
+      </section>
+    );
+  }
+
   // ✅ 임시 더미 데이터 (나중에 API로 교체)
   const docs = useMemo<DocItem[]>(
     () => [
-      { id: 'doc_1', name: '위험성평가_2026-01-08.xlsx', createdAt: Date.now() - 1000 * 60 * 60 * 2 },
-      { id: 'doc_2', name: '안전보건관리규정_초안.docx', createdAt: Date.now() - 1000 * 60 * 60 * 24 * 3 },
-      { id: 'doc_3', name: 'TBM_일지_양식.pdf', createdAt: Date.now() - 1000 * 60 * 60 * 24 * 10 },
+      {
+        id: 'doc_1',
+        name: '위험성평가_2026-01-08.xlsx',
+        createdAt: Date.now() - 1000 * 60 * 60 * 2,
+      },
+      {
+        id: 'doc_2',
+        name: '안전보건관리규정_초안.docx',
+        createdAt: Date.now() - 1000 * 60 * 60 * 24 * 3,
+      },
+      {
+        id: 'doc_3',
+        name: 'TBM_일지_양식.pdf',
+        createdAt: Date.now() - 1000 * 60 * 60 * 24 * 10,
+      },
     ],
     [],
   );
 
   // ✅ 임시 다운로드: 실제 파일 대신 텍스트를 파일로 내려받게 해둠
   const handleDownload = (doc: DocItem) => {
-    const content = `임시 다운로드 파일입니다.\n\n문서명: ${doc.name}\n생성일: ${formatDate(doc.createdAt)}\nID: ${doc.id}\n\n(추후 API 연결 시 실제 파일로 대체)`;
+    const content = `임시 다운로드 파일입니다.\n\n문서명: ${doc.name}\n생성일: ${formatDate(
+      doc.createdAt,
+    )}\nID: ${doc.id}\n\n(추후 API 연결 시 실제 파일로 대체)`;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
 
