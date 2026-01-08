@@ -1849,6 +1849,7 @@ export default function ChatArea() {
     return `${yyyy}/${mm}/${dd}`;
   };
 
+  // ✅ 방이 없으면 생성하고 roomId 반환
   const ensureRoomExists = () => {
     const st = useChatStore.getState?.();
     if (!st) return null;
@@ -1856,11 +1857,12 @@ export default function ChatArea() {
     // ✅ 이미 있으면 그걸 반환
     if (st.activeRoomId) return st.activeRoomId;
 
-    // ❗️중요: createRoom이 roomId를 반환하도록 store를 고쳐야 함
+    // ✅ createRoom이 roomId를 반환하도록 store가 구현되어 있어야 함
     const newId = st.createRoom?.();
     return newId ?? useChatStore.getState?.().activeRoomId ?? null;
   };
 
+  // ✅ roomId 기반 타이틀 변경
   const setSidebarTitle = (roomId: string | null, title: string) => {
     if (!roomId) return;
     const st = useChatStore.getState?.();
@@ -1887,8 +1889,8 @@ export default function ChatArea() {
 
     // ✅ 위험성평가: [위험성평가]YYYY/MM/DD
     if (action.id === 'risk_assessment') {
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[위험성평가]${today}`));
+      const roomId = ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(roomId, `[위험성평가]${today}`));
 
       setShowRiskWizard(true);
       return;
@@ -1899,8 +1901,8 @@ export default function ChatArea() {
       setActiveHintTask(null);
       setActiveHints([]);
 
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[안전뉴스]${today}`));
+      const roomId = ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(roomId, `[안전뉴스]${today}`));
 
       fetchWeeklySafetyNews();
       return;
@@ -1911,8 +1913,8 @@ export default function ChatArea() {
       setActiveHintTask(null);
       setActiveHints([]);
 
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[입법예고]${today}`));
+      const roomId = ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(roomId, `[입법예고]${today}`));
 
       fetchLawNoticeSummary();
       return;
@@ -1920,8 +1922,8 @@ export default function ChatArea() {
 
     // ✅ 사고사례: [사고사례]YYYY/MM/DD
     if (action.id === 'accident_search') {
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`
+      const roomId = ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(roomId, `[사고사례]${today}`)); // 날짜 원치 않으면 `[사고사례]`
 
       const intro: ChatMessage = { role: 'assistant', content: ACCIDENT_INTRO_TEXT };
 
@@ -1955,8 +1957,8 @@ export default function ChatArea() {
 
     // ✅ 교육자료: [교육자료]YYYY/MM/DD
     if (action.id === 'edu_material') {
-      ensureRoomExists();
-      queueMicrotask(() => setSidebarTitle(`[교육자료]${today}`));
+      const roomId = ensureRoomExists();
+      queueMicrotask(() => setSidebarTitle(roomId, `[교육자료]${today}`));
 
       setSelectedTask('edu_material');
       setActiveHintTask(null);
@@ -2053,8 +2055,7 @@ export default function ChatArea() {
 
     const guide = SAFETY_DOC_GUIDES[doc.id];
 
-    const intro =
-      guide?.intro || `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
+    const intro = guide?.intro || `"${doc.label}" 문서를 작성하기 위해 필요한 정보를 정리해 주세요.`;
 
     const fields =
       guide?.fields?.length
@@ -2142,7 +2143,6 @@ export default function ChatArea() {
     const el = document.querySelector<HTMLInputElement>('.chat-input');
     if (el) el.focus();
   };
-
 
   // ✅ 게스트 제한 체크 (3개 이상이면 true)
   const shouldBlockGuestByLimit = () => {
