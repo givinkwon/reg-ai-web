@@ -2651,7 +2651,10 @@ export default function ChatArea() {
 
   const handleRegenerate = (assistantIndex: number) => {
     // assistantIndex 이전의 가장 가까운 user 메시지를 찾아서 regenerate
-    const prev = [...messages].slice(0, assistantIndex).reverse().find((m) => m.role === 'user');
+    const prev = [...messages]
+      .slice(0, assistantIndex)
+      .reverse()
+      .find((m) => m.role === 'user');
     const q = (prev?.content || '').trim();
     if (!q) return;
 
@@ -3328,7 +3331,9 @@ export default function ChatArea() {
                                     updateLastAssistant(progressLines.join('<br/>'));
                                   }
                                   if (Date.now() - startedAt > timeoutMs) {
-                                    updateLastAssistant('문서 검토가 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요.');
+                                    updateLastAssistant(
+                                      '문서 검토가 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요.',
+                                    );
                                     break;
                                   }
                                   await new Promise((r) => setTimeout(r, intervalMs));
@@ -3354,7 +3359,9 @@ export default function ChatArea() {
                                   break;
                                 }
 
-                                updateLastAssistant(`문서 검토 작업 상태를 알 수 없습니다. (status=${String(status)})`);
+                                updateLastAssistant(
+                                  `문서 검토 작업 상태를 알 수 없습니다. (status=${String(status)})`,
+                                );
                                 break;
                               }
                             }}
@@ -3446,7 +3453,8 @@ export default function ChatArea() {
                 const isSafetyDocDownload =
                   m.role === 'assistant' && /양식\s*\((DOCX|XLSX)\)\s*다운로드/.test(plain);
 
-                const isEduMaterial = m.role === 'assistant' && (m.content || '').includes('data-ai-kind="edu-material"');
+                const isEduMaterial =
+                  m.role === 'assistant' && (m.content || '').includes('data-ai-kind="edu-material"');
 
                 const raw = m.role === 'assistant' ? m.content || '' : '';
                 const isLoadingBubble =
@@ -3461,7 +3469,10 @@ export default function ChatArea() {
                   return (
                     <div key={i} className={s.userRow}>
                       <div className={s.userBubble}>
-                        <div className={s.userContent} dangerouslySetInnerHTML={{ __html: m.content }} />
+                        <div
+                          className={s.userContent}
+                          dangerouslySetInnerHTML={{ __html: m.content }}
+                        />
                       </div>
                     </div>
                   );
@@ -3482,10 +3493,18 @@ export default function ChatArea() {
                         <div className={s.miniActions}>
                           {!isSafetyNews && !isNoticeSummary && (
                             <div className={s.miniActions}>
-                              <button className={s.iconBtn} title="다시 생성" onClick={() => handleRegenerate(i)}>
+                              <button
+                                className={s.iconBtn}
+                                title="다시 생성"
+                                onClick={() => handleRegenerate(i)}
+                              >
                                 <RotateCcw className={s.iconAction} />
                               </button>
-                              <button className={s.iconBtn} title="복사" onClick={() => handleCopy(i, m.content)}>
+                              <button
+                                className={s.iconBtn}
+                                title="복사"
+                                onClick={() => handleCopy(i, m.content)}
+                              >
                                 <Copy className={s.iconAction} />
                               </button>
                             </div>
@@ -3563,12 +3582,7 @@ export default function ChatArea() {
 
           {/* Right Panel */}
           {rightOpen && (
-            <RightPanel
-              open={rightOpen}
-              mode={rightMode}
-              html={rightHtml}
-              onClose={() => setRightOpen(false)}
-            />
+            <RightPanel open={rightOpen} mode={rightMode} html={rightHtml} onClose={() => setRightOpen(false)} />
           )}
 
           {attachments.length > 0 && (
@@ -3706,4 +3720,4 @@ export default function ChatArea() {
       {noticeToast && <div className={s.toast}>{noticeToast}</div>}
     </>
   );
-}
+  }
