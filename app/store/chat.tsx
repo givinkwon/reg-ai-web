@@ -289,9 +289,7 @@ const parseEvidenceLines = (block: string): EvidenceItem[] => {
 
   const normalized = lines.map(stripMdDecorations).filter(Boolean);
 
-  const candidates = normalized.filter((x) =>
-    /^(〔.+?〕|제\d+조|부칙)/.test(x),
-  );
+  const candidates = normalized.filter((x) => /^(〔.+?〕|제\d+조|부칙)/.test(x));
 
   const items: EvidenceItem[] = [];
   for (const raw of candidates) {
@@ -368,12 +366,8 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
   console.log('step3.evBlock:', evBlock);
   console.log('step3.formsBlock:', formsBlock);
 
-  const evidencePreview = evBlock
-    ? evBlock.split('\n').map((x) => x.trim()).filter(Boolean)
-    : [];
-  const formsPreview = formsBlock
-    ? formsBlock.split('\n').map((x) => x.trim()).filter(Boolean)
-    : [];
+  const evidencePreview = evBlock ? evBlock.split('\n').map((x) => x.trim()).filter(Boolean) : [];
+  const formsPreview = formsBlock ? formsBlock.split('\n').map((x) => x.trim()).filter(Boolean) : [];
   console.log('evidencePreview:', evidencePreview);
   console.log('formsPreview:', formsPreview);
 
@@ -399,9 +393,7 @@ const parseRightDataFromHtml = (html: string): RightPanelData => {
   };
 };
 
-type SetMessagesArg =
-  | ChatMessage[]
-  | ((prev: ChatMessage[]) => ChatMessage[]);
+type SetMessagesArg = ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[]);
 
 /* =========================
  * Store
@@ -422,6 +414,10 @@ interface ChatStore {
   deleteRoom: (id: string) => void;
 
   updateRoomTitle: (roomId: string, title: string) => void;
+
+  // ✅ 추가: ChatArea 호환용 alias
+  setRoomTitle: (roomId: string, title: string) => void;
+
   setActiveRoomTitleIfEmpty: (title: string) => void;
   setActiveRoomTitle: (title: string) => void;
 
@@ -566,9 +562,7 @@ export const useChatStore = create<ChatStore>((set, get) => {
         set({
           rooms,
           activeRoomId: safeActive,
-          messages: safeActive
-            ? rooms.find((r) => r.id === safeActive)?.messages || []
-            : [],
+          messages: safeActive ? rooms.find((r) => r.id === safeActive)?.messages || [] : [],
         });
       } catch (e) {
         console.warn('[loadFromCookies] failed:', e);
@@ -607,15 +601,12 @@ export const useChatStore = create<ChatStore>((set, get) => {
     deleteRoom: (id) => {
       set((s) => {
         const filtered = s.rooms.filter((r) => r.id !== id);
-        const nextActive =
-          s.activeRoomId === id ? filtered[0]?.id ?? null : s.activeRoomId;
+        const nextActive = s.activeRoomId === id ? filtered[0]?.id ?? null : s.activeRoomId;
 
         return {
           rooms: filtered,
           activeRoomId: nextActive,
-          messages: nextActive
-            ? filtered.find((r) => r.id === nextActive)?.messages || []
-            : [],
+          messages: nextActive ? filtered.find((r) => r.id === nextActive)?.messages || [] : [],
         };
       });
       get().saveToCookies();
@@ -635,6 +626,11 @@ export const useChatStore = create<ChatStore>((set, get) => {
       });
 
       get().saveToCookies();
+    },
+
+    // ✅ 추가: ChatArea 호환용 alias
+    setRoomTitle: (roomId, title) => {
+      get().updateRoomTitle(roomId, title);
     },
 
     setActiveRoomTitleIfEmpty: (title) => {
