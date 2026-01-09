@@ -1,206 +1,283 @@
 /* Light default + Dark override + Mobile bottom sheet */
 
 .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    z-index: 2400;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 2400;
+}
+
+.wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 2401;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.modal {
+  width: min(860px, calc(100% - 24px));
+  max-height: min(80vh, 720px);
+  overflow: hidden;
+  border-radius: 16px;
+
+  background: #ffffff;
+  color: #0f172a;
+
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
+
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.title {
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}
+
+.close {
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: transparent;
+  color: black;
+  cursor: pointer;
+  padding: 4px 10px;
+  line-height: 1;
+}
+
+.meta {
+  padding: 10px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+}
+
+.dim {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.body {
+  padding: 16px;
+  overflow: auto;
+}
+
+/* ✅ 여기부터: summaryHtml(후처리 HTML) 스타일 */
+.html {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(15, 23, 42, 0.92);
+
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* 큰 제목: 1) 답변 */
+.html h3[data-ai='title'] {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+/* 소제목: 1. ~ */
+.html p[data-ai='subheading'] {
+  margin: 10px 0 6px;
+}
+.html p[data-ai='subheading'] strong {
+  font-weight: 900;
+}
+
+/* 일반 문단 간격 */
+.html p {
+  margin: 0 0 8px;
+}
+.html p:last-child {
+  margin-bottom: 0;
+}
+
+/* ✅ ul/li를 "가운데점"으로 통일 */
+.html ul {
+  margin: 8px 0 12px;
+  padding-left: 0;
+  list-style: none;
+}
+.html li {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0;
+}
+.html li::before {
+  content: '·';
+  flex: 0 0 auto;
+  font-weight: 900;
+  opacity: 0.75;
+  line-height: 1.6;
+}
+.html ul ul {
+  margin-top: 6px;
+  padding-left: 16px;
+}
+
+.html span {
+  font-size: 1.2em;
+}
+/* ✅ (옵션) p 들여쓰기 dot 마크업이 들어올 때도 대응 */
+.html p[data-ai-dot='1'] {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.html span[data-ai='dotmark'] {
+  flex: 0 0 auto;
+  font-weight: 900;
+  opacity: 0.75;
+  line-height: 1.6;
+}
+.html span[data-ai='dottext'] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.loading {
+  opacity: 0.85;
+  padding: 10px 0;
+}
+
+.empty {
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+.error {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.errorTitle {
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.errorMsg {
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.articlesBtn {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.articlesBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dark */
+@media (prefers-color-scheme: dark) {
+  .overlay {
+    background: rgba(0, 0, 0, 0.55);
   }
-  
-  .wrap {
-    position: fixed;
-    inset: 0;
-    z-index: 2401;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-  }
-  
+
   .modal {
-    width: min(860px, calc(100% - 24px));
-    max-height: min(80vh, 720px);
-    overflow: hidden;
-    border-radius: 16px;
-  
-    background: #ffffff;
-    color: #0f172a;
-  
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
-  
-    display: flex;
-    flex-direction: column;
+    background: #0b1220;
+    color: #e5e7eb;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
   }
-  
+
   .head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   }
-  
-  .title {
-    font-weight: 900;
-    font-size: 14px;
-    letter-spacing: -0.2px;
-  }
-  
-  .close {
-    border-radius: 999px;
-    border: 1px solid rgba(15, 23, 42, 0.14);
-    background: transparent;
-    color: black;
-    cursor: pointer;
-  }
-  
+
   .meta {
-    padding: 10px 16px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   }
-  
+
+  .close {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: #e5e7eb;
+  }
+
   .badge {
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-weight: 900;
-    border: 1px solid rgba(37, 99, 235, 0.25);
-    background: rgba(37, 99, 235, 0.08);
-    color: #1d4ed8;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    background: rgba(96, 165, 250, 0.12);
+    color: #bfdbfe;
   }
-  
-  .dim {
-    font-size: 12px;
-    opacity: 0.75;
-  }
-  
-  .body {
-    padding: 16px;
-    overflow: auto;
-  }
-  
+
   .html {
-    font-size: 13px;
-    line-height: 1.7;
-    color: rgba(15, 23, 42, 0.92);
+    color: rgba(229, 231, 235, 0.92);
   }
-  
-  .loading {
-    opacity: 0.85;
-    padding: 10px 0;
+
+  .html li::before,
+  .html span[data-ai='dotmark'] {
+    opacity: 0.8;
   }
-  
-  .empty {
-    opacity: 0.7;
-    font-size: 13px;
-  }
-  
-  .error {
-    border: 1px solid rgba(239, 68, 68, 0.20);
-    background: rgba(239, 68, 68, 0.06);
-    border-radius: 12px;
-    padding: 12px;
-  }
-  
-  .errorTitle {
-    font-weight: 900;
-    margin-bottom: 6px;
-  }
-  
-  .errorMsg {
-    font-size: 13px;
-    line-height: 1.6;
-    opacity: 0.9;
-  }
-  
-  .footer {
-    margin-top: 14px;
-    display: flex;
-    justify-content: flex-end;
-  }
-  
+
   .articlesBtn {
-    padding: 10px 12px;
-    border-radius: 12px;
-    font-weight: 900;
-    cursor: pointer;
-  
-    border: 1px solid rgba(37, 99, 235, 0.25);
-    background: rgba(37, 99, 235, 0.10);
-    color: #1d4ed8;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    background: rgba(96, 165, 250, 0.12);
+    color: #bfdbfe;
   }
-  
-  .articlesBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+}
+
+/* Mobile bottom sheet */
+@media (max-width: 768px) {
+  .wrap {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
   }
-  
-  /* Dark */
-  @media (prefers-color-scheme: dark) {
-    .overlay {
-      background: rgba(0, 0, 0, 0.55);
-    }
-  
-    .modal {
-      background: #0b1220;
-      color: #e5e7eb;
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.45);
-    }
-  
-    .head {
-      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-    }
-  
-    .meta {
-      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-    }
-  
-    .close {
-      border: 1px solid rgba(148, 163, 184, 0.22);
-    }
-  
-    .badge {
-      border: 1px solid rgba(96, 165, 250, 0.35);
-      background: rgba(96, 165, 250, 0.12);
-      color: #bfdbfe;
-    }
-  
-    .html {
-      color: rgba(229, 231, 235, 0.92);
-    }
-  
-    .articlesBtn {
-      border: 1px solid rgba(96, 165, 250, 0.35);
-      background: rgba(96, 165, 250, 0.12);
-      color: #bfdbfe;
-    }
+
+  .modal {
+    width: 100vw;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
   }
-  
-  /* Mobile bottom sheet */
-  @media (max-width: 768px) {
-    .wrap {
-      align-items: flex-end;
-      justify-content: center;
-      padding: 0;
-    }
-  
-    .modal {
-      width: 100vw;
-      max-height: 88vh;
-      border-radius: 16px 16px 0 0;
-      border-left: 0;
-      border-right: 0;
-      border-bottom: 0;
-    }
-  
-    .body {
-      padding: 14px 14px 18px;
-    }
+
+  .body {
+    padding: 14px 14px 18px;
   }
-  
+}

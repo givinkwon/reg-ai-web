@@ -1,47 +1,113 @@
 /* ===== Sidebar ===== */
 .wrap{
-  width:296px; min-width:296px; height:100%;
+  width:296px; min-width:296px;
+  height:100%;
+  min-height:0;                 /* ✅ 중요: flex 스크롤을 위해 */
   padding:24px 12px 16px;
-  display:flex; flex-direction:column; gap:16px;
-  background: var(--sidebar-bg);                     /* ✅ 회색으로 변경 */
-  border-right: none; /* ✅ 경계선 제거 */
-  box-shadow: none;   /* 혹시 바깥 그림자 있으면 제거 */      /* ✅ 부드러운 보더 */
+
+  display:flex; flex-direction:column;
+  gap:16px;
+
+  background: var(--sidebar-bg);
+  border-right: none;
+  box-shadow: none;
+  overflow:hidden;              /* ✅ sidebar 자체는 고정, 내부(listArea)만 스크롤 */
   transition:width .2s ease, padding .2s ease, background .2s;
 }
+
 .collapsed{
-  width:64px; min-width:64px; padding:16px 8px;
-  background: var(--sidebar-bg);    
-  border-right: none;                 /* ✅ 접힘 상태도 동일 톤 */
+  width:64px; min-width:64px;
+  padding:16px 8px;
+  background: var(--sidebar-bg);
+  border-right: none;
+  min-height:0;
+  overflow:hidden;
 }
 
-.header{ display:flex; flex-direction:column; gap:12px; }
-.titleRow{ height:40px; padding:0 6px; display:flex; justify-content:space-between; align-items:center; }
-.brand{ display:flex; align-items:center; gap:8px; min-width:0; height: 25px; }
+.header{
+  cursor: pointer;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  flex:0 0 auto;                /* ✅ 헤더는 줄어들지 않게 */
+}
+
+.titleRow{
+  height:40px;
+  padding:0 6px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  height:25px;
+}
+
 .fav{ height:25px; }
-.brandText{ color:var(--text-dark); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.brandText{
+  color:var(--text-dark);
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
 /* ✅ 파란 배경 + 흰 화살표 */
 .collapseBtn{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; border-radius:8px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px; height:28px;
+  border-radius:8px;
   background:linear-gradient(to bottom,var(--btn-blue),var(--btn-blue-2));
   border:1px solid #0679FF;
   box-shadow:0 2px 5px rgba(20,88,201,.17);
   line-height:0;
 }
 .collapseBtn:hover{ filter:brightness(.95); }
+
 /* 아이콘이 0px로 수축되는 문제 방지 + 흰색 고정 */
 .collapseBtn :global(svg){
-  width:16px !important; height:16px !important;
-  min-width:16px; min-height:16px; flex:0 0 16px; display:block;
-  stroke:#fff !important; color:#fff !important;
+  width:16px !important;
+  height:16px !important;
+  min-width:16px;
+  min-height:16px;
+  flex:0 0 16px;
+  display:block;
+  stroke:#fff !important;
+  color:#fff !important;
 }
 
 .iconWhite{ width:16px; height:16px; color:#fff; }
 
-.nav{ display:flex; flex-direction:column; gap:8px; }
-.navItem{ cursor: pointer; height:36px; padding:0 8px; display:flex; align-items:center; border-radius:8px; }
-.navLeft{ display:flex; align-items:center; gap:8px; min-width:0; }
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.navItem{
+  cursor:pointer;
+  height:36px;
+  flex:0 0 36px;                /* ✅ 줄어들지 않게 */
+  padding:0 8px;
+  display:flex;
+  align-items:center;
+  border-radius:8px;
+}
+
+.navLeft{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+
 .iconSm{ width:16px; height:16px; color:var(--text-neutral); }
 
 /* ✅ 텍스트는 항상 1줄 */
@@ -53,24 +119,72 @@
   text-overflow:ellipsis;
 }
 
-/* ✅ 구분선 톤도 회색으로 */
-.divider{ width:100%; height:1px; background: var(--border-soft); }
+/* ✅ 구분선 */
+.divider{
+  width:100%;
+  height:1px;
+  background: var(--border-soft);
+  flex:0 0 auto;
+}
 
-.listArea{ flex:1; display:flex; flex-direction:column; gap:2px; overflow:auto; }
-.chatItem{ height:38px; padding:0 8px; display:flex; align-items:center; gap:8px; border-radius:8px; cursor:pointer; }
-/* hover/active도 회색 기조 */
+/* ✅ 핵심: 리스트 영역만 스크롤 */
+.listArea{
+  flex:1 1 auto;
+  min-height:0;                 /* ✅ 중요: overflow 작동 */
+  overflow-y:auto;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  scrollbar-gutter: stable;     /* ✅ 스크롤 생겨도 레이아웃 흔들림 최소화 */
+  padding-right:2px;            /* ✅ 스크롤바 공간 살짝 */
+}
+
+/* 선택: 스크롤바 얇게(원하면 삭제 가능) */
+.listArea::-webkit-scrollbar{ width:8px; }
+.listArea::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,.12);
+  border-radius: 10px;
+}
+.listArea::-webkit-scrollbar-track{ background: transparent; }
+
+.chatItem{
+  height:38px;
+  flex:0 0 38px;                /* ✅ 많아져도 높이(간격) 안 줄어듦 */
+  padding:0 8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
 .chatItem:hover{ background:#EFF4FF; }
 .chatActive{ background:#E9F2FF; }
 
 .iconSmAccent{ width:16px; height:16px; color:var(--accent); }
 .iconSmMuted{ width:16px; height:16px; color:var(--text-neutral); }
-.chatText{ color:var(--text-dark); font-size:13px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.chatText{
+  color:var(--text-dark);
+  font-size:13px;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
 .iconXsMuted{ width:12px; height:12px; color:#fff; }
+
 .deleteBtn{ padding:6px; border-radius:6px; }
 .deleteBtn:hover{ background:#F0F3FA; }
 
-.footer{ margin-top:auto; }
-/* 버튼 기본 상태 */
+/* ✅ footer는 항상 아래 고정 */
+.footer{
+  margin-top:auto;
+  flex:0 0 auto;
+}
+
 .startBtn{
   background: #eef3ff !important;
   background-color: #eef3ff !important;
@@ -82,20 +196,18 @@
   transition: background-color .15s ease, color .15s ease;
 }
 
-/* 버튼 hover 시 배경 변경 */
 .startBtn:hover{
   background: #2388ff !important;
   background-color: #2388ff !important;
 }
 
-/* 아이콘/라벨 기본 색 */
 .plus{ width:15px; height:15px; color:#2388ff; }
 .startLabel{ color:#2388ff; white-space:nowrap; }
 
-/* ✨ 부모(.startBtn) hover 시 자식 색도 같이 변경 */
 .startBtn:hover .plus{ color:#eef3ff !important; }
 .startBtn:hover .startLabel{ color:#eef3ff !important; }
-/* ✅ 접힘 상태: 텍스트 숨기고, 아이콘만 세로로 */
+
+/* ✅ 접힘 상태: 텍스트 숨기고, 아이콘만 */
 .collapsed .brandText,
 .collapsed .navText,
 .collapsed .chatText,

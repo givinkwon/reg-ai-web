@@ -1,19 +1,20 @@
 'use client';
 
 import {
-  Search,
   MessageSquare,
   Plus,
   ChevronLeft,
   ChevronRight,
   Trash2,
   Home,
-  Folder, // ✅ 추가
+  Folder,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import s from './Sidebar.module.css';
 import { useChatStore } from '../../store/chat';
-import { useUserStore } from '../../store/user'; // ✅ 추가
+import { useUserStore } from '../../store/user';
+
+import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
   const user = useUserStore((st) => st.user);
@@ -26,21 +27,30 @@ export default function Sidebar() {
     createRoom,
     collapsed,
     setCollapsed,
-    setMainView,          // ✅ 추가
-    setShowLoginModal,    // ✅ 추가(이미 store에 있음)
+    setMainView,
+    setShowLoginModal,
   } = useChatStore();
 
+  const router = useRouter();
   const toggleCollapse = () => setCollapsed(!collapsed);
 
-  const handleHomeClick = () => {
-    const st = useChatStore.getState();
-    st.setMainView('chat');
-    st.setActiveRoom(null);         // ✅ activeRoomId 비우기 + messages 초기화
-    st.setSidebarMobileOpen(false);
+  const handleLogoClick = () => {
+    router.push('/');
   };
-  
+
+  const handleHomeClick = () => {
+    // ✅ zustand persist를 쓰는 경우, 저장소까지 비우기
+    try {
+      // persist 미사용이면 undefined라서 안전
+      // @ts-ignore
+      useChatStore.persist?.clearStorage?.();
+    } catch {}
+
+    // ✅ 홈으로 이동 + 전체 리로드(스토어/컴포넌트 상태 전부 초기화)
+    window.location.assign('/chat');
+  };
+
   const handleDocsClick = () => {
-    // ✅ 로그인 아니면 모달
     if (!user?.email) {
       alert('로그인해야 내 문서함을 볼 수 있어요.');
       setShowLoginModal(true);
@@ -56,7 +66,7 @@ export default function Sidebar() {
         <div className={s.titleRow}>
           {!collapsed && (
             <div className={s.brand}>
-              <img src="/logo.png" className={s.fav} alt="REG AI" />
+              <img onClick={handleLogoClick} src="/logo.png" className={s.fav} alt="REG AI" />
             </div>
           )}
 
@@ -89,7 +99,7 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* ✅ 문서함 */}
+          {/* 문서함 */}
           <div
             className={s.navItem}
             role="button"
@@ -107,7 +117,7 @@ export default function Sidebar() {
 
       <div className={s.divider} />
 
-      {/* Chat list */}
+      {/* ✅ Chat list (스크롤 영역) */}
       <div className={s.listArea}>
         {rooms.map((r) => {
           const active = r.id === activeRoomId;
@@ -116,12 +126,13 @@ export default function Sidebar() {
               key={r.id}
               className={`${s.chatItem} ${active ? s.chatActive : ''}`}
               onClick={() => {
-                setMainView('chat'); // ✅ 채팅방 클릭하면 채팅 화면으로 복귀
+                setMainView('chat');
                 setActiveRoom(r.id);
               }}
             >
               <MessageSquare className={active ? s.iconSmAccent : s.iconSmMuted} />
               <span className={s.chatText}>{r.title || '새 대화'}</span>
+
               {active && !collapsed && (
                 <button
                   className={s.deleteBtn}
@@ -144,7 +155,7 @@ export default function Sidebar() {
         <Button
           className={s.startBtn}
           onClick={() => {
-            setMainView('chat'); // ✅ 새 대화도 채팅 화면으로
+            setMainView('chat');
             createRoom();
           }}
         >

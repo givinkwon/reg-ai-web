@@ -37,7 +37,7 @@ import { logoutFirebase } from '@/app/lib/firebase';
 import MakeSafetyDocs, {
   SafetyDoc,
   SafetyDocCategory,
-} from './MakeSafetyDocs';
+} from './make-safety-docs/MakeSafetyDocs';
 import DocReviewUploadPane from './DocReviewUploadPane';
 import MakeSafetyEduMaterials from './MakeSafetyEduMaterials';
 
@@ -50,11 +50,7 @@ import { useLawNoticeModal } from './law-notice/UseLawNoticeModal';
 import LawNoticeSummaryModal from './law-notice/LawNoticeSummaryModal';
 import LawNoticeArticlesModal from './law-notice/LawNoticeArticlesModal';
 
-
-const TYPE_META: Record<string, { label: string; emoji: string }> = {
-  environment: { label: '환경/안전', emoji: '🌱' },
-  infosec: { label: '정보보안', emoji: '🛡️' },
-};
+import { formatAssistantHtml } from '../../utils/formatAssistantHtml';
 
 type TaskType =
   | 'law_research'
@@ -1316,7 +1312,13 @@ export default function ChatArea() {
     }
   };
 
-  const currentTaskMeta = selectedTask ? TASK_META[selectedTask] : null;
+  const currentTaskMeta =
+    selectedTask &&
+    (selectedTask === 'guideline_interpret' ||
+      selectedTask === 'law_interpret' ||
+      selectedTask === 'accident_search')
+      ? TASK_META[selectedTask as keyof typeof TASK_META]
+      : null;
 
   const htmlToText = (html: string) => {
     try {
@@ -1433,27 +1435,6 @@ export default function ChatArea() {
     return before.replace(/\n/g, '<br />');
   };
 
-  const splitDigestForArticles = (digest: string, marker = '참고 기사 목록') => {
-    if (!digest) return { summaryText: '', articlesText: '' };
-
-    const idx = digest.indexOf(marker);
-
-    if (idx === -1) {
-      return {
-        summaryText: digest.trim(),
-        articlesText: '',
-      };
-    }
-
-    const summaryPart = digest.slice(0, idx);
-    const articlesPart = digest.slice(idx);
-
-    return {
-      summaryText: summaryPart.trim(),
-      articlesText: articlesPart.trim(),
-    };
-  };
-
   // 🔹 추가: 사고사례 섹션이 있는지 체크
   const hasAccidentCasesInHtml = (html: string) => {
     if (!html) return false;
@@ -1464,93 +1445,6 @@ export default function ChatArea() {
     if (/\[사고사례\s*\d+\]/.test(html)) return true;
 
     return false;
-  };
-
-  const extractSafetySummaryHtml = (html: string) => {
-    const match = html.match(
-      /<div[^>]+data-section="summary"[^>]*>([\s\S]*?)<\/div>/,
-    );
-    if (!match) {
-      return cutHtmlBeforeEvidence(html);
-    }
-    return match[0];
-  };
-
-  const extractSafetyArticlesHtml = (html: string) => {
-    const match = html.match(
-      /<div[^>]+data-section="articles"[^>]*>([\s\S]*?)<\/div>/,
-    );
-    if (!match) return '';
-    const cleaned = match[0].replace(/display\s*:\s*none\s*;?/i, '');
-    return `<div><h3>참고 기사 목록</h3>${cleaned}</div>`;
-  };
-
-  // 🔹 새로 추가: 입법예고 요약 메시지인지 판별
-  const isNoticeSummaryHtml = (html: string) => {
-    return html.includes('data-msg-type="notice-summary"');
-  };
-
-  // 🔹 새로 추가: 입법예고 메시지에서 "참고 입법예고 목록" 섹션만 제거한 본문
-  const extractNoticeSummaryHtml = (html: string) => {
-    // data-section="articles" 블록만 날리고 나머지는 그대로 유지
-    return html.replace(
-      /<div[^>]+data-section="articles"[^>]*>[\s\S]*?<\/div>/,
-      '',
-    );
-  };
-
-  // 🔹 새로 추가: "참고 입법예고 목록"을 제목 + URL 링크 리스트로 변환
-  const extractNoticeArticlesHtml = (html: string) => {
-    const match = html.match(
-      /<div[^>]+data-section="articles"[^>]*>([\s\S]*?)<\/div>/,
-    );
-    if (!match) return '';
-
-    // 안쪽 HTML -> 텍스트 라인
-    const inner = match[1]
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/?[^>]+>/g, '')
-      .trim();
-
-    if (!inner) return '';
-
-    const lines = inner
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    const items: { title: string; url: string }[] = [];
-
-    for (const line of lines) {
-      if (line.startsWith('참고 입법예고 목록')) continue;
-
-      // 예:
-      // 1. 제목 (입법예고기간: 2025-10-02~2025-11-11, URL: https://www.moleg....)
-      const m = line.match(
-        /^\d+\.\s*(.+?)\s*\((?:입법예고기간:[^,]*,)?\s*URL:\s*([^)]+)\)/,
-      );
-      if (m) {
-        items.push({
-          title: m[1].trim(),
-          url: m[2].trim(),
-        });
-      }
-    }
-
-    // 파싱 실패하면 그냥 원문이라도 보여주기
-    if (!items.length) {
-      const fallback = lines.join('<br />');
-      return `<div><h3>참고 입법예고 목록</h3><div>${fallback}</div></div>`;
-    }
-
-    const listHtml = items
-      .map(
-        (it) =>
-          `<li><a href="${it.url}" target="_blank" rel="noopener noreferrer">${it.title}</a></li>`,
-      )
-      .join('');
-
-    return `<div><h3>참고 입법예고 목록</h3><ul>${listHtml}</ul></div>`;
   };
 
   const handleSend = () => {
@@ -1591,7 +1485,7 @@ export default function ChatArea() {
     e.preventDefault();
   };
 
-  const { openWeeklyNewsModal, openNoticeSummaryModal } = useChatStore();
+  const { openWeeklyNewsModal } = useChatStore();
   const {
     open: noticeOpen,
     articlesOpen,
@@ -2246,39 +2140,6 @@ export default function ChatArea() {
   // ✅ 메뉴(안전뉴스/입법예고 등) 클릭 후 서버 응답 대기 로딩
   const [menuLoading, setMenuLoading] = useState(false);
 
-  /**
-   * ✅ 서버에서 데이터가 와야 하는 "메뉴 액션" 공용 로딩 시작
-   * - assistant 말풍선 1개를 먼저 추가
-   * - 응답 오면 updateLastAssistant로 그 말풍선을 교체
-   */
-  const beginMenuLoading = (label: string) => {
-    setMenuLoading(true);
-    setShowLanding(false);
-
-    addMessage({
-      role: 'assistant',
-      content: `
-        <div data-msg-state="loading" data-ai-kind="menu-loading">
-          <span>⏳ ${label}을 가져오고 있어요</span>
-          <span class="${s.dots}">
-            <span>•</span><span>•</span><span>•</span>
-          </span>
-        </div>
-      `,
-    });
-  };
-
-  const endMenuLoadingSuccess = (finalHtml: string) => {
-    updateLastAssistant(finalHtml);
-    setMenuLoading(false);
-  };
-
-  const endMenuLoadingError = (msg: string) => {
-    // 안전하게 HTML로 감싸기 (assistant bubble은 HTML로 렌더됨)
-    updateLastAssistant(`<p>${msg}</p>`);
-    setMenuLoading(false);
-  };
-
   return (
     <>
       <section className={s.wrap}>
@@ -2550,6 +2411,9 @@ export default function ChatArea() {
                   safeHtml = m.content;
                 }
 
+                const finalHtml =
+                m.role === 'assistant' ? formatAssistantHtml(safeHtml) : safeHtml;
+
                 const isIntro =
                   m.role === 'assistant' &&
                   (m.content === LAW_INTRO_TEXT ||
@@ -2584,7 +2448,7 @@ export default function ChatArea() {
                       <div className={s.userBubble}>
                         <div
                           className={s.userContent}
-                          dangerouslySetInnerHTML={{ __html: m.content }}
+                          dangerouslySetInnerHTML={{ __html: finalHtml }}
                         />
                       </div>
                     </div>
@@ -2598,7 +2462,7 @@ export default function ChatArea() {
                         contentRefs.current[i] = el;
                       }}
                       className={s.aiBubble}
-                      dangerouslySetInnerHTML={{ __html: safeHtml }}
+                      dangerouslySetInnerHTML={{ __html: finalHtml }}
                     />
 
                     {!menuLoading && !isLoadingBubble && !hideActionRow && (

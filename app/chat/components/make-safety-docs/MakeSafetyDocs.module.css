@@ -300,8 +300,7 @@ body[data-theme='dark'] .wrap {
 }
 
 /* 들여쓰기 줄 → 가운데점 */
-/* 들여쓰기 줄 → 가운데점 */
-.aiBubble p[data-ai-dot='1'] {
+.aiBubble p[data-ai='dot'] {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -318,7 +317,6 @@ body[data-theme='dark'] .wrap {
   flex: 1 1 auto;
   min-width: 0;
 }
-
 
 /* 소제목: 1. 출입통제: ... (num/head만 bold는 strong으로 처리됨) */
 .aiBubble p[data-ai='subheading'] {
@@ -337,25 +335,13 @@ body[data-theme='dark'] .wrap {
   margin-bottom: 0;
 }
 
-/* 리스트: 가운데점 마커 강제 */
+/* 리스트 */
 .aiBubble ul {
   margin: 6px 0 10px;
-  padding-left: 0;        /* 기본 들여쓰기 제거 */
-  list-style: none;       /* 전역 리셋이 뭐든 상관없이 우리가 직접 마커 넣음 */
+  padding-left: 18px;
 }
-
-.aiBubble ul > li {
-  position: relative;
-  padding-left: 16px;     /* 마커 공간 */
+.aiBubble li {
   margin: 4px 0;
-}
-
-.aiBubble ul > li::before {
-  content: ' • ';
-  position: absolute;
-  left: 0;    
-  font-weight: 900;
-  opacity: 0.75;
 }
 
 /* =========================================================

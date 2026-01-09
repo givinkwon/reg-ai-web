@@ -1,0 +1,85 @@
+.wrap {
+  position: relative;
+}
+
+.box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fbfbfc;
+  padding: 10px 12px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: rgba(0, 0, 0, 0.82);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tagX {
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.input {
+  flex: 1;
+  min-width: 140px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  padding: 6px 4px;
+}
+
+.hintRow {
+  margin-top: 6px;
+}
+
+.hint {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+.option {
+  width: 100%;
+  text-align: left;
+  border: none;
+  color: black;
+  background: transparent;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.option:hover,
+.optionActive {
+  background: #f3f6ff;
+}

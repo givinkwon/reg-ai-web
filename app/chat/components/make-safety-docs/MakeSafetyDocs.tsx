@@ -2,7 +2,10 @@
 
 import { useState, ReactNode } from 'react';
 import { ChevronDown, FileText } from 'lucide-react';
-import s from './ChatArea.module.css';
+import s from './MakeSafetyDocs.module.css';
+
+// ✅ 추가
+import TbmCreateModal, { TbmCreatePayload } from './tbm/TbmCreateModal';
 
 // ======================
 // 타입 정의
@@ -35,10 +38,7 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
       { id: 'work-plan', label: '작업계획서' },
       { id: 'work-permit', label: '작업허가서' },
       { id: 'daily-safety-council-minutes', label: '안전보건 협의체 회의록' },
-      {
-        id: 'msds-list',
-        label: '물질안전보건자료목록표(MSDS)',
-      },
+      { id: 'msds-list', label: '물질안전보건자료목록표(MSDS)' },
       { id: 'work-stop-request-log', label: '작업중지요청 기록대장' },
       { id: 'work-stop-request-form', label: '작업중지 요청서' },
     ],
@@ -77,15 +77,9 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
     description:
       '사고 발생 시 처리해야 하는 재해 보고서, 아차사고 조사 보고서 등을 작성할 수 있어요',
     docs: [
-      {
-        id: 'industrial-accident-investigation',
-        label: '산업재해조사표',
-      },
+      { id: 'industrial-accident-investigation', label: '산업재해조사표' },
       { id: 'accident-report', label: '재해보고서' },
-      {
-        id: 'near-miss-investigation-report',
-        label: '아차사고 조사 보고서',
-      },
+      { id: 'near-miss-investigation-report', label: '아차사고 조사 보고서' },
     ],
   },
   {
@@ -96,18 +90,9 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
     docs: [
       { id: 'safety-person-eval', label: '안전보건관계자 평가표' },
       { id: 'supervisor-eval', label: '관리 감독자 평가표' },
-      {
-        id: 'safety-qualification-register',
-        label: '안전보건 자격등록 목록부',
-      },
-      {
-        id: 'safety-person-appointment-report',
-        label: '안전보건관계자 선임 등 보고서',
-      },
-      {
-        id: 'safety-person-appointment-doc',
-        label: '안전보건관계자 선임 및 지정서',
-      },
+      { id: 'safety-qualification-register', label: '안전보건 자격등록 목록부' },
+      { id: 'safety-person-appointment-report', label: '안전보건관계자 선임 등 보고서' },
+      { id: 'safety-person-appointment-doc', label: '안전보건관계자 선임 및 지정서' },
     ],
   },
 ];
@@ -116,20 +101,21 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
 // 컴포넌트 Props
 // ======================
 export type MakeSafetyDocsProps = {
-  // 생성 / 검토 모드
   mode: 'create' | 'review';
 
-  // 문서 선택 콜백 (기존 그대로)
   onSelectDoc?: (category: SafetyDocCategory, doc: SafetyDoc) => void;
 
-  // 검토 모드에서 "선택된 문서 id" (드롭다운 표시용)
   selectedDocId?: string | null;
 
-  // 선택된 문서 아래에 렌더링할 내용 (예: 업로드 영역)
   renderSelectedDocPane?: (
     category: SafetyDocCategory,
     doc: SafetyDoc,
   ) => ReactNode;
+
+  // ✅ TBM 전용: “모달에서 입력 받은 값”을 상위로 올리고 싶을 때 사용 (선택)
+  onCreateTbm?: (
+    payload: TbmCreatePayload & { categoryId: string; docId: string },
+  ) => void;
 };
 
 // ======================
@@ -140,10 +126,18 @@ export default function MakeSafetyDocs({
   onSelectDoc,
   selectedDocId,
   renderSelectedDocPane,
+  onCreateTbm,
 }: MakeSafetyDocsProps) {
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(
     SAFETY_DOC_CATEGORIES[0]?.id ?? null,
   );
+
+  // ✅ TBM 모달 상태
+  const [tbmModalOpen, setTbmModalOpen] = useState(false);
+  const [tbmTarget, setTbmTarget] = useState<{
+    category: SafetyDocCategory;
+    doc: SafetyDoc;
+  } | null>(null);
 
   const titleText =
     mode === 'review'
@@ -154,6 +148,11 @@ export default function MakeSafetyDocs({
     mode === 'review'
       ? '어떤 문서를 업로드해서 검토받으시겠어요?'
       : '어떤 문서를 생성해드릴까요?';
+
+  const openTbm = (category: SafetyDocCategory, doc: SafetyDoc) => {
+    setTbmTarget({ category, doc });
+    setTbmModalOpen(true);
+  };
 
   return (
     <div className={s.docWrap}>
@@ -167,11 +166,8 @@ export default function MakeSafetyDocs({
           return (
             <div
               key={cat.id}
-              className={`${s.docCategoryCard} ${
-                isOpen ? s.docCategoryCardOpen : ''
-              }`}
+              className={`${s.docCategoryCard} ${isOpen ? s.docCategoryCardOpen : ''}`}
             >
-              {/* 상단 카테고리 영역 */}
               <button
                 type="button"
                 className={s.docCategoryHeader}
@@ -179,55 +175,50 @@ export default function MakeSafetyDocs({
               >
                 <div className={s.docCategoryText}>
                   <span className={s.docCategoryTitle}>{cat.title}</span>
-                  <span className={s.docCategoryDesc}>
-                    {cat.description}
-                  </span>
+                  <span className={s.docCategoryDesc}>{cat.description}</span>
                 </div>
                 <ChevronDown
-                  className={`${s.docCategoryArrow} ${
-                    isOpen ? s.docCategoryArrowOpen : ''
-                  }`}
+                  className={`${s.docCategoryArrow} ${isOpen ? s.docCategoryArrowOpen : ''}`}
                 />
               </button>
 
-              {/* 펼쳐졌을 때 내부 문서 목록 */}
               {isOpen && (
                 <div className={s.docList}>
                   {cat.docs.length > 0 ? (
                     cat.docs.map((doc) => {
-                      const isSelected =
-                        mode === 'review' && selectedDocId === doc.id;
+                      const isSelected = mode === 'review' && selectedDocId === doc.id;
+
+                      const handleClick = () => {
+                        // ✅ 문서 생성 모드에서 TBM 선택 시 모달 오픈
+                        if (mode === 'create' && doc.id === 'tbm-log') {
+                          openTbm(cat, doc);
+                          return;
+                        }
+                        onSelectDoc?.(cat, doc);
+                      };
 
                       return (
                         <div key={doc.id} className={s.docRow}>
                           <button
                             type="button"
-                            className={`${s.docChip} ${
-                              isSelected ? s.docChipActive : ''
-                            }`}
-                            onClick={() => onSelectDoc?.(cat, doc)}
+                            className={`${s.docChip} ${isSelected ? s.docChipActive : ''}`}
+                            onClick={handleClick}
                           >
                             <FileText className={s.docChipIcon} />
-                            <span className={s.docChipLabel}>
-                              {doc.label}
-                            </span>
+                            <span className={s.docChipLabel}>{doc.label}</span>
                           </button>
 
-                          {/* ✅ 검토 모드일 때 선택된 문서 아래로 드롭다운 영역 표시 */}
-                          {isSelected &&
-                            mode === 'review' &&
-                            renderSelectedDocPane && (
-                              <div className={s.docDropdownPane}>
-                                {renderSelectedDocPane(cat, doc)}
-                              </div>
-                            )}
+                          {isSelected && mode === 'review' && renderSelectedDocPane && (
+                            <div className={s.docDropdownPane}>
+                              {renderSelectedDocPane(cat, doc)}
+                            </div>
+                          )}
                         </div>
                       );
                     })
                   ) : (
                     <div className={s.docEmpty}>
-                      아직 등록된 문서가 없습니다. 필요한 문서를
-                      추가해 주세요.
+                      아직 등록된 문서가 없습니다. 필요한 문서를 추가해 주세요.
                     </div>
                   )}
                 </div>
@@ -236,6 +227,27 @@ export default function MakeSafetyDocs({
           );
         })}
       </div>
+
+      {/* ✅ TBM 생성 모달 */}
+      <TbmCreateModal
+        open={tbmModalOpen}
+        onClose={() => setTbmModalOpen(false)}
+        onSubmit={(payload) => {
+          // (선택) 기존 흐름 유지 필요하면 여기서 doc 선택 이벤트도 같이 호출 가능
+          if (tbmTarget) onSelectDoc?.(tbmTarget.category, tbmTarget.doc);
+
+          // (선택) 상위에서 API 호출/문서 생성 트리거
+          if (tbmTarget) {
+            onCreateTbm?.({
+              ...payload,
+              categoryId: tbmTarget.category.id,
+              docId: tbmTarget.doc.id,
+            });
+          }
+
+          setTbmModalOpen(false);
+        }}
+      />
     </div>
   );
 }

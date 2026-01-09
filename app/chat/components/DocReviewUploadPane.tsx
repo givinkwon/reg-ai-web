@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import type { SafetyDocCategory, SafetyDoc } from './MakeSafetyDocs';
+import type { SafetyDocCategory, SafetyDoc } from './make-safety-docs/MakeSafetyDocs';
 import s from './DocReviewUploadPane.module.css';
 
 type DocReviewUploadPaneProps = {
