@@ -3,59 +3,248 @@
   padding: 18px;
 }
 
+/* 가운데 정렬된 “카드 영역” */
+.shell {
+  max-width: 980px;
+  margin: 0 auto; /* ✅ 가운데 정렬 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ChatArea 느낌: 선명한 다크 + 글래스 카드 */
+.card {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.03)
+  );
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .header {
-  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 2px;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .title {
   font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 6px 0;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  margin: 0;
 }
 
 .desc {
   margin: 0;
   font-size: 13px;
-  opacity: 0.8;
+  opacity: 0.78;
 }
 
+/* 작은 배지(차가운 느낌) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(120, 200, 255, 0.9);
+  box-shadow: 0 0 14px rgba(120, 200, 255, 0.55);
+}
+
+.badgeText {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* 테이블 래퍼: 카드 내부에서 정갈하게 */
 .tableWrap {
   width: 100%;
   overflow: auto;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
 }
 
+/* “가운데 정렬된 테이블처럼” 보이게: 카드 폭 안에서 깔끔하게 */
 .table {
   width: 100%;
-  border-collapse: collapse;
-  min-width: 640px;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 720px;
 }
 
+/* 헤더 */
 .table thead th {
   text-align: left;
   font-size: 12px;
-  opacity: 0.8;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
+  letter-spacing: 0.2px;
+  opacity: 0.78;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
 }
 
+/* 첫/마지막 th 라운딩 */
+.table thead th:first-child {
+  border-top-left-radius: 16px;
+}
+.table thead th:last-child {
+  border-top-right-radius: 16px;
+}
+
+/* 바디 */
 .table tbody td {
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 13px;
 }
 
-.thName { width: 60%; }
-.thDate { width: 20%; }
-.thDl { width: 20%; }
+/* row hover: ChatArea 같은 “차가운” 하이라이트 */
+.row:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
 
-.tdName { font-weight: 600; }
-.tdDate { opacity: 0.85; }
-.tdDl { text-align: left; }
+.thName {
+  width: 62%;
+}
+.thDate {
+  width: 18%;
+}
+.thDl {
+  width: 20%;
+}
+
+.tdName {
+  font-weight: 650;
+}
+
+.docName {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.docIcon {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: rgba(120, 200, 255, 0.85);
+  box-shadow: 0 0 16px rgba(120, 200, 255, 0.35);
+  flex: 0 0 auto;
+}
+
+.docText {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tdDate {
+  opacity: 0.92;
+}
+
+.datePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  opacity: 0.92;
+}
+
+.tdDl {
+  text-align: left;
+}
+
+.dlBtn {
+  gap: 8px;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.dlBtn:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.dlText {
+  margin-left: 2px;
+}
 
 .empty {
-  padding: 18px 14px;
+  padding: 22px 16px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* 로그인 박스 */
+.loginBox {
+  padding: 18px;
+}
+
+.loginTitle {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.loginDesc {
+  font-size: 13px;
   opacity: 0.75;
+  line-height: 1.5;
+}
+
+.loginActions {
+  margin-top: 14px;
+}
+
+/* 하단 안내 */
+.footNote {
+  font-size: 12px;
+  opacity: 0.6;
+  padding: 2px 2px 0 2px;
+}
+
+/* 모바일 */
+@media (max-width: 640px) {
+  .wrap {
+    padding: 14px;
+  }
+  .shell {
+    max-width: 100%;
+  }
+  .table {
+    min-width: 640px; /* 가로 스크롤로 테이블 형태 유지 */
+  }
 }
