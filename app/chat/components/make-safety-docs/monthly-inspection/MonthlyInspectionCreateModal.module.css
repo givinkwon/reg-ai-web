@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.52);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 50;
+}
+
+.modal {
+  width: 520px;
+  max-width: 92vw;
+
+  /* ✅ 화면보다 길어지면 내부 스크롤 */
+  max-height: calc(100vh - 36px);
+
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+  overflow: hidden;
+
+  /* ✅ 상단바 고정 + 본문 스크롤을 위해 */
+  display: flex;
+  flex-direction: column;
+}
+
+.topBar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+}
+
+.pill {
+  font-size: 12px;
+  font-weight: 900;
+  color: #0b62ff;
+  background: rgba(11, 98, 255, 0.10);
+  border: 1px solid rgba(11, 98, 255, 0.20);
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.iconBtn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 10px;
+  color: rgba(0,0,0,0.6);
+}
+.iconBtn:hover { background: rgba(0,0,0,0.05); }
+
+/* ✅ card를 스크롤 컨테이너로 */
+.card {
+  flex: 1 1 auto;
+  min-height: 0;         /* 중요: overflow가 제대로 먹게 */
+  overflow: auto;
+
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* (선택) 스크롤바 미세 스타일 */
+.card::-webkit-scrollbar { width: 10px; }
+.card::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
+.card::-webkit-scrollbar-track { background: transparent; }
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.85);
+}
+
+.desc {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(0,0,0,0.58);
+  line-height: 1.35;
+}
+
+.subDesc {
+  display: inline-block;
+  margin-top: 4px;
+  font-weight: 800;
+  color: rgba(11, 98, 255, 0.75);
+}
+
+.label {
+  font-size: 12px;
+  color: rgba(0,0,0,0.70);
+  font-weight: 800;
+}
+
+.primaryBtn {
+  margin-top: 6px;
+  height: 46px;
+  border-radius: 14px;
+  border: 0;
+  cursor: pointer;
+  background: #0b62ff;
+  color: #fff;
+  font-weight: 900;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.errorText {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #ff6b6b;
+}

@@ -1,0 +1,144 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.02);
+}
+
+.metaTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.82);
+}
+
+.metaSub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(0,0,0,0.55);
+}
+
+.tagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: rgba(11, 98, 255, 0.08);
+  border: 1px solid rgba(11, 98, 255, 0.25);
+  color: rgba(0,0,0,0.78);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.groupTitle {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(11, 98, 255, 0.9);
+}
+
+.card {
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.question {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.78);
+  line-height: 1.35;
+}
+
+.ratingRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rateBtn {
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: rgba(0,0,0,0.72);
+}
+.rateBtn:hover { background: rgba(0,0,0,0.03); }
+
+.active {
+  border-color: rgba(11, 98, 255, 0.5);
+  background: rgba(11, 98, 255, 0.10);
+  color: rgba(0,0,0,0.82);
+  font-weight: 900;
+}
+
+.note {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 10px;
+  font-size: 12px;
+  outline: none;
+}
+.note:focus {
+  border-color: rgba(11, 98, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(11, 98, 255, 0.12);
+}
+
+.footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.ghost {
+  flex: 1;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  color: black;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.primary {
+  flex: 1.4;
+  height: 44px;
+  border-radius: 14px;
+  border: 0;
+  background: #0b62ff;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+}
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

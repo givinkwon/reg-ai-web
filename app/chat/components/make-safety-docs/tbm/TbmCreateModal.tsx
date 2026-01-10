@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Plus, FileText } from 'lucide-react';
 import s from './TbmCreateModal.module.css';
 
-import { useUserStore } from '@/app/store/user';
 import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
 
 export type TbmAttendee = {
@@ -12,20 +11,28 @@ export type TbmAttendee = {
   contact?: string;
 };
 
+// ✅ (호환) workTags도 남겨두되, 실사용은 detailTasks로 명확히
 export type TbmCreatePayload = {
-  workTags: string[];
+  detailTasks: string[];      // ✅ 세부작업(process_name) 태그
   attendees: TbmAttendee[];
 
+  // (호환) 기존 로직이 workTags를 기대하면 같이 제공
+  workTags?: string[];
+
   jobTitle?: string;
-  minorCategory?: string;
+  minorCategory?: string;     // 'ALL'은 스코프용으로만 사용 가능
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSubmit: (payload: TbmCreatePayload) => void;
 
+  // 필요하면 로깅/상태 저장용으로 쓰고, 없어도 됨
+  onSubmit?: (payload: TbmCreatePayload) => void;
+
+  // 상위에서 소분류(업종) 넘겨줄 수 있으면 넘기기(권장)
   minorCategory?: string | null;
+
   defaultValue?: Partial<TbmCreatePayload>;
 };
 
@@ -33,23 +40,24 @@ const norm = (v?: string | null) => (v ?? '').trim();
 
 /** =========================
  * ✅ localStorage cache (form)
+ * - user가 없으니 guest 스코프만 사용
+ * - minor 스코프는 유지(같은 guest라도 업종별로 폼 분리)
  * ========================= */
-const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v1';
+const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v2'; // ✅ v2로 bump
 const FORM_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
 
 type TbmFormCache = {
-  v: 1;
+  v: 2;
   ts: number;
-  user: string;     // email or 'guest'
-  minor: string;    // 'ALL' 포함 (여기는 “스코프키”일 뿐, API minor랑 다름)
-  workTags: string[];
+  user: 'guest';
+  minorScope: string;         // 'ALL' 포함 (스코프키)
+  detailTasks: string[];
   attendees: TbmAttendee[];
 };
 
-function formCacheKey(userEmail: string | null | undefined, minor: string | null | undefined) {
-  const u = norm(userEmail) || 'guest';
-  const m = norm(minor) || 'ALL';
-  return `${FORM_CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(m)}`;
+function formCacheKey(minorScope: string) {
+  const m = norm(minorScope) || 'ALL';
+  return `${FORM_CACHE_PREFIX}:guest:${encodeURIComponent(m)}`;
 }
 
 function safeReadFormCache(key: string): TbmFormCache | null {
@@ -58,14 +66,13 @@ function safeReadFormCache(key: string): TbmFormCache | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as TbmFormCache;
 
-    if (parsed?.v !== 1) return null;
+    if (parsed?.v !== 2) return null;
     if (!parsed?.ts) return null;
-    if (!Array.isArray(parsed?.workTags) || !Array.isArray(parsed?.attendees)) return null;
+    if (!Array.isArray(parsed?.detailTasks) || !Array.isArray(parsed?.attendees)) return null;
     if (Date.now() - parsed.ts > FORM_CACHE_TTL_MS) return null;
 
-    // 깨진 캐시 방지: 둘 다 비면 무의미
     const hasAny =
-      parsed.workTags.some((t) => norm(t)) ||
+      parsed.detailTasks.some((t) => norm(t)) ||
       parsed.attendees.some((a) => norm(a?.name));
     if (!hasAny) return null;
 
@@ -90,14 +97,18 @@ export default function TbmCreateModal({
   minorCategory: minorFromProps,
   defaultValue,
 }: Props) {
-  const user = useUserStore((st) => st.user);
-
   const [minorCategory, setMinorCategory] = useState<string | null>(minorFromProps ?? null);
 
-  const [workTags, setWorkTags] = useState<string[]>(defaultValue?.workTags ?? []);
+  // ✅ 세부작업 태그 (process_name)
+  const [detailTasks, setDetailTasks] = useState<string[]>(
+    (defaultValue?.detailTasks ?? defaultValue?.workTags ?? []).map(norm).filter(Boolean),
+  );
+
   const [attendees, setAttendees] = useState<TbmAttendee[]>(
     defaultValue?.attendees?.length ? (defaultValue.attendees as TbmAttendee[]) : [{ name: '', contact: '' }],
   );
+
+  const [submitting, setSubmitting] = useState(false);
 
   // ✅ 사용자가 입력을 시작하면 캐시가 뒤늦게 와도 덮어쓰지 않기
   const dirtyRef = useRef(false);
@@ -105,48 +116,65 @@ export default function TbmCreateModal({
     dirtyRef.current = true;
   };
 
-  const scopeUser = useMemo(() => norm(user?.email) || 'guest', [user?.email]);
+  // ✅ minor 스코프키(캐시용): 'ALL' 허용
   const scopeMinor = useMemo(() => norm(minorCategory) || 'ALL', [minorCategory]);
-  const scopeKey = useMemo(() => formCacheKey(user?.email ?? null, scopeMinor), [user?.email, scopeMinor]);
+  const scopeKey = useMemo(() => formCacheKey(scopeMinor), [scopeMinor]);
 
-  // open 시 default 반영(기존 동작 유지)
+  // ✅ 실제 API로 넘길 minor: 'ALL'이면 null 처리 (중요)
+  const minorForApi = useMemo(() => {
+    const m = norm(minorCategory);
+    if (!m) return null;
+    if (m.toUpperCase() === 'ALL') return null;
+    return m;
+  }, [minorCategory]);
+
+  // open 시 default/캐시 복원
   useEffect(() => {
     if (!open) return;
 
     dirtyRef.current = false;
 
-    const hasDefaultTags = (defaultValue?.workTags ?? []).some((t) => norm(t));
-    const hasDefaultAtt = (defaultValue?.attendees ?? []).some((a: any) => norm(a?.name));
+    const dvTasks = (defaultValue?.detailTasks ?? defaultValue?.workTags ?? [])
+      .map(norm)
+      .filter(Boolean);
 
-    // ✅ 1) defaultValue가 “실제로” 있으면 default 우선
-    if (hasDefaultTags || hasDefaultAtt) {
-      setWorkTags((defaultValue?.workTags ?? []).map(norm).filter(Boolean));
-      const dvAtt =
-        (defaultValue?.attendees as TbmAttendee[] | undefined)?.map((a) => ({
-          name: norm(a?.name),
-          contact: norm(a?.contact ?? ''),
-        })) ?? [];
+    const dvAtt =
+      (defaultValue?.attendees as TbmAttendee[] | undefined)?.map((a) => ({
+        name: norm(a?.name),
+        contact: norm(a?.contact ?? ''),
+      })) ?? [];
+
+    const hasDefaultTasks = dvTasks.length > 0;
+    const hasDefaultAtt = dvAtt.some((a) => a.name);
+
+    // ✅ 1) defaultValue가 있으면 default 우선
+    if (hasDefaultTasks || hasDefaultAtt) {
+      setDetailTasks(dvTasks);
       setAttendees(dvAtt.length ? dvAtt : [{ name: '', contact: '' }]);
       return;
     }
 
-    // ✅ 2) 아니면 캐시 복원 시도 (minor가 아직 없으면 ALL 스코프 캐시 사용)
-    const key = formCacheKey(user?.email ?? null, norm(minorCategory) || 'ALL');
-    const cached = safeReadFormCache(key);
-
+    // ✅ 2) 캐시 복원 (scopeMinor 기준)
+    const cached = safeReadFormCache(scopeKey);
     if (cached) {
-      setWorkTags((cached.workTags ?? []).map(norm).filter(Boolean));
+      setDetailTasks((cached.detailTasks ?? []).map(norm).filter(Boolean));
       const ca =
         (cached.attendees ?? [])
           .map((a) => ({ name: norm(a?.name), contact: norm(a?.contact ?? '') }))
           .filter((a) => a.name) ?? [];
       setAttendees(ca.length ? ca : [{ name: '', contact: '' }]);
     } else {
-      // 캐시 없으면 빈값
-      setWorkTags([]);
+      setDetailTasks([]);
       setAttendees([{ name: '', contact: '' }]);
     }
-  }, [open, defaultValue, user?.email]); // minor는 아래 minor 확보 후 별도 복원 기회 줌
+  }, [open, defaultValue, scopeKey]);
+
+  // minorFromProps가 바뀌면 반영
+  useEffect(() => {
+    if (!open) return;
+    const mp = norm(minorFromProps);
+    if (mp) setMinorCategory(mp);
+  }, [open, minorFromProps]);
 
   // 스크롤 잠금
   useEffect(() => {
@@ -158,95 +186,27 @@ export default function TbmCreateModal({
     };
   }, [open]);
 
-  // ✅ minor 자동 확보 (StepTasks 방식)
-  useEffect(() => {
-    if (!open) return;
-
-    const fromProps = norm(minorFromProps);
-    if (fromProps) {
-      setMinorCategory(fromProps);
-      return;
-    }
-
-    if (minorCategory) return;
-    if (!user?.email) return;
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch('/api/accounts/find-by-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email }),
-        });
-        if (!res.ok) return;
-
-        const acc = await res.json().catch(() => null);
-        const minorFound =
-          acc?.secondary_info?.subcategory?.name ??
-          acc?.secondary_info?.subcategory_name ??
-          acc?.subcategory?.name ??
-          null;
-
-        if (!cancelled && typeof minorFound === 'string' && norm(minorFound)) {
-          setMinorCategory(norm(minorFound));
-        }
-      } catch {
-        // silent
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, user?.email, minorFromProps, minorCategory]);
-
-  // ✅ minor가 뒤늦게 확정되면: 해당 minor 스코프 캐시가 있으면 “비어있을 때만” 복원
-  useEffect(() => {
-    if (!open) return;
-    if (!scopeMinor) return;
-
-    if (dirtyRef.current) return; // 사용자가 이미 수정 시작했으면 덮어쓰기 금지
-
-    const key = formCacheKey(user?.email ?? null, scopeMinor);
-    const cached = safeReadFormCache(key);
-    if (!cached) return;
-
-    const nowHasAny =
-      workTags.some((t) => norm(t)) || attendees.some((a) => norm(a?.name));
-    if (nowHasAny) return; // 이미 값이 있으면 덮어쓰지 않음
-
-    setWorkTags((cached.workTags ?? []).map(norm).filter(Boolean));
-    const ca =
-      (cached.attendees ?? [])
-        .map((a) => ({ name: norm(a?.name), contact: norm(a?.contact ?? '') }))
-        .filter((a) => a.name) ?? [];
-    setAttendees(ca.length ? ca : [{ name: '', contact: '' }]);
-  }, [open, scopeMinor, user?.email, workTags, attendees]);
-
   // ✅ 입력값 변경 시 캐시에 저장 (open일 때만)
   useEffect(() => {
     if (!open) return;
 
-    const tagsToSave = Array.from(new Set(workTags.map(norm).filter(Boolean)));
+    const tasksToSave = Array.from(new Set(detailTasks.map(norm).filter(Boolean)));
     const attToSave =
       attendees
         .map((a) => ({ name: norm(a?.name), contact: norm(a?.contact ?? '') }))
         .filter((a) => a.name) ?? [];
 
-    // 둘 다 완전 비어있으면 저장 안 함
-    if (tagsToSave.length === 0 && attToSave.length === 0) return;
+    if (tasksToSave.length === 0 && attToSave.length === 0) return;
 
     safeWriteFormCache(scopeKey, {
-      v: 1,
+      v: 2,
       ts: Date.now(),
-      user: scopeUser,
-      minor: scopeMinor,
-      workTags: tagsToSave,
+      user: 'guest',
+      minorScope: scopeMinor,
+      detailTasks: tasksToSave,
       attendees: attToSave,
     });
-  }, [open, workTags, attendees, scopeKey, scopeUser, scopeMinor]);
+  }, [open, detailTasks, attendees, scopeKey, scopeMinor]);
 
   if (!open) return null;
 
@@ -265,28 +225,82 @@ export default function TbmCreateModal({
     setAttendees((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const onChangeTags = (next: string[]) => {
+  const onChangeTasks = (next: string[]) => {
     markDirty();
-    setWorkTags(next);
+    setDetailTasks(next);
   };
 
   const canSubmit =
-    workTags.map(norm).filter(Boolean).length > 0 &&
-    attendees.some((a) => norm(a.name).length > 0);
+    detailTasks.map(norm).filter(Boolean).length > 0 &&
+    attendees.some((a) => norm(a.name).length > 0) &&
+    !submitting;
 
-  const handleSubmit = () => {
-    const cleanedTags = Array.from(new Set(workTags.map(norm).filter(Boolean)));
+  const downloadBlob = async (res: Response) => {
+    const blob = await res.blob();
+    const cd = res.headers.get('content-disposition') ?? '';
+    const match = cd.match(/filename\*\=UTF-8''(.+)$/);
+    const filename = match
+      ? decodeURIComponent(match[1])
+      : `TBM활동일지_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleSubmit = async () => {
+    const cleanedTasks = Array.from(new Set(detailTasks.map(norm).filter(Boolean)));
 
     const cleanedAttendees = attendees
       .map((a) => ({ name: norm(a.name), contact: norm(a.contact ?? '') }))
       .filter((a) => a.name.length > 0);
 
-    onSubmit({
-      workTags: cleanedTags,
+    // ✅ 호환 payload (원하면 부모에서 저장/로그 등에 사용)
+    const payload: TbmCreatePayload = {
+      detailTasks: cleanedTasks,
+      workTags: cleanedTasks, // ✅ 호환
       attendees: cleanedAttendees,
-      jobTitle: cleanedTags.join(', '),
-      minorCategory: norm(minorCategory) || 'ALL', // (생성용 전달값) 그대로 유지
-    });
+      jobTitle: cleanedTasks.join(', '),
+      minorCategory: norm(minorCategory) || 'ALL',
+    };
+
+    try {
+      setSubmitting(true);
+
+      // (선택) 부모 콜백
+      onSubmit?.(payload);
+
+      // ✅ 서버로는 'ALL'을 보내지 말고, minorForApi만 보내는 걸 권장
+      const body = {
+        dateISO: new Date().toISOString().slice(0, 10),
+        minorCategory: minorForApi,          // ✅ ALL이면 null
+        detailTasks: cleanedTasks,           // ✅ workTags 대신 명확히
+        attendees: cleanedAttendees,
+      };
+
+      // ✅ 여기 endpoint는 서버에서 맞춰주면 됨
+      const res = await fetch('/api/risk-assessment?endpoint=tbm-export-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        alert(`TBM 엑셀 생성 실패 (${res.status}) ${txt.slice(0, 200)}`);
+        return;
+      }
+
+      await downloadBlob(res);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -317,9 +331,10 @@ export default function TbmCreateModal({
 
           <label className={s.label}>금일 작업(세부작업 태그)</label>
           <TbmDetailTaskTagInput
-            value={workTags}
-            onChange={onChangeTags}
-            minorCategory={minorCategory}
+            value={detailTasks}
+            onChange={onChangeTasks}
+            // ✅ ALL이면 null로 내려가므로 /detail-tasks에 minor=ALL 안 붙음
+            minorCategory={minorForApi}
           />
 
           <div className={s.sectionRow}>
@@ -365,9 +380,14 @@ export default function TbmCreateModal({
             ))}
           </div>
 
-          <button type="button" className={s.primaryBtn} disabled={!canSubmit} onClick={handleSubmit}>
+          <button
+            type="button"
+            className={s.primaryBtn}
+            disabled={!canSubmit}
+            onClick={handleSubmit}
+          >
             <FileText size={18} />
-            TBM 활동일지 생성하기
+            {submitting ? '생성 중…' : 'TBM 활동일지 생성하기'}
           </button>
         </div>
       </div>

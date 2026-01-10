@@ -1,0 +1,113 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1f3b7a;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.chipX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0.7;
+}
+
+.chipX:hover {
+  opacity: 1;
+}
+
+.inputRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+}
+
+.searchIcon {
+  opacity: 0.6;
+  flex: 0 0 auto;
+}
+
+.input {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+}
+
+.loader {
+  opacity: 0.7;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.list {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  color: black;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.itemActive {
+  background: rgba(59, 130, 246, 0.10);
+}
+
+.empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.helper {
+  font-size: 12px;
+  opacity: 0.65;
+  line-height: 1.35;
+}

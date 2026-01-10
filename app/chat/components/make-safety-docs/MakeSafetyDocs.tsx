@@ -4,8 +4,13 @@ import { useState, ReactNode } from 'react';
 import { ChevronDown, FileText } from 'lucide-react';
 import s from './MakeSafetyDocs.module.css';
 
-// ✅ 추가
+// ✅ TBM
 import TbmCreateModal, { TbmCreatePayload } from './tbm/TbmCreateModal';
+
+// ✅ 월 작업장 순회 점검표 (새 모달)
+import MonthlyInspectionCreateModal, {
+  MonthlyInspectionPayload,
+} from './monthly-inspection/MonthlyInspectionCreateModal';
 
 // ======================
 // 타입 정의
@@ -33,6 +38,7 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
       'TBM 활동일지, 보호구 지급대장, 작업 계획표 등의 서류를 작성할 수 있어요',
     docs: [
       { id: 'tbm-log', label: 'TBM활동일지' },
+      { id: 'monthly-inspection', label: '월 작업장 순회 점검표' },
       { id: 'heat-illness-control-sheet', label: '온열질환관리표' },
       { id: 'ppe-issue-ledger', label: '보호구 지급 대장' },
       { id: 'work-plan', label: '작업계획서' },
@@ -91,7 +97,10 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
       { id: 'safety-person-eval', label: '안전보건관계자 평가표' },
       { id: 'supervisor-eval', label: '관리 감독자 평가표' },
       { id: 'safety-qualification-register', label: '안전보건 자격등록 목록부' },
-      { id: 'safety-person-appointment-report', label: '안전보건관계자 선임 등 보고서' },
+      {
+        id: 'safety-person-appointment-report',
+        label: '안전보건관계자 선임 등 보고서',
+      },
       { id: 'safety-person-appointment-doc', label: '안전보건관계자 선임 및 지정서' },
     ],
   },
@@ -112,9 +121,14 @@ export type MakeSafetyDocsProps = {
     doc: SafetyDoc,
   ) => ReactNode;
 
-  // ✅ TBM 전용: “모달에서 입력 받은 값”을 상위로 올리고 싶을 때 사용 (선택)
+  // ✅ TBM 전용
   onCreateTbm?: (
     payload: TbmCreatePayload & { categoryId: string; docId: string },
+  ) => void;
+
+  // ✅ 월 점검표 전용
+  onCreateMonthlyInspection?: (
+    payload: MonthlyInspectionPayload & { categoryId: string; docId: string },
   ) => void;
 };
 
@@ -127,6 +141,7 @@ export default function MakeSafetyDocs({
   selectedDocId,
   renderSelectedDocPane,
   onCreateTbm,
+  onCreateMonthlyInspection,
 }: MakeSafetyDocsProps) {
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(
     SAFETY_DOC_CATEGORIES[0]?.id ?? null,
@@ -135,6 +150,13 @@ export default function MakeSafetyDocs({
   // ✅ TBM 모달 상태
   const [tbmModalOpen, setTbmModalOpen] = useState(false);
   const [tbmTarget, setTbmTarget] = useState<{
+    category: SafetyDocCategory;
+    doc: SafetyDoc;
+  } | null>(null);
+
+  // ✅ 월 작업장 순회 점검표 모달 상태
+  const [monthlyModalOpen, setMonthlyModalOpen] = useState(false);
+  const [monthlyTarget, setMonthlyTarget] = useState<{
     category: SafetyDocCategory;
     doc: SafetyDoc;
   } | null>(null);
@@ -152,6 +174,11 @@ export default function MakeSafetyDocs({
   const openTbm = (category: SafetyDocCategory, doc: SafetyDoc) => {
     setTbmTarget({ category, doc });
     setTbmModalOpen(true);
+  };
+
+  const openMonthlyInspection = (category: SafetyDocCategory, doc: SafetyDoc) => {
+    setMonthlyTarget({ category, doc });
+    setMonthlyModalOpen(true);
   };
 
   return (
@@ -189,11 +216,16 @@ export default function MakeSafetyDocs({
                       const isSelected = mode === 'review' && selectedDocId === doc.id;
 
                       const handleClick = () => {
-                        // ✅ 문서 생성 모드에서 TBM 선택 시 모달 오픈
+                        // ✅ create 모드에서 TBM / 월점검표는 모달 오픈
                         if (mode === 'create' && doc.id === 'tbm-log') {
                           openTbm(cat, doc);
                           return;
                         }
+                        if (mode === 'create' && doc.id === 'monthly-inspection') {
+                          openMonthlyInspection(cat, doc);
+                          return;
+                        }
+
                         onSelectDoc?.(cat, doc);
                       };
 
@@ -233,10 +265,8 @@ export default function MakeSafetyDocs({
         open={tbmModalOpen}
         onClose={() => setTbmModalOpen(false)}
         onSubmit={(payload) => {
-          // (선택) 기존 흐름 유지 필요하면 여기서 doc 선택 이벤트도 같이 호출 가능
           if (tbmTarget) onSelectDoc?.(tbmTarget.category, tbmTarget.doc);
 
-          // (선택) 상위에서 API 호출/문서 생성 트리거
           if (tbmTarget) {
             onCreateTbm?.({
               ...payload,
@@ -246,6 +276,25 @@ export default function MakeSafetyDocs({
           }
 
           setTbmModalOpen(false);
+        }}
+      />
+
+      {/* ✅ 월 작업장 순회 점검표 생성 모달 */}
+      <MonthlyInspectionCreateModal
+        open={monthlyModalOpen}
+        onClose={() => setMonthlyModalOpen(false)}
+        onSubmit={(payload) => {
+          if (monthlyTarget) onSelectDoc?.(monthlyTarget.category, monthlyTarget.doc);
+
+          if (monthlyTarget) {
+            onCreateMonthlyInspection?.({
+              ...payload,
+              categoryId: monthlyTarget.category.id,
+              docId: monthlyTarget.doc.id,
+            });
+          }
+
+          setMonthlyModalOpen(false);
         }}
       />
     </div>

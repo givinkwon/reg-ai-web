@@ -1,0 +1,95 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 0 12px;
+  font-size: 12px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(11, 98, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(11, 98, 255, 0.12);
+}
+
+.addBtn {
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  color: black;
+  place-items: center;
+}
+.addBtn:hover { background: rgba(0,0,0,0.03); }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.empty {
+  font-size: 12px;
+  color: rgba(0,0,0,0.45);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 98, 255, 0.35);
+  background: rgba(11, 98, 255, 0.08);
+  padding: 8px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: rgba(0,0,0,0.8);
+}
+
+.suggestHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+
+.suggestTitle {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(11, 98, 255, 0.9);
+}
+
+.suggestHint {
+  font-size: 11px;
+  color: rgba(11, 98, 255, 0.65);
+}
+
+.suggestRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestChip {
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.suggestChip:hover { background: rgba(0,0,0,0.03); }
