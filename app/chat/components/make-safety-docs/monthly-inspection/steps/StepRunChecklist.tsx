@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import s from './StepRunChecklist.module.css';
 import type { ChecklistItem, Rating } from '../MonthlyInspectionCreateModal';
 
@@ -27,6 +27,29 @@ export default function StepRunChecklist({
   onFinish,
   finishDisabled,
 }: Props) {
+  // ✅ items 목록(IDs)이 바뀔 때마다 "자동 기본값 적용"을 다시 허용
+  const lastIdsKeyRef = useRef<string>('');
+  const didAutofillRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const idsKey = items.map((it) => it.id).join('|');
+
+    if (lastIdsKeyRef.current !== idsKey) {
+      lastIdsKeyRef.current = idsKey;
+      didAutofillRef.current = false;
+    }
+
+    if (didAutofillRef.current) return;
+
+    const hasMissing = items.some((it) => !it.rating);
+    if (!hasMissing) return;
+
+    didAutofillRef.current = true;
+
+    const next = items.map((it) => (it.rating ? it : { ...it, rating: 'O' as Rating }));
+    onChangeItems(next);
+  }, [items, onChangeItems]);
+
   const grouped = useMemo(() => {
     const m = new Map<string, ChecklistItem[]>();
     items.forEach((it) => {
@@ -53,16 +76,28 @@ export default function StepRunChecklist({
 
   return (
     <div className={s.wrap}>
+      <div className={s.footer}>
+        <button className={s.ghost} type="button" onClick={onBack}>
+          이전
+        </button>
+        <button className={s.primary} type="button" disabled={!!finishDisabled} onClick={onFinish}>
+          점검 완료
+        </button>
+      </div>
       <div className={s.meta}>
         <div>
           <div className={s.metaTitle}>점검 사항 목록</div>
-          <div className={s.metaSub}>선택됨 {completion.done}/{completion.total}</div>
+          <div className={s.metaSub}>
+            선택됨 {completion.done}/{completion.total}
+          </div>
         </div>
       </div>
 
       <div className={s.tagsRow}>
         {detailTasks.map((t) => (
-          <span key={t} className={s.tagChip}>{t}</span>
+          <span key={t} className={s.tagChip}>
+            {t}
+          </span>
         ))}
       </div>
 
@@ -97,15 +132,6 @@ export default function StepRunChecklist({
           ))}
         </div>
       ))}
-
-      <div className={s.footer}>
-        <button className={s.ghost} type="button" onClick={onBack}>
-          이전
-        </button>
-        <button className={s.primary} type="button" disabled={!!finishDisabled} onClick={onFinish}>
-          점검 완료
-        </button>
-      </div>
     </div>
   );
 }

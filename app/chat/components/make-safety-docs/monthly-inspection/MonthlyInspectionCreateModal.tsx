@@ -1,3 +1,4 @@
+// components/monthly-inspection/MonthlyInspectionCreateModal.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -44,106 +45,11 @@ type Props = {
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 
-/** -----------------------
- * 체크리스트 생성 결과 캐시 (GPT 결과 재사용)
- * ---------------------- */
-type ChecklistCacheEntry = {
-  t: number; // saved at
-  minorKey: string; // normalized minor
-  tasks: string[]; // normalized+sorted unique
-  sections: Sections;
-  model?: string;
-  hazards?: string[];
-};
-type ChecklistCacheStore = Record<string, ChecklistCacheEntry>;
-
-const CHECKLIST_CACHE_KEY = 'regai:monthlyInspection:checklistGen:v1';
-const CHECKLIST_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
-const CHECKLIST_CACHE_MAX = 120;
-
-/** -----------------------
- * 모달 드래프트 캐시 (모달 껐다 켜도 유지)
- * ---------------------- */
-type DraftEntry = {
-  t: number;
-  minorKey: string;
-  step: 0 | 1 | 2;
-  detailTasks: string[];
-  sections?: Sections;
-  items?: ChecklistItem[];
-};
-type DraftStore = Record<string, DraftEntry>;
-
-const DRAFT_CACHE_KEY = 'regai:monthlyInspection:draft:v1';
-const DRAFT_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30일
-const DRAFT_CACHE_MAX = 30;
-
-function safeJsonParse<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function safeLoadLocal<T>(key: string): T | null {
-  try {
-    if (typeof window === 'undefined') return null;
-    return safeJsonParse<T>(window.localStorage.getItem(key));
-  } catch {
-    return null;
-  }
-}
-
-function safeSaveLocal(key: string, value: any) {
-  try {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore
-  }
-}
-
-function pruneStore<T extends { t: number }>(
-  store: Record<string, T>,
-  ttlMs: number,
-  maxKeys: number,
-): Record<string, T> {
-  const now = Date.now();
-  const entries = Object.entries(store || {})
-    .filter(([, v]) => v && typeof v.t === 'number' && now - v.t <= ttlMs);
-
-  entries.sort((a, b) => (b[1].t ?? 0) - (a[1].t ?? 0));
-  return Object.fromEntries(entries.slice(0, maxKeys));
-}
-
-/** 키 길이 줄이기용: fnv1a 32-bit */
-function fnv1a32(input: string): string {
-  let h = 0x811c9dc5; // 2166136261
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    // h *= 16777619 (32-bit)
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
-  }
-  return h.toString(16).padStart(8, '0');
-}
-
-function minorKeyOf(minorCategory?: string | null) {
-  const m = norm(minorCategory);
-  return m ? m : 'ALL';
-}
-
-function stableTaskSet(tasks: string[]): string[] {
-  const cleaned = tasks.map(norm).filter(Boolean);
-  return Array.from(new Set(cleaned)).sort((a, b) => a.localeCompare(b));
-}
-
-function checklistCacheId(minorKey: string, stableTasksArr: string[]) {
-  // order-insensitive
-  const base = `${minorKey}||${stableTasksArr.join('||')}`;
-  return fnv1a32(base);
-}
+const CATS: ChecklistCategory[] = [
+  '사업장 점검 사항',
+  '노동안전 점검 사항',
+  '세부 작업 및 공정별 점검 사항',
+];
 
 function formatKoreanWeekLabel(d: Date) {
   const day = d.getDate();
@@ -202,6 +108,129 @@ type GenResponse = {
   model?: string;
 };
 
+/** -----------------------
+ * localStorage: draft (모달 껐다 켜도 그대로)
+ * ---------------------- */
+type DraftState = {
+  t: number;
+  minorCategory?: string | null;
+  step: 0 | 1 | 2;
+  detailTasks: string[];
+  sections: Sections;
+  results: ChecklistItem[];
+};
+
+const DRAFT_KEY = 'regai:monthlyInspection:draft:v1';
+const DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
+
+function loadDraft(): DraftState | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DraftState;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.t || Date.now() - parsed.t > DRAFT_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(next: Omit<DraftState, 't'>) {
+  try {
+    const payload: DraftState = { ...next, t: Date.now() };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore
+  }
+}
+
+/** -----------------------
+ * localStorage: checklist cache (세부작업 세트 동일 시 GPT 호출 방지)
+ * ---------------------- */
+type ChecklistCacheEntry = {
+  t: number;
+  key: string;
+  minorKey: string;     // minorCategory 정규화
+  tasksKey: string;     // 정규화된 tasks(정렬) 기반
+  sections: Sections;
+};
+
+type ChecklistCacheStore = Record<string, ChecklistCacheEntry>;
+
+const CHECKLIST_CACHE_KEY = 'regai:monthlyInspection:checklistCache:v1';
+const CHECKLIST_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30일
+const CHECKLIST_CACHE_MAX = 120;
+
+function fnv1a32(str: string) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+function stableTasksKey(minorCategory: string | null | undefined, tasks: string[]) {
+  const minorKey = norm(minorCategory || '') || 'ALL';
+  const arr = tasks.map(norm).filter(Boolean).sort();
+  const tasksKey = arr.join('||');
+  const raw = `${minorKey}::${tasksKey}`;
+  const key = fnv1a32(raw);
+  return { key, minorKey, tasksKey, sortedTasks: arr };
+}
+
+function loadChecklistCache(): ChecklistCacheStore {
+  try {
+    const raw = localStorage.getItem(CHECKLIST_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as ChecklistCacheStore;
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+
+function pruneChecklistCache(store: ChecklistCacheStore): ChecklistCacheStore {
+  const now = Date.now();
+  const entries = Object.entries(store)
+    .filter(([, v]) => v && typeof v.t === 'number' && v.sections)
+    .filter(([, v]) => now - v.t <= CHECKLIST_CACHE_TTL_MS);
+
+  entries.sort((a, b) => (b[1].t ?? 0) - (a[1].t ?? 0));
+  const limited = entries.slice(0, CHECKLIST_CACHE_MAX);
+  return Object.fromEntries(limited);
+}
+
+function saveChecklistCache(store: ChecklistCacheStore) {
+  try {
+    localStorage.setItem(CHECKLIST_CACHE_KEY, JSON.stringify(store));
+  } catch {
+    // ignore
+  }
+}
+
+function getFilenameFromContentDisposition(cd: string | null, fallback: string) {
+  if (!cd) return fallback;
+
+  // filename*=UTF-8''...
+  const mStar = cd.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (mStar?.[1]) {
+    try {
+      return decodeURIComponent(mStar[1]);
+    } catch {
+      return mStar[1];
+    }
+  }
+
+  // filename="..."
+  const m = cd.match(/filename\s*=\s*"([^"]+)"/i) || cd.match(/filename\s*=\s*([^;]+)/i);
+  if (m?.[1]) return m[1].trim();
+
+  return fallback;
+}
+
 export default function MonthlyInspectionCreateModal({
   open,
   onClose,
@@ -223,8 +252,11 @@ export default function MonthlyInspectionCreateModal({
   const [items, setItems] = useState<ChecklistItem[]>(defaultValue?.results ?? []);
 
   const [doneOpen, setDoneOpen] = useState(false);
+
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string>('');
+
+  const [exportLoading, setExportLoading] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const weekLabel = useMemo(() => formatKoreanWeekLabel(today), [today]);
@@ -238,58 +270,18 @@ export default function MonthlyInspectionCreateModal({
   const canFinish = useMemo(() => items.some((it) => !!it.rating), [items]);
   const canGoStep1 = detailTasks.map(norm).filter(Boolean).length > 0;
 
-  /** 캐시 refs */
+  // ✅ checklist cache store in memory
   const checklistCacheRef = useRef<ChecklistCacheStore>({});
-  const draftRef = useRef<DraftStore>({});
-  const saveDebounceRef = useRef<number | null>(null);
 
-  /** 캐시 로드 (open 시점에만) */
+  // mount: load checklist cache
   useEffect(() => {
-    if (!open) return;
+    if (typeof window === 'undefined') return;
+    const loaded = pruneChecklistCache(loadChecklistCache());
+    checklistCacheRef.current = loaded;
+    saveChecklistCache(loaded);
+  }, []);
 
-    const cl = pruneStore<ChecklistCacheEntry>(
-      safeLoadLocal<ChecklistCacheStore>(CHECKLIST_CACHE_KEY) || {},
-      CHECKLIST_CACHE_TTL_MS,
-      CHECKLIST_CACHE_MAX,
-    );
-    checklistCacheRef.current = cl;
-    safeSaveLocal(CHECKLIST_CACHE_KEY, cl);
-
-    const dr = pruneStore<DraftEntry>(
-      safeLoadLocal<DraftStore>(DRAFT_CACHE_KEY) || {},
-      DRAFT_CACHE_TTL_MS,
-      DRAFT_CACHE_MAX,
-    );
-    draftRef.current = dr;
-    safeSaveLocal(DRAFT_CACHE_KEY, dr);
-  }, [open]);
-
-  /** draft 저장 (debounced) */
-  const scheduleSaveDraft = (entry: DraftEntry | null) => {
-    if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
-    saveDebounceRef.current = window.setTimeout(() => {
-      if (entry) {
-        draftRef.current[entry.minorKey] = entry;
-      }
-      const pruned = pruneStore<DraftEntry>(draftRef.current, DRAFT_CACHE_TTL_MS, DRAFT_CACHE_MAX);
-      draftRef.current = pruned;
-      safeSaveLocal(DRAFT_CACHE_KEY, pruned);
-    }, 300);
-  };
-
-  /** 완료 후 draft 초기화(원하면 유지해도 됨) */
-  const clearDraftForMinor = () => {
-    const mk = minorKeyOf(minorCategory);
-    delete draftRef.current[mk];
-    const pruned = pruneStore<DraftEntry>(draftRef.current, DRAFT_CACHE_TTL_MS, DRAFT_CACHE_MAX);
-    draftRef.current = pruned;
-    safeSaveLocal(DRAFT_CACHE_KEY, pruned);
-  };
-
-  /** open 시 state 복원 로직
-   * 1) defaultValue 우선
-   * 2) 없으면 draft 캐시로 복원
-   */
+  // ✅ open 시: defaultValue 우선, 없으면 draft 복원
   useEffect(() => {
     if (!open) return;
 
@@ -297,12 +289,12 @@ export default function MonthlyInspectionCreateModal({
     setDoneOpen(false);
     setGenLoading(false);
     setGenError('');
+    setExportLoading(false);
 
     const dvTasks = (defaultValue?.detailTasks ?? []).map(norm).filter(Boolean);
     const dvSections = defaultValue?.sections;
     const dvResults = defaultValue?.results;
 
-    // ✅ 1) defaultValue 우선
     if (dvTasks.length > 0) {
       setDetailTasks(dvTasks);
 
@@ -329,42 +321,21 @@ export default function MonthlyInspectionCreateModal({
       return;
     }
 
-    // ✅ 2) draft 캐시 복원
-    const mk = minorKeyOf(minorCategory);
-    const cachedDraft = draftRef.current?.[mk];
-    const now = Date.now();
-
-    if (cachedDraft && now - cachedDraft.t <= DRAFT_CACHE_TTL_MS) {
-      const tasks = (cachedDraft.detailTasks ?? []).map(norm).filter(Boolean);
-      const sec = cachedDraft.sections;
-      const its = cachedDraft.items;
-
-      setDetailTasks(tasks);
-
-      if (sec && sec['사업장 점검 사항'] && sec['노동안전 점검 사항'] && sec['세부 작업 및 공정별 점검 사항']) {
-        const cleaned = cleanSections(sec);
-        setSections(cleaned);
-
-        if (cachedDraft.step === 2 && Array.isArray(its) && its.length > 0) {
-          setItems(its);
-          setStep(2);
-        } else {
-          setItems(toItems(cleaned));
-          setStep(1);
-        }
-      } else {
-        setSections({
-          '사업장 점검 사항': [],
-          '노동안전 점검 사항': [],
-          '세부 작업 및 공정별 점검 사항': [],
-        });
-        setItems([]);
-        setStep(0);
-      }
+    // ✅ draft 로드 (모달 껐다 켜도 동일)
+    const draft = loadDraft();
+    if (draft) {
+      setDetailTasks((draft.detailTasks ?? []).map(norm).filter(Boolean));
+      setSections(cleanSections(draft.sections ?? {
+        '사업장 점검 사항': [],
+        '노동안전 점검 사항': [],
+        '세부 작업 및 공정별 점검 사항': [],
+      }));
+      setItems(draft.results ?? []);
+      setStep(draft.step ?? 0);
       return;
     }
 
-    // ✅ 아무것도 없으면 초기화
+    // ✅ 아무 것도 없으면 초기화
     setStep(0);
     setDetailTasks([]);
     setSections({
@@ -373,9 +344,9 @@ export default function MonthlyInspectionCreateModal({
       '세부 작업 및 공정별 점검 사항': [],
     });
     setItems([]);
-  }, [open, defaultValue, minorCategory]);
+  }, [open, defaultValue]);
 
-  /** 모달 열려있을 때 body scroll lock */
+  // ✅ body scroll lock
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -385,57 +356,70 @@ export default function MonthlyInspectionCreateModal({
     };
   }, [open]);
 
-  /** 모달 열려있을 때 draft 자동 저장 */
-  useEffect(() => {
-    if (!open) return;
-
-    const mk = minorKeyOf(minorCategory);
-
-    const entry: DraftEntry = {
-      t: Date.now(),
-      minorKey: mk,
+  // ✅ draft 즉시 저장 (세부작업 1개만 추가하고 바로 닫아도 안 날아가게)
+  const persistDraftNow = (next?: Partial<DraftState>) => {
+    const payload: Omit<DraftState, 't'> = {
+      minorCategory: minorCategory ?? null,
       step,
       detailTasks: detailTasks.map(norm).filter(Boolean),
-      sections: step >= 1 ? sections : undefined,
-      items: step >= 2 ? items : undefined,
+      sections,
+      results: items,
+      ...(next ?? {}),
     };
+    saveDraft(payload);
+  };
 
-    scheduleSaveDraft(entry);
+  // 상태 바뀔 때마다 draft 저장(짧은 debounce가 필요하면 추가 가능)
+  useEffect(() => {
+    if (!open) return;
+    persistDraftNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, detailTasks, sections, items, minorCategory]);
 
   if (!open) return null;
 
-  /** ✅ 캐시 기반: 동일 세트면 API 호출 없이 즉시 sections 로드 */
+  const closeOnly = () => {
+    // ✅ reset하지 않음: 캐시/드래프트 유지
+    setDoneOpen(false);
+    onClose();
+  };
+
   const handleCreateChecklist = async () => {
     markDirty();
     setGenError('');
+    setGenLoading(true);
 
-    const mk = minorKeyOf(minorCategory);
-    const tasksStable = stableTaskSet(detailTasks);
-    if (tasksStable.length === 0) return;
+    const tasks = detailTasks.map(norm).filter(Boolean);
 
-    const cid = checklistCacheId(mk, tasksStable);
-    const now = Date.now();
+    // ✅ 캐시 키 생성 (minor + tasks set)
+    const { key, minorKey } = stableTasksKey(minorCategory, tasks);
 
-    const cached = checklistCacheRef.current?.[cid];
-    if (cached && now - cached.t <= CHECKLIST_CACHE_TTL_MS) {
-      const cachedSections = cleanSections(cached.sections);
-      setSections(cachedSections);
-      setItems(toItems(cachedSections));
+    // ✅ 1) 캐시 hit면 GPT 호출/서버 호출 없이 바로 로드
+    const cached = checklistCacheRef.current[key];
+    if (cached && Date.now() - cached.t <= CHECKLIST_CACHE_TTL_MS) {
+      setSections(cached.sections);
+      setItems(toItems(cached.sections));
       setStep(1);
+      setGenLoading(false);
+
+      persistDraftNow({
+        step: 1,
+        detailTasks: tasks,
+        sections: cached.sections,
+        results: toItems(cached.sections),
+      });
+
       return;
     }
 
-    setGenLoading(true);
-
+    // ✅ 2) 캐시 없으면 서버 호출
     try {
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-checklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          minorCategory: mk === 'ALL' ? undefined : mk,
-          detailTasks: tasksStable,
+          minorCategory: minorCategory ?? undefined,
+          detailTasks: tasks,
           limitPerCategory: 10,
         }),
       });
@@ -447,7 +431,6 @@ export default function MonthlyInspectionCreateModal({
 
       const data = (await res.json()) as GenResponse;
       const sec = data?.sections ?? {};
-
       const next: Sections = {
         '사업장 점검 사항': (sec['사업장 점검 사항'] ?? []).map(String),
         '노동안전 점검 사항': (sec['노동안전 점검 사항'] ?? []).map(String),
@@ -461,33 +444,33 @@ export default function MonthlyInspectionCreateModal({
         cleaned['노동안전 점검 사항'].length === 0 ||
         cleaned['세부 작업 및 공정별 점검 사항'].length === 0;
 
-      const finalSections = anyEmpty ? buildFallbackSections(tasksStable) : cleaned;
+      const finalSections = anyEmpty ? buildFallbackSections(tasks) : cleaned;
+
+      // ✅ 캐시에 저장
+      const store = checklistCacheRef.current;
+      store[key] = {
+        t: Date.now(),
+        key,
+        minorKey,
+        tasksKey: stableTasksKey(minorCategory, tasks).tasksKey,
+        sections: finalSections,
+      };
+      checklistCacheRef.current = pruneChecklistCache(store);
+      saveChecklistCache(checklistCacheRef.current);
 
       setSections(finalSections);
       setItems(toItems(finalSections));
       setStep(1);
 
-      // ✅ API 성공 시에만 “생성 결과 캐시” 저장 (fallback만 나온 경우는 원하면 저장해도 됨)
-      if (!anyEmpty) {
-        checklistCacheRef.current[cid] = {
-          t: Date.now(),
-          minorKey: mk,
-          tasks: tasksStable,
-          sections: finalSections,
-          model: data?.model,
-          hazards: data?.hazards,
-        };
-
-        const pruned = pruneStore<ChecklistCacheEntry>(
-          checklistCacheRef.current,
-          CHECKLIST_CACHE_TTL_MS,
-          CHECKLIST_CACHE_MAX,
-        );
-        checklistCacheRef.current = pruned;
-        safeSaveLocal(CHECKLIST_CACHE_KEY, pruned);
-      }
+      persistDraftNow({
+        step: 1,
+        detailTasks: tasks,
+        sections: finalSections,
+        results: toItems(finalSections),
+      });
     } catch (e) {
-      const fb = buildFallbackSections(tasksStable);
+      // fallback + (원하면 fallback도 캐시 저장 가능)
+      const fb = buildFallbackSections(tasks);
       setSections(fb);
       setItems(toItems(fb));
       setStep(1);
@@ -500,9 +483,33 @@ export default function MonthlyInspectionCreateModal({
   const handleConfirmChecklist = (nextSections: Sections) => {
     markDirty();
     const cleaned = cleanSections(nextSections);
+    const nextItems = toItems(cleaned);
+
     setSections(cleaned);
-    setItems(toItems(cleaned));
+    setItems(nextItems);
     setStep(2);
+
+    // ✅ 편집된 섹션도 캐시에 덮어쓰기 (같은 세트면 다음엔 편집본 바로 뜸)
+    const tasks = detailTasks.map(norm).filter(Boolean);
+    const { key, minorKey, tasksKey } = stableTasksKey(minorCategory, tasks);
+
+    const store = checklistCacheRef.current;
+    store[key] = {
+      t: Date.now(),
+      key,
+      minorKey,
+      tasksKey,
+      sections: cleaned,
+    };
+    checklistCacheRef.current = pruneChecklistCache(store);
+    saveChecklistCache(checklistCacheRef.current);
+
+    persistDraftNow({
+      step: 2,
+      detailTasks: tasks,
+      sections: cleaned,
+      results: nextItems,
+    });
   };
 
   const handleFinish = async () => {
@@ -513,33 +520,44 @@ export default function MonthlyInspectionCreateModal({
       results: items,
     };
 
+    setExportLoading(true);
+
     try {
+      // (옵션) DB 저장/로그
       await onSubmit?.(payload);
-    } finally {
+
+      // ✅ 엑셀 다운로드
+      const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-export-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`export excel failed: ${res.status} ${txt}`);
+      }
+
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition');
+      const fallbackName = `월_작업장_순회점검표_${dateISO}.xlsx`;
+      const filename = getFilenameFromContentDisposition(cd, fallbackName);
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
       setDoneOpen(true);
+    } catch (e) {
+      setGenError((e as Error)?.message || '엑셀 생성에 실패했습니다.');
+    } finally {
+      setExportLoading(false);
     }
-  };
-
-  const resetAndClose = () => {
-    // ✅ close는 state reset 하되, draft는 localStorage에 남겨서 다음 open에 복원됨
-    setStep(0);
-    setDetailTasks([]);
-    setSections({
-      '사업장 점검 사항': [],
-      '노동안전 점검 사항': [],
-      '세부 작업 및 공정별 점검 사항': [],
-    });
-    setItems([]);
-    setDoneOpen(false);
-    setGenLoading(false);
-    setGenError('');
-    onClose();
-  };
-
-  const closeAfterDone = () => {
-    // ✅ “완료” 확인 후에는 draft를 비우는 편이 보통 UX가 좋음(원하면 이 줄 삭제)
-    clearDraftForMinor();
-    resetAndClose();
   };
 
   return (
@@ -549,13 +567,13 @@ export default function MonthlyInspectionCreateModal({
       aria-modal="true"
       aria-label="월 작업장 순회 점검표"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) resetAndClose();
+        if (e.target === e.currentTarget) closeOnly();
       }}
     >
       <div className={s.modal}>
         <div className={s.topBar}>
           <span className={s.pill}>월 작업장 순회 점검표</span>
-          <button type="button" className={s.iconBtn} onClick={resetAndClose} aria-label="닫기">
+          <button type="button" className={s.iconBtn} onClick={closeOnly} aria-label="닫기">
             <X size={18} />
           </button>
         </div>
@@ -578,6 +596,8 @@ export default function MonthlyInspectionCreateModal({
                 onChange={(next) => {
                   markDirty();
                   setDetailTasks(next);
+                  // ✅ 즉시 draft 저장: 첫 태그 추가 후 바로 닫아도 유지
+                  persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
                 }}
               />
 
@@ -620,10 +640,12 @@ export default function MonthlyInspectionCreateModal({
               onChangeItems={(next) => {
                 markDirty();
                 setItems(next);
+                // ✅ 결과/조치사항도 draft로 저장
+                persistDraftNow({ results: next, step: 2 });
               }}
               onBack={() => setStep(1)}
               onFinish={handleFinish}
-              finishDisabled={!canFinish}
+              finishDisabled={!canFinish || exportLoading}
             />
           )}
         </div>
@@ -633,7 +655,10 @@ export default function MonthlyInspectionCreateModal({
         open={doneOpen}
         title="순회 점검 완료"
         message={`${weekLabel} 작업장 순회 점검이 완료되었습니다.`}
-        onConfirm={closeAfterDone}
+        onConfirm={() => {
+          setDoneOpen(false);
+          closeOnly();
+        }}
       />
     </div>
   );
