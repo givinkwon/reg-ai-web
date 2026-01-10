@@ -15,6 +15,7 @@ import {
   Folder,
   User2,
   LogOut,
+  Menu,
 } from 'lucide-react';
 
 import { Button } from '../../components/ui/button';
@@ -2139,6 +2140,7 @@ export default function ChatArea() {
 
   // ✅ 메뉴(안전뉴스/입법예고 등) 클릭 후 서버 응답 대기 로딩
   const [menuLoading, setMenuLoading] = useState(false);
+  const setSidebarMobileOpen = useChatStore((st) => st.setSidebarMobileOpen);
 
   return (
     <>
@@ -2146,12 +2148,15 @@ export default function ChatArea() {
         {/* Header */}
         <div className={s.header}>
           <div className={s.headerLeft}>
-            <div className={s.productName}>REG AI</div>
-            <div className={s.chatTitle}>
-              {messages.length > 0 && messages[0].role === 'user'
-                ? htmlToText(messages[0].content).slice(0, 24) || '새 대화'
-                : '새 대화'}
-            </div>
+            <button
+              type="button"
+              className={s.menuBtn}
+              onClick={() => setSidebarMobileOpen(true)}
+              aria-label="사이드바 열기"
+              title="메뉴"
+            >
+              <Menu className={s.menuIcon} />
+            </button>
           </div>
 
           <div className={s.headerRight}>

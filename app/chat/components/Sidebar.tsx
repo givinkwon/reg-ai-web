@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import {
   MessageSquare,
   Plus,
@@ -8,6 +9,7 @@ import {
   Trash2,
   Home,
   Folder,
+  X, // ✅ 추가
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import s from './Sidebar.module.css';
@@ -29,24 +31,45 @@ export default function Sidebar() {
     setCollapsed,
     setMainView,
     setShowLoginModal,
+
+    // ✅ 모바일 오버레이 닫기용 (스토어에 있어야 함)
+    sidebarMobileOpen,
+    setSidebarMobileOpen,
   } = useChatStore();
 
   const router = useRouter();
+
+  // ✅ 모바일 판별
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  // ✅ 모바일에서는 collapsed 상태가 적용되지 않게 강제로 풀어줌(선택이지만 추천)
+  useEffect(() => {
+    if (isMobile && collapsed) setCollapsed(false);
+  }, [isMobile, collapsed, setCollapsed]);
+
   const toggleCollapse = () => setCollapsed(!collapsed);
 
-  const handleLogoClick = () => {
-    router.push('/');
+  const handleLogoClick = () => router.push('/');
+
+  const closeMobileOverlay = () => {
+    if (isMobile && sidebarMobileOpen) setSidebarMobileOpen(false);
   };
 
   const handleHomeClick = () => {
-    // ✅ zustand persist를 쓰는 경우, 저장소까지 비우기
+    closeMobileOverlay();
+
     try {
-      // persist 미사용이면 undefined라서 안전
       // @ts-ignore
       useChatStore.persist?.clearStorage?.();
     } catch {}
 
-    // ✅ 홈으로 이동 + 전체 리로드(스토어/컴포넌트 상태 전부 초기화)
     window.location.assign('/chat');
   };
 
@@ -57,35 +80,58 @@ export default function Sidebar() {
       return;
     }
     setMainView('docs');
+    closeMobileOverlay();
   };
 
   return (
-    <aside className={`${s.wrap} ${collapsed ? s.collapsed : ''}`}>
+    // ✅ 모바일에서는 collapsed 클래스 적용 금지
+    <aside className={`${s.wrap} ${!isMobile && collapsed ? s.collapsed : ''}`}>
       {/* Header */}
       <div className={s.header}>
         <div className={s.titleRow}>
-          {!collapsed && (
+          {/* 로고 */}
+          {!(!isMobile && collapsed) && (
             <div className={s.brand}>
-              <img onClick={handleLogoClick} src="/logo.png" className={s.fav} alt="REG AI" />
+              <img
+                onClick={handleLogoClick}
+                src="/logo.png"
+                className={s.fav}
+                alt="REG AI"
+              />
             </div>
           )}
 
-          <button
-            onClick={toggleCollapse}
-            className={s.collapseBtn}
-            aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
-          >
-            {collapsed ? (
-              <ChevronRight size={16} strokeWidth={2} color="#fff" style={{ width: 16, height: 16 }} />
-            ) : (
-              <ChevronLeft size={16} strokeWidth={2} color="#fff" style={{ width: 16, height: 16 }} />
-            )}
-          </button>
+          {/* ✅ 데스크톱: 접기/펼치기 버튼 */}
+          {!isMobile && (
+            <button
+              onClick={toggleCollapse}
+              className={s.collapseBtn}
+              aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
+            >
+              {collapsed ? (
+                <ChevronRight size={16} strokeWidth={2} color="#fff" style={{ width: 16, height: 16 }} />
+              ) : (
+                <ChevronLeft size={16} strokeWidth={2} color="#fff" style={{ width: 16, height: 16 }} />
+              )}
+            </button>
+          )}
+
+          {/* ✅ 모바일: 닫기(X) 버튼 (overlay 닫기) */}
+          {isMobile && (
+            <button
+              type="button"
+              className={s.mobileCloseBtn}
+              onClick={() => setSidebarMobileOpen(false)}
+              aria-label="사이드바 닫기"
+              title="닫기"
+            >
+              <X className={s.mobileCloseIcon} />
+            </button>
+          )}
         </div>
 
         {/* Nav */}
         <div className={s.nav}>
-          {/* Home */}
           <div
             className={s.navItem}
             role="button"
@@ -95,11 +141,11 @@ export default function Sidebar() {
           >
             <div className={s.navLeft}>
               <Home className={s.iconSm} />
-              {!collapsed && <span className={s.navText}>Home</span>}
+              {/* 모바일에서는 항상 텍스트 보여도 됨 */}
+              {!(!isMobile && collapsed) && <span className={s.navText}>Home</span>}
             </div>
           </div>
 
-          {/* 문서함 */}
           <div
             className={s.navItem}
             role="button"
@@ -109,7 +155,7 @@ export default function Sidebar() {
           >
             <div className={s.navLeft}>
               <Folder className={s.iconSm} />
-              {!collapsed && <span className={s.navText}>문서함</span>}
+              {!(!isMobile && collapsed) && <span className={s.navText}>문서함</span>}
             </div>
           </div>
         </div>
@@ -117,7 +163,7 @@ export default function Sidebar() {
 
       <div className={s.divider} />
 
-      {/* ✅ Chat list (스크롤 영역) */}
+      {/* Chat list */}
       <div className={s.listArea}>
         {rooms.map((r) => {
           const active = r.id === activeRoomId;
@@ -128,12 +174,13 @@ export default function Sidebar() {
               onClick={() => {
                 setMainView('chat');
                 setActiveRoom(r.id);
+                closeMobileOverlay(); // ✅ 모바일에서 대화 선택하면 sidebar 닫힘
               }}
             >
               <MessageSquare className={active ? s.iconSmAccent : s.iconSmMuted} />
               <span className={s.chatText}>{r.title || '새 대화'}</span>
 
-              {active && !collapsed && (
+              {active && !(!isMobile && collapsed) && (
                 <button
                   className={s.deleteBtn}
                   onClick={(e) => {
@@ -157,6 +204,7 @@ export default function Sidebar() {
           onClick={() => {
             setMainView('chat');
             createRoom();
+            closeMobileOverlay(); // ✅ 모바일에서 새 대화 만들면 sidebar 닫힘
           }}
         >
           <Plus className={s.plus} />

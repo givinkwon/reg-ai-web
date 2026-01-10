@@ -88,10 +88,9 @@
 
 /* ✅ 여기부터: summaryHtml(후처리 HTML) 스타일 */
 .html {
-  font-size: 13px;
+  font-size: 1.2em;
   line-height: 1.7;
   color: rgba(15, 23, 42, 0.92);
-
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -142,9 +141,6 @@
   padding-left: 16px;
 }
 
-.html span {
-  font-size: 1.2em;
-}
 /* ✅ (옵션) p 들여쓰기 dot 마크업이 들어올 때도 대응 */
 .html p[data-ai-dot='1'] {
   display: flex;
@@ -269,7 +265,7 @@
   }
 
   .modal {
-    width: 100vw;
+    width: 85vw;
     max-height: 88vh;
     border-radius: 16px 16px 0 0;
     border-left: 0;

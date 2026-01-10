@@ -1138,6 +1138,23 @@ body[data-theme='dark'] .hintChip {
   gap: 10px;
 }
 
+/* 기본(웹/데스크톱): 햄버거 숨김, 채팅 제목 보임 */
+.menuBtn { display: none; }
+.chatTitle { display: block; }
+
+/* 모바일: 햄버거 보임, 채팅 제목 숨김 */
+@media (max-width: 768px) {
+  .menuBtn {
+    display: inline-flex; /* 또는 flex */
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chatTitle {
+    display: none;
+  }
+}
+
 @media (max-width: 720px) {
   .safety-doc-download-grid {
     grid-template-columns: 1fr;
