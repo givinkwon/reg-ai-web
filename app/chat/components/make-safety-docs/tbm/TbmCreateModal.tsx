@@ -5,6 +5,7 @@ import { X, Plus, FileText } from 'lucide-react';
 import s from './TbmCreateModal.module.css';
 
 import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
+import { useUserStore } from '@/app/store/user';
 
 export type TbmAttendee = {
   name: string;
@@ -13,44 +14,42 @@ export type TbmAttendee = {
 
 // ✅ (호환) workTags도 남겨두되, 실사용은 detailTasks로 명확히
 export type TbmCreatePayload = {
-  detailTasks: string[];      // ✅ 세부작업(process_name) 태그
+  detailTasks: string[];
   attendees: TbmAttendee[];
-
-  // (호환) 기존 로직이 workTags를 기대하면 같이 제공
   workTags?: string[];
-
   jobTitle?: string;
-  minorCategory?: string;     // 'ALL'은 스코프용으로만 사용 가능
+  minorCategory?: string;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
 
-  // 필요하면 로깅/상태 저장용으로 쓰고, 없어도 됨
   onSubmit?: (payload: TbmCreatePayload) => void;
 
-  // 상위에서 소분류(업종) 넘겨줄 수 있으면 넘기기(권장)
   minorCategory?: string | null;
-
   defaultValue?: Partial<TbmCreatePayload>;
+
+  // ✅ 추가: 로그인/회사명
+  userEmail: string | null;
+  companyName?: string | null;
+  onRequireLogin: () => void; // 로그인 모달 열기
 };
 
 const norm = (v?: string | null) => (v ?? '').trim();
 
 /** =========================
  * ✅ localStorage cache (form)
- * - user가 없으니 guest 스코프만 사용
- * - minor 스코프는 유지(같은 guest라도 업종별로 폼 분리)
+ * - (기존 유지) guest 스코프
  * ========================= */
-const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v2'; // ✅ v2로 bump
-const FORM_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
+const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v2';
+const FORM_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180;
 
 type TbmFormCache = {
   v: 2;
   ts: number;
   user: 'guest';
-  minorScope: string;         // 'ALL' 포함 (스코프키)
+  minorScope: string;
   detailTasks: string[];
   attendees: TbmAttendee[];
 };
@@ -96,31 +95,33 @@ export default function TbmCreateModal({
   onSubmit,
   minorCategory: minorFromProps,
   defaultValue,
+
+  userEmail,
+  companyName,
+  onRequireLogin,
 }: Props) {
   const [minorCategory, setMinorCategory] = useState<string | null>(minorFromProps ?? null);
 
-  // ✅ 세부작업 태그 (process_name)
   const [detailTasks, setDetailTasks] = useState<string[]>(
     (defaultValue?.detailTasks ?? defaultValue?.workTags ?? []).map(norm).filter(Boolean),
   );
 
   const [attendees, setAttendees] = useState<TbmAttendee[]>(
-    defaultValue?.attendees?.length ? (defaultValue.attendees as TbmAttendee[]) : [{ name: '', contact: '' }],
+    defaultValue?.attendees?.length
+      ? (defaultValue.attendees as TbmAttendee[])
+      : [{ name: '', contact: '' }],
   );
 
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ 사용자가 입력을 시작하면 캐시가 뒤늦게 와도 덮어쓰지 않기
   const dirtyRef = useRef(false);
   const markDirty = () => {
     dirtyRef.current = true;
   };
 
-  // ✅ minor 스코프키(캐시용): 'ALL' 허용
   const scopeMinor = useMemo(() => norm(minorCategory) || 'ALL', [minorCategory]);
   const scopeKey = useMemo(() => formCacheKey(scopeMinor), [scopeMinor]);
 
-  // ✅ 실제 API로 넘길 minor: 'ALL'이면 null 처리 (중요)
   const minorForApi = useMemo(() => {
     const m = norm(minorCategory);
     if (!m) return null;
@@ -128,10 +129,10 @@ export default function TbmCreateModal({
     return m;
   }, [minorCategory]);
 
-  // open 시 default/캐시 복원
+  const user = useUserStore((st) => st.user);
+
   useEffect(() => {
     if (!open) return;
-
     dirtyRef.current = false;
 
     const dvTasks = (defaultValue?.detailTasks ?? defaultValue?.workTags ?? [])
@@ -147,14 +148,12 @@ export default function TbmCreateModal({
     const hasDefaultTasks = dvTasks.length > 0;
     const hasDefaultAtt = dvAtt.some((a) => a.name);
 
-    // ✅ 1) defaultValue가 있으면 default 우선
     if (hasDefaultTasks || hasDefaultAtt) {
       setDetailTasks(dvTasks);
       setAttendees(dvAtt.length ? dvAtt : [{ name: '', contact: '' }]);
       return;
     }
 
-    // ✅ 2) 캐시 복원 (scopeMinor 기준)
     const cached = safeReadFormCache(scopeKey);
     if (cached) {
       setDetailTasks((cached.detailTasks ?? []).map(norm).filter(Boolean));
@@ -169,14 +168,12 @@ export default function TbmCreateModal({
     }
   }, [open, defaultValue, scopeKey]);
 
-  // minorFromProps가 바뀌면 반영
   useEffect(() => {
     if (!open) return;
     const mp = norm(minorFromProps);
     if (mp) setMinorCategory(mp);
   }, [open, minorFromProps]);
 
-  // 스크롤 잠금
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -186,7 +183,6 @@ export default function TbmCreateModal({
     };
   }, [open]);
 
-  // ✅ 입력값 변경 시 캐시에 저장 (open일 때만)
   useEffect(() => {
     if (!open) return;
 
@@ -254,16 +250,21 @@ export default function TbmCreateModal({
   };
 
   const handleSubmit = async () => {
-    const cleanedTasks = Array.from(new Set(detailTasks.map(norm).filter(Boolean)));
+    // ✅ 0) 로그인 필수: 생성 버튼 누를 때 막고 로그인 유도
+    if (!user?.email) {
+      alert('TBM 활동일지를 생성하려면 로그인이 필요합니다.');
+      onRequireLogin();
+      return;
+    }
 
+    const cleanedTasks = Array.from(new Set(detailTasks.map(norm).filter(Boolean)));
     const cleanedAttendees = attendees
       .map((a) => ({ name: norm(a.name), contact: norm(a.contact ?? '') }))
       .filter((a) => a.name.length > 0);
 
-    // ✅ 호환 payload (원하면 부모에서 저장/로그 등에 사용)
-    const payload: TbmCreatePayload = {
+    const payloadForParent: TbmCreatePayload = {
       detailTasks: cleanedTasks,
-      workTags: cleanedTasks, // ✅ 호환
+      workTags: cleanedTasks,
       attendees: cleanedAttendees,
       jobTitle: cleanedTasks.join(', '),
       minorCategory: norm(minorCategory) || 'ALL',
@@ -271,22 +272,25 @@ export default function TbmCreateModal({
 
     try {
       setSubmitting(true);
+      onSubmit?.(payloadForParent);
 
-      // (선택) 부모 콜백
-      onSubmit?.(payload);
-
-      // ✅ 서버로는 'ALL'을 보내지 말고, minorForApi만 보내는 걸 권장
+      // ✅ 서버 요구사항: payload.email 을 사용 중이므로 반드시 포함
       const body = {
         dateISO: new Date().toISOString().slice(0, 10),
-        minorCategory: minorForApi,          // ✅ ALL이면 null
-        detailTasks: cleanedTasks,           // ✅ workTags 대신 명확히
+        email: user.email,                 // ✅ 핵심
+        companyName: companyName ?? null, // ✅ 선택
+        minorCategory: minorForApi,
+        detailTasks: cleanedTasks,
         attendees: cleanedAttendees,
+        // newsSummary: ... (있으면 추가)
       };
 
-      // ✅ 여기 endpoint는 서버에서 맞춰주면 됨
       const res = await fetch('/api/risk-assessment?endpoint=tbm-export-excel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-email': user.email, // ✅ 문서 저장/문서함 식별용(프록시/백엔드에서 받게)
+        },
         body: JSON.stringify(body),
       });
 
@@ -333,7 +337,6 @@ export default function TbmCreateModal({
           <TbmDetailTaskTagInput
             value={detailTasks}
             onChange={onChangeTasks}
-            // ✅ ALL이면 null로 내려가므로 /detail-tasks에 minor=ALL 안 붙음
             minorCategory={minorForApi}
           />
 

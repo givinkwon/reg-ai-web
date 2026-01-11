@@ -1,7 +1,7 @@
 'use client';
 
-import { Download } from 'lucide-react';
-import { useMemo } from 'react';
+import { Download, RefreshCw, FileText } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import s from './DocsVault.module.css';
 
@@ -9,6 +9,8 @@ type DocItem = {
   id: string;
   name: string;
   createdAt: number; // epoch ms
+  size?: number;     // bytes
+  kind?: string;     // 'tbm' | 'riskassessment' | ...
 };
 
 function formatDate(ts: number) {
@@ -19,13 +21,105 @@ function formatDate(ts: number) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatBytes(n?: number) {
+  if (!n || n <= 0) return '-';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 type Props = {
   userEmail: string | null;
   onRequireLogin: () => void;
 };
 
 export default function DocsVault({ userEmail, onRequireLogin }: Props) {
-  // ✅ 로그인 안 되어 있으면 안내 화면
+  const [docs, setDocs] = useState<DocItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ 문서함 진입 시 로그인 안 되어 있으면 로그인 모달 자동 오픈(한 번만)
+  const autoLoginRef = useRef(false);
+  useEffect(() => {
+    if (!userEmail && !autoLoginRef.current) {
+      autoLoginRef.current = true;
+      onRequireLogin();
+    }
+  }, [userEmail, onRequireLogin]);
+
+  const fetchDocs = async () => {
+    if (!userEmail) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/docs?endpoint=list', {
+        method: 'GET',
+        headers: {
+          'x-user-email': userEmail, // ✅ 간단 식별(나중에 세션/JWT로 대체 권장)
+        },
+        cache: 'no-store',
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`목록 조회 실패 (${res.status}) ${t.slice(0, 200)}`);
+      }
+
+      const data = (await res.json()) as { items: DocItem[] };
+      setDocs(Array.isArray(data.items) ? data.items : []);
+    } catch (e: any) {
+      setError(e?.message ?? '문서 목록을 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!userEmail) return;
+    fetchDocs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmail]);
+
+  const handleDownload = async (doc: DocItem) => {
+    if (!userEmail) {
+      onRequireLogin();
+      return;
+    }
+
+    const res = await fetch(`/api/docs?endpoint=download&id=${encodeURIComponent(doc.id)}`, {
+      method: 'GET',
+      headers: { 'x-user-email': userEmail },
+    });
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      alert(`다운로드 실패 (${res.status}) ${t.slice(0, 200)}`);
+      return;
+    }
+
+    const blob = await res.blob();
+
+    // filename은 서버의 content-disposition 우선
+    const cd = res.headers.get('content-disposition') ?? '';
+    const match = cd.match(/filename\*\=UTF-8''(.+)$/);
+    const filename = match ? decodeURIComponent(match[1]) : doc.name;
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  // ✅ 로그인 안 되어 있으면 안내 화면(버튼은 유지)
   if (!userEmail) {
     return (
       <section className={s.wrap}>
@@ -53,46 +147,10 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     );
   }
 
-  // ✅ 임시 더미 데이터 (나중에 API로 교체)
-  const docs = useMemo<DocItem[]>(
-    () => [
-      {
-        id: 'doc_1',
-        name: '위험성평가_2026-01-08.xlsx',
-        createdAt: Date.now() - 1000 * 60 * 60 * 2,
-      },
-      {
-        id: 'doc_2',
-        name: '안전보건관리규정_초안.docx',
-        createdAt: Date.now() - 1000 * 60 * 60 * 24 * 3,
-      },
-      {
-        id: 'doc_3',
-        name: 'TBM_일지_양식.pdf',
-        createdAt: Date.now() - 1000 * 60 * 60 * 24 * 10,
-      },
-    ],
-    [],
-  );
-
-  // ✅ 임시 다운로드: 실제 파일 대신 텍스트를 파일로 내려받게 해둠
-  const handleDownload = (doc: DocItem) => {
-    const content = `임시 다운로드 파일입니다.\n\n문서명: ${doc.name}\n생성일: ${formatDate(
-      doc.createdAt,
-    )}\nID: ${doc.id}\n\n(추후 API 연결 시 실제 파일로 대체)`;
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = doc.name.replace(/\.(xlsx|docx|pdf)$/i, '.txt');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    URL.revokeObjectURL(url);
-  };
+  const countText = useMemo(() => {
+    if (loading) return '불러오는 중…';
+    return `총 ${docs.length}개`;
+  }, [docs.length, loading]);
 
   return (
     <section className={s.wrap}>
@@ -106,26 +164,58 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
           <div className={s.headerRight}>
             <div className={s.badge}>
               <span className={s.badgeDot} />
-              <span className={s.badgeText}>총 {docs.length}개</span>
+              <span className={s.badgeText}>{countText}</span>
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className={s.refreshBtn}
+              onClick={fetchDocs}
+              disabled={loading}
+              title="새로고침"
+            >
+              <RefreshCw size={16} />
+              <span>새로고침</span>
+            </Button>
           </div>
         </header>
 
         <div className={s.card}>
+          {error && <div className={s.errorBox}>{error}</div>}
+
           <div className={s.tableWrap}>
             <table className={s.table}>
               <thead>
                 <tr>
                   <th className={s.thName}>문서명</th>
                   <th className={s.thDate}>작성일</th>
+                  <th className={s.thMeta}>크기</th>
                   <th className={s.thDl}>다운로드</th>
                 </tr>
               </thead>
 
               <tbody>
-                {docs.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className={s.row}>
+                      <td className={s.tdName}>
+                        <div className={s.skeletonLine} />
+                      </td>
+                      <td className={s.tdDate}>
+                        <div className={s.skeletonPill} />
+                      </td>
+                      <td className={s.tdMeta}>
+                        <div className={s.skeletonPill} />
+                      </td>
+                      <td className={s.tdDl}>
+                        <div className={s.skeletonBtn} />
+                      </td>
+                    </tr>
+                  ))
+                ) : docs.length === 0 ? (
                   <tr>
-                    <td className={s.empty} colSpan={3}>
+                    <td className={s.empty} colSpan={4}>
                       아직 생성된 문서가 없습니다.
                     </td>
                   </tr>
@@ -138,11 +228,21 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                           <span className={s.docText} title={d.name}>
                             {d.name}
                           </span>
+                          {d.kind ? (
+                            <span className={s.kindPill}>
+                              <FileText size={14} />
+                              {d.kind}
+                            </span>
+                          ) : null}
                         </div>
                       </td>
 
                       <td className={s.tdDate}>
                         <span className={s.datePill}>{formatDate(d.createdAt)}</span>
+                      </td>
+
+                      <td className={s.tdMeta}>
+                        <span className={s.metaPill}>{formatBytes(d.size)}</span>
                       </td>
 
                       <td className={s.tdDl}>
@@ -165,7 +265,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
         </div>
 
         <div className={s.footNote}>
-          * 현재는 더미 데이터입니다. API 연결 시 실제 문서 파일로 다운로드됩니다.
+          * 문서는 사용자 계정별로 저장되며, 동일 계정으로 다른 기기에서도 확인할 수 있습니다.
         </div>
       </div>
     </section>

@@ -10,6 +10,7 @@ import StepControls from './steps/StepControls';
 
 // ✅ 추가: 진행률 모달
 import ProgressDownloadModal from './ui/ProgressDownloadModal';
+import { useUserStore } from '@/app/store/user';
 
 export type RiskLevel = 1 | 2 | 3 | 4 | 5;
 export type Judgement = '상' | '중' | '하';
@@ -159,19 +160,16 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
     }
   };
 
-  // ✅ 5분짜리 “시간 기반 + 구간별” 진행률
   const startFakeProgress = () => {
     stopGenTimer();
     setGenErrorText(null);
     setGenOpen(true);
 
-    // ✅ 0~95%를 5분(300초)에 걸쳐 진행
-    // 구간: 0~25 / 25~50 / 50~75 / 75~95
     const PLAN = [
-      { to: 25, ms: 60_000 }, // 1분
-      { to: 50, ms: 90_000 }, // 1.5분
-      { to: 75, ms: 90_000 }, // 1.5분
-      { to: 95, ms: 60_000 }, // 1분
+      { to: 25, ms: 60_000 },
+      { to: 50, ms: 90_000 },
+      { to: 75, ms: 90_000 },
+      { to: 95, ms: 60_000 },
     ] as const;
 
     genStartAtRef.current = Date.now();
@@ -191,7 +189,7 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
         const segEnd = acc + seg.ms;
 
         if (elapsed < segEnd) {
-          const raw = (elapsed - segStart) / seg.ms; // 0~1
+          const raw = (elapsed - segStart) / seg.ms;
           const t = easeInOutCubic(Math.max(0, Math.min(1, raw)));
           target = from + (seg.to - from) * t;
           break;
@@ -202,10 +200,8 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
         target = seg.to;
       }
 
-      // ✅ 5분이 지나면 95%에서 대기
       if (elapsed >= totalMs) target = 95;
 
-      // ✅ 단조 증가 + 소수점 0.1 단위
       setGenPercent((prev) => {
         const next = Math.max(prev, Math.round(target * 10) / 10);
         return Math.min(95, next);
@@ -223,7 +219,6 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
   };
 
   const cancelGeneration = () => {
-    // ✅ onSubmit이 signal을 쓰면 실제로 취소됨 (fetch 등)
     genAbortRef.current?.abort();
     genAbortRef.current = null;
 
@@ -232,7 +227,6 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
     setGenPercent(0);
     setGenErrorText(null);
 
-    // UI상 submit도 해제
     setSubmitting(false);
   };
 
@@ -243,7 +237,6 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
     };
   }, []);
 
-  // ✅ 퍼센트 구간별 메시지
   const genMessage = useMemo(() => {
     if (genPercent < 25) return '사업장 정보를 분석하고 있어요';
     if (genPercent < 50) return '세부 공정 데이터를 분석하고 있어요';
@@ -252,13 +245,11 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
   }, [genPercent]);
 
   useEffect(() => {
-    // 날짜 세팅
     setDraft((prev) => {
       if (prev.meta.dateISO) return prev;
       return { ...prev, meta: { ...prev.meta, dateISO: todayISOClient() } };
     });
 
-    // localStorage에서 소분류
     try {
       const v = localStorage.getItem('risk_minor_category') || '';
       if (v.trim()) setMinor(v.trim());
@@ -292,11 +283,20 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
     if (prev) setStep(prev);
   };
 
+  const user = useUserStore((st) => st.user);
   // =========================
-  // ✅ 여기서 모달을 띄우고, onSubmit 완료까지 기다림
+  // ✅ 로그인 체크 + 생성 진행
   // =========================
   const handleSubmit = async () => {
     if (submitting) return;
+
+    const userEmail = user?.email
+
+    // ✅ 0) 로그인 필수: 생성 버튼 누를 때 막고 로그인 유도
+    if (!userEmail) {
+      alert('위험성 평가 보고서를 생성하려면 로그인이 필요합니다.');
+      return;
+    }
 
     const ac = new AbortController();
     genAbortRef.current = ac;
@@ -305,22 +305,18 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
       setSubmitting(true);
       startFakeProgress();
 
-      // ✅ onSubmit이 signal을 받을 수도 있으니 "있으면" 넘김 (안 받으면 무시됨)
-      await (onSubmit as any)(draft, { signal: ac.signal });
+      // ✅ 핵심: userEmail + signal 전달 (TBM과 동일한 패턴)
+      await (onSubmit as any)(draft, { signal: ac.signal, userEmail });
 
-      // 완료 직전 살짝 올려주고 마무리
       setGenPercent((p) => Math.max(p, 92));
       await finishAndClose();
     } catch (e: any) {
-      if (e?.name === 'AbortError') {
-        // 사용자가 취소한 경우: 조용히 종료
-        return;
-      }
+      if (e?.name === 'AbortError') return;
+
       console.error(e);
 
       stopGenTimer();
       setGenErrorText('보고서 생성에 실패했습니다.');
-      // 잠깐 에러 보여주고 닫기
       await new Promise((r) => setTimeout(r, 1200));
       setGenOpen(false);
       setGenPercent(0);
@@ -355,7 +351,7 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
             type="button"
             className={`${s.tab} ${step === t.id ? s.tabActive : ''}`}
             onClick={() => setStep(t.id)}
-            disabled={submitting} // ✅ 생성 중 탭 이동 방지
+            disabled={submitting}
           >
             {t.label}
           </button>
@@ -389,7 +385,6 @@ export default function RiskAssessmentWizard({ onClose, onSubmit }: Props) {
         {step === 'controls' && <StepControls draft={draft} setDraft={setDraft} />}
       </div>
 
-      {/* ✅ 진행률 모달 */}
       <ProgressDownloadModal
         open={genOpen}
         percent={genPercent}

@@ -10,6 +10,8 @@ import StepBuildChecklist from './steps/StepBuildChecklist';
 import StepRunChecklist from './steps/StepRunChecklist';
 import CompletionToastModal from './ui/CompletionToastModal';
 
+import { useUserStore } from '@/app/store/user'; // ✅ 추가 (프로젝트 경로에 맞게 유지)
+
 export type Rating = 'O' | '△' | 'X';
 
 export type ChecklistCategory =
@@ -151,8 +153,8 @@ function saveDraft(next: Omit<DraftState, 't'>) {
 type ChecklistCacheEntry = {
   t: number;
   key: string;
-  minorKey: string;     // minorCategory 정규화
-  tasksKey: string;     // 정규화된 tasks(정렬) 기반
+  minorKey: string; // minorCategory 정규화
+  tasksKey: string; // 정규화된 tasks(정렬) 기반
   sections: Sections;
 };
 
@@ -262,6 +264,10 @@ export default function MonthlyInspectionCreateModal({
   const weekLabel = useMemo(() => formatKoreanWeekLabel(today), [today]);
   const dateISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
+  // ✅ 로그인 유저(아이디=email) 가져오기
+  const user = useUserStore((st) => st.user);
+  const userEmail = (user?.email || '').trim(); // ✅ 이걸 헤더로 보내서 "아이디로 저장"
+
   const dirtyRef = useRef(false);
   const markDirty = () => {
     dirtyRef.current = true;
@@ -325,11 +331,15 @@ export default function MonthlyInspectionCreateModal({
     const draft = loadDraft();
     if (draft) {
       setDetailTasks((draft.detailTasks ?? []).map(norm).filter(Boolean));
-      setSections(cleanSections(draft.sections ?? {
-        '사업장 점검 사항': [],
-        '노동안전 점검 사항': [],
-        '세부 작업 및 공정별 점검 사항': [],
-      }));
+      setSections(
+        cleanSections(
+          (draft.sections as Sections) ?? {
+            '사업장 점검 사항': [],
+            '노동안전 점검 사항': [],
+            '세부 작업 및 공정별 점검 사항': [],
+          },
+        ),
+      );
       setItems(draft.results ?? []);
       setStep(draft.step ?? 0);
       return;
@@ -369,7 +379,7 @@ export default function MonthlyInspectionCreateModal({
     saveDraft(payload);
   };
 
-  // 상태 바뀔 때마다 draft 저장(짧은 debounce가 필요하면 추가 가능)
+  // 상태 바뀔 때마다 draft 저장
   useEffect(() => {
     if (!open) return;
     persistDraftNow();
@@ -469,7 +479,7 @@ export default function MonthlyInspectionCreateModal({
         results: toItems(finalSections),
       });
     } catch (e) {
-      // fallback + (원하면 fallback도 캐시 저장 가능)
+      // fallback
       const fb = buildFallbackSections(tasks);
       setSections(fb);
       setItems(toItems(fb));
@@ -489,7 +499,7 @@ export default function MonthlyInspectionCreateModal({
     setItems(nextItems);
     setStep(2);
 
-    // ✅ 편집된 섹션도 캐시에 덮어쓰기 (같은 세트면 다음엔 편집본 바로 뜸)
+    // ✅ 편집된 섹션도 캐시에 덮어쓰기
     const tasks = detailTasks.map(norm).filter(Boolean);
     const { key, minorKey, tasksKey } = stableTasksKey(minorCategory, tasks);
 
@@ -513,6 +523,12 @@ export default function MonthlyInspectionCreateModal({
   };
 
   const handleFinish = async () => {
+    // ✅ 로그인(아이디=email) 없으면 저장/다운로드 불가
+    if (!userEmail) {
+      setGenError('로그인이 필요합니다. (user email 없음)');
+      return;
+    }
+
     const payload: MonthlyInspectionPayload = {
       dateISO,
       detailTasks: detailTasks.map(norm).filter(Boolean),
@@ -526,10 +542,13 @@ export default function MonthlyInspectionCreateModal({
       // (옵션) DB 저장/로그
       await onSubmit?.(payload);
 
-      // ✅ 엑셀 다운로드
+      // ✅ 엑셀 다운로드 + 서버 저장 (x-user-email로 저장 주체 결정)
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-export-excel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-email': userEmail, // ✅ 핵심: 아이디로 저장
+        },
         body: JSON.stringify(payload),
       });
 
@@ -596,7 +615,7 @@ export default function MonthlyInspectionCreateModal({
                 onChange={(next) => {
                   markDirty();
                   setDetailTasks(next);
-                  // ✅ 즉시 draft 저장: 첫 태그 추가 후 바로 닫아도 유지
+                  // ✅ 즉시 draft 저장
                   persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
                 }}
               />

@@ -47,6 +47,9 @@ function pickForwardHeaders(req: Request) {
     'x-request-id',
     'x-forwarded-for',
     'user-agent',
+
+    // ✅ 추가: 로그인 사용자 식별용(문서 저장/문서함)
+    'x-user-email',
   ];
 
   for (const k of copyKeys) {
@@ -66,6 +69,10 @@ function pickBackHeaders(res: Response) {
 
   const cd = res.headers.get('content-disposition');
   if (cd) headers.set('content-disposition', cd);
+
+  // ✅ 추가: TBM 등에서 내려주는 커스텀 헤더가 필요하면 전달
+  const tbmId = res.headers.get('x-tbm-id');
+  if (tbmId) headers.set('x-tbm-id', tbmId);
 
   headers.set('cache-control', 'no-store');
   return headers;
