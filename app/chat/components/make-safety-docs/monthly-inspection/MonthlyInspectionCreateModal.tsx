@@ -568,8 +568,8 @@ export default function MonthlyInspectionCreateModal({
 
     // ✅ 핵심: “점검완료” 누르는 즉시 Alert 먼저 띄우기
     openAlert({
-      title: '점검완료 요청',
-      lines: ['점검완료 요청을 접수했습니다.', '서버에서 문서를 생성 중이며, 완료되면 파일 다운로드가 시작됩니다.'],
+      title: '순회 점검 문서 생성 요청',
+      lines: ['순회 점검 문서 생성이 요청되었어요!', '서버에서 문서를 생성 중이며, 완료되면 이메일로 안내해드립니다. 파일함에서도 확인 가능해요!'],
       confirmText: '확인',
       onConfirm: () => closeAlert(),
     });
@@ -618,14 +618,6 @@ export default function MonthlyInspectionCreateModal({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-
-      // ✅ (선택) 이미 떠 있는 Alert을 “다운로드 시작” 안내로 업데이트
-      openAlert({
-        title: '다운로드 시작',
-        lines: ['파일 다운로드가 시작되었습니다.', `파일명: ${filename}`],
-        confirmText: '확인',
-        onConfirm: () => closeAlert(),
-      });
 
       // ✅ 원하면 완료 후 모달 닫기 (TBM처럼)
       onClose();

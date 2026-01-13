@@ -284,7 +284,7 @@ export default function MakeSafetyDocs({
         open={monthlyModalOpen}
         onClose={() => setMonthlyModalOpen(false)}
         onSubmit={(payload) => {
-          if (monthlyTarget) onSelectDoc?.(monthlyTarget.category, monthlyTarget.doc);
+          // if (monthlyTarget) onSelectDoc?.(monthlyTarget.category, monthlyTarget.doc);
 
           if (monthlyTarget) {
             onCreateMonthlyInspection?.({
