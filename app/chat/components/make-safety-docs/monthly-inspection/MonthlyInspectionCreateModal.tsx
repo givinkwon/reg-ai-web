@@ -322,16 +322,28 @@ export default function MonthlyInspectionCreateModal({
     saveChecklistCache(loaded);
   }, []);
 
-  // ✅ open 시: defaultValue 우선, 없으면 draft 복원
+  /**
+   * ✅ open 시 초기화/복원 로직:
+   * - (중요) defaultValue가 렌더마다 새 객체로 내려오면 alertOpen이 꺼지는 문제를 막기 위해
+   *   "열릴 때(open false→true)"에만 초기화를 강하게 수행.
+   */
+  const prevOpenRef = useRef(false);
   useEffect(() => {
+    const prev = prevOpenRef.current;
+    prevOpenRef.current = open;
+
     if (!open) return;
 
-    dirtyRef.current = false;
-    setGenLoading(false);
-    setGenError('');
-    setExportLoading(false);
-    setAlertOpen(false);
+    // ✅ 처음 열릴 때만 초기화
+    if (!prev && open) {
+      dirtyRef.current = false;
+      setGenLoading(false);
+      setGenError('');
+      setExportLoading(false);
+      setAlertOpen(false);
+    }
 
+    // ✅ 데이터 복원은 open 상태에서만 수행
     const dvTasks = (defaultValue?.detailTasks ?? []).map(norm).filter(Boolean);
     const dvSections = defaultValue?.sections;
     const dvResults = defaultValue?.results;
@@ -387,7 +399,7 @@ export default function MonthlyInspectionCreateModal({
       '세부 작업 및 공정별 점검 사항': [],
     });
     setItems([]);
-  }, [open, defaultValue]);
+  }, [open, defaultValue, minorCategory]); // minorCategory 변경도 반영
 
   // ✅ body scroll lock: 모달/Alert 떠 있으면 잠금
   useEffect(() => {
@@ -418,7 +430,11 @@ export default function MonthlyInspectionCreateModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, detailTasks, sections, items, minorCategory]);
 
-  if (!open) return null;
+  /**
+   * ✅ 중요: 모달(open)이 닫혀도 Alert(alertOpen)이 떠 있으면 렌더를 유지해야 함
+   * -> 부모가 open=false로 바꿔버려도 Alert이 화면에 떠야 한다는 요구사항 대응
+   */
+  if (!open && !alertOpen) return null;
 
   const closeOnly = () => {
     // ✅ export 중엔 닫기 방지(원하면 제거 가능)
@@ -551,7 +567,10 @@ export default function MonthlyInspectionCreateModal({
     if (!userEmail) {
       openAlert({
         title: '로그인이 필요합니다',
-        lines: ['월 순회 점검표를 저장/다운로드하려면 로그인이 필요합니다.', '로그인 후 다시 시도해주세요.'],
+        lines: [
+          '월 순회 점검표를 저장/다운로드하려면 로그인이 필요합니다.',
+          '로그인 후 다시 시도해주세요.',
+        ],
         confirmText: '확인',
       });
       return;
@@ -569,9 +588,11 @@ export default function MonthlyInspectionCreateModal({
     // ✅ 핵심: “점검완료” 누르는 즉시 Alert 먼저 띄우기
     openAlert({
       title: '순회 점검 문서 생성 요청',
-      lines: ['순회 점검 문서 생성이 요청되었어요!', '서버에서 문서를 생성 중이며, 완료되면 이메일로 안내해드립니다. 파일함에서도 확인 가능해요!'],
+      lines: [
+        '순회 점검 문서 생성이 요청되었어요!',
+        '서버에서 문서를 생성 중이며, 완료되면 이메일로 안내해드립니다. 파일함에서도 확인 가능해요!',
+      ],
       confirmText: '확인',
-      onConfirm: () => closeAlert(),
     });
 
     // ✅ 중복 클릭 방지 + UI 반영 한 프레임 보장
@@ -634,103 +655,106 @@ export default function MonthlyInspectionCreateModal({
 
   return (
     <>
-      <div
-        className={s.overlay}
-        role="dialog"
-        aria-modal="true"
-        aria-label="월 작업장 순회 점검표"
-        onMouseDown={(e) => {
-          if (e.target !== e.currentTarget) return;
-          closeOnly();
-        }}
-      >
-        <div className={s.modal}>
-          <div className={s.topBar}>
-            <span className={s.pill}>월 작업장 순회 점검표</span>
-            <button
-              type="button"
-              className={s.iconBtn}
-              onClick={closeOnly}
-              aria-label="닫기"
-              disabled={exportLoading}
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className={s.card}>
-            <div className={s.header}>
-              <h3 className={s.title}>월 작업장 순회 점검표</h3>
-              <p className={s.desc}>
-                세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을 생성합니다. <br />
-                <span className={s.subDesc}>{weekLabel}</span>
-              </p>
+      {/* ✅ 모달 본체는 open일 때만 렌더 */}
+      {open && (
+        <div
+          className={s.overlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="월 작업장 순회 점검표"
+          onMouseDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            closeOnly();
+          }}
+        >
+          <div className={s.modal}>
+            <div className={s.topBar}>
+              <span className={s.pill}>월 작업장 순회 점검표</span>
+              <button
+                type="button"
+                className={s.iconBtn}
+                onClick={closeOnly}
+                aria-label="닫기"
+                disabled={exportLoading}
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            {step === 0 && (
-              <>
-                <label className={s.label}>세부 작업 검색</label>
+            <div className={s.card}>
+              <div className={s.header}>
+                <h3 className={s.title}>월 작업장 순회 점검표</h3>
+                <p className={s.desc}>
+                  세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을 생성합니다. <br />
+                  <span className={s.subDesc}>{weekLabel}</span>
+                </p>
+              </div>
 
-                <MonthlyInspectionDetailTaskAutocompleteInput
-                  value={detailTasks}
-                  onChange={(next) => {
-                    markDirty();
-                    setDetailTasks(next);
-                    persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
-                  }}
+              {step === 0 && (
+                <>
+                  <label className={s.label}>세부 작업 검색</label>
+
+                  <MonthlyInspectionDetailTaskAutocompleteInput
+                    value={detailTasks}
+                    onChange={(next) => {
+                      markDirty();
+                      setDetailTasks(next);
+                      persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
+                    }}
+                  />
+
+                  {genError && <div className={s.errorText}>{genError}</div>}
+
+                  <button
+                    type="button"
+                    className={s.primaryBtn}
+                    disabled={!canGoStep1 || genLoading}
+                    onClick={handleCreateChecklist}
+                  >
+                    {genLoading ? (
+                      <>
+                        <Loader2 size={18} className={s.spin} />
+                        점검 항목 생성 중...
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={18} />
+                        월 작업장 순회 점검표 생성
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {step === 1 && (
+                <StepBuildChecklist
+                  detailTasks={detailTasks}
+                  initialSections={sections}
+                  onBack={() => setStep(0)}
+                  onNext={handleConfirmChecklist}
                 />
+              )}
 
-                {genError && <div className={s.errorText}>{genError}</div>}
-
-                <button
-                  type="button"
-                  className={s.primaryBtn}
-                  disabled={!canGoStep1 || genLoading}
-                  onClick={handleCreateChecklist}
-                >
-                  {genLoading ? (
-                    <>
-                      <Loader2 size={18} className={s.spin} />
-                      점검 항목 생성 중...
-                    </>
-                  ) : (
-                    <>
-                      <FileText size={18} />
-                      월 작업장 순회 점검표 생성
-                    </>
-                  )}
-                </button>
-              </>
-            )}
-
-            {step === 1 && (
-              <StepBuildChecklist
-                detailTasks={detailTasks}
-                initialSections={sections}
-                onBack={() => setStep(0)}
-                onNext={handleConfirmChecklist}
-              />
-            )}
-
-            {step === 2 && (
-              <StepRunChecklist
-                detailTasks={detailTasks}
-                items={items}
-                onChangeItems={(next) => {
-                  markDirty();
-                  setItems(next);
-                  persistDraftNow({ results: next, step: 2 });
-                }}
-                onBack={() => setStep(1)}
-                onFinish={handleFinish}
-                finishDisabled={!canFinish || exportLoading}
-              />
-            )}
+              {step === 2 && (
+                <StepRunChecklist
+                  detailTasks={detailTasks}
+                  items={items}
+                  onChangeItems={(next) => {
+                    markDirty();
+                    setItems(next);
+                    persistDraftNow({ results: next, step: 2 });
+                  }}
+                  onBack={() => setStep(1)}
+                  onFinish={handleFinish}
+                  finishDisabled={!canFinish || exportLoading}
+                />
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ✅ Alert Modal */}
+      {/* ✅ Alert Modal: open이 false여도 alertOpen이면 렌더되어야 함 */}
       <CenteredAlertModal
         open={alertOpen}
         title={alertTitle}
