@@ -8,9 +8,11 @@ import s from './MonthlyInspectionCreateModal.module.css';
 import MonthlyInspectionDetailTaskAutocompleteInput from './MonthlyInspectionDetailTaskAutocompleteInput';
 import StepBuildChecklist from './steps/StepBuildChecklist';
 import StepRunChecklist from './steps/StepRunChecklist';
-import CompletionToastModal from './ui/CompletionToastModal';
 
-import { useUserStore } from '@/app/store/user'; // ✅ 추가 (프로젝트 경로에 맞게 유지)
+// ✅ TBM 방식 Alert 모달
+import CenteredAlertModal from './ui/AlertModal';
+
+import { useUserStore } from '@/app/store/user';
 
 export type Rating = 'O' | '△' | 'X';
 
@@ -75,8 +77,12 @@ function toItems(sections: Sections): ChecklistItem[] {
 
 function cleanSections(nextSections: Sections): Sections {
   return {
-    '사업장 점검 사항': Array.from(new Set((nextSections['사업장 점검 사항'] ?? []).map(norm).filter(Boolean))),
-    '노동안전 점검 사항': Array.from(new Set((nextSections['노동안전 점검 사항'] ?? []).map(norm).filter(Boolean))),
+    '사업장 점검 사항': Array.from(
+      new Set((nextSections['사업장 점검 사항'] ?? []).map(norm).filter(Boolean)),
+    ),
+    '노동안전 점검 사항': Array.from(
+      new Set((nextSections['노동안전 점검 사항'] ?? []).map(norm).filter(Boolean)),
+    ),
     '세부 작업 및 공정별 점검 사항': Array.from(
       new Set((nextSections['세부 작업 및 공정별 점검 사항'] ?? []).map(norm).filter(Boolean)),
     ),
@@ -111,7 +117,7 @@ type GenResponse = {
 };
 
 /** -----------------------
- * localStorage: draft (모달 껐다 켜도 그대로)
+ * localStorage: draft
  * ---------------------- */
 type DraftState = {
   t: number;
@@ -123,7 +129,7 @@ type DraftState = {
 };
 
 const DRAFT_KEY = 'regai:monthlyInspection:draft:v1';
-const DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
+const DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 180;
 
 function loadDraft(): DraftState | null {
   try {
@@ -142,26 +148,24 @@ function saveDraft(next: Omit<DraftState, 't'>) {
   try {
     const payload: DraftState = { ...next, t: Date.now() };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 /** -----------------------
- * localStorage: checklist cache (세부작업 세트 동일 시 GPT 호출 방지)
+ * localStorage: checklist cache
  * ---------------------- */
 type ChecklistCacheEntry = {
   t: number;
   key: string;
-  minorKey: string; // minorCategory 정규화
-  tasksKey: string; // 정규화된 tasks(정렬) 기반
+  minorKey: string;
+  tasksKey: string;
   sections: Sections;
 };
 
 type ChecklistCacheStore = Record<string, ChecklistCacheEntry>;
 
 const CHECKLIST_CACHE_KEY = 'regai:monthlyInspection:checklistCache:v1';
-const CHECKLIST_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30일
+const CHECKLIST_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const CHECKLIST_CACHE_MAX = 120;
 
 function fnv1a32(str: string) {
@@ -208,15 +212,12 @@ function pruneChecklistCache(store: ChecklistCacheStore): ChecklistCacheStore {
 function saveChecklistCache(store: ChecklistCacheStore) {
   try {
     localStorage.setItem(CHECKLIST_CACHE_KEY, JSON.stringify(store));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
 function getFilenameFromContentDisposition(cd: string | null, fallback: string) {
   if (!cd) return fallback;
 
-  // filename*=UTF-8''...
   const mStar = cd.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
   if (mStar?.[1]) {
     try {
@@ -226,11 +227,14 @@ function getFilenameFromContentDisposition(cd: string | null, fallback: string) 
     }
   }
 
-  // filename="..."
   const m = cd.match(/filename\s*=\s*"([^"]+)"/i) || cd.match(/filename\s*=\s*([^;]+)/i);
   if (m?.[1]) return m[1].trim();
 
   return fallback;
+}
+
+function nextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 export default function MonthlyInspectionCreateModal({
@@ -253,20 +257,51 @@ export default function MonthlyInspectionCreateModal({
   );
   const [items, setItems] = useState<ChecklistItem[]>(defaultValue?.results ?? []);
 
-  const [doneOpen, setDoneOpen] = useState(false);
-
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string>('');
 
+  // ✅ “서버 생성 진행중” 중복 클릭 방지용 (UI 로딩 표시는 따로 안 함)
   const [exportLoading, setExportLoading] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const weekLabel = useMemo(() => formatKoreanWeekLabel(today), [today]);
   const dateISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // ✅ 로그인 유저(아이디=email) 가져오기
+  // ✅ 로그인 유저(아이디=email)
   const user = useUserStore((st) => st.user);
-  const userEmail = (user?.email || '').trim(); // ✅ 이걸 헤더로 보내서 "아이디로 저장"
+  const userEmail = (user?.email || '').trim();
+
+  // ✅ AlertModal 상태 (TBM과 동일 패턴)
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('안내');
+  const [alertLines, setAlertLines] = useState<string[]>([]);
+  const [alertConfirmText, setAlertConfirmText] = useState('확인');
+  const [alertShowClose, setAlertShowClose] = useState(false);
+  const alertOnConfirmRef = useRef<null | (() => void)>(null);
+  const alertOnCloseRef = useRef<null | (() => void)>(null);
+
+  const openAlert = (opts: {
+    title?: string;
+    lines: string[];
+    confirmText?: string;
+    showClose?: boolean;
+    onConfirm?: () => void;
+    onClose?: () => void;
+  }) => {
+    setAlertTitle(opts.title ?? '안내');
+    setAlertLines(opts.lines);
+    setAlertConfirmText(opts.confirmText ?? '확인');
+    setAlertShowClose(!!opts.showClose);
+    alertOnConfirmRef.current = opts.onConfirm ?? null;
+    alertOnCloseRef.current = opts.onClose ?? null;
+    setAlertOpen(true);
+  };
+
+  const closeAlert = () => {
+    setAlertOpen(false);
+    alertOnConfirmRef.current = null;
+    alertOnCloseRef.current = null;
+  };
 
   const dirtyRef = useRef(false);
   const markDirty = () => {
@@ -292,10 +327,10 @@ export default function MonthlyInspectionCreateModal({
     if (!open) return;
 
     dirtyRef.current = false;
-    setDoneOpen(false);
     setGenLoading(false);
     setGenError('');
     setExportLoading(false);
+    setAlertOpen(false);
 
     const dvTasks = (defaultValue?.detailTasks ?? []).map(norm).filter(Boolean);
     const dvSections = defaultValue?.sections;
@@ -327,7 +362,6 @@ export default function MonthlyInspectionCreateModal({
       return;
     }
 
-    // ✅ draft 로드 (모달 껐다 켜도 동일)
     const draft = loadDraft();
     if (draft) {
       setDetailTasks((draft.detailTasks ?? []).map(norm).filter(Boolean));
@@ -345,7 +379,6 @@ export default function MonthlyInspectionCreateModal({
       return;
     }
 
-    // ✅ 아무 것도 없으면 초기화
     setStep(0);
     setDetailTasks([]);
     setSections({
@@ -356,17 +389,17 @@ export default function MonthlyInspectionCreateModal({
     setItems([]);
   }, [open, defaultValue]);
 
-  // ✅ body scroll lock
+  // ✅ body scroll lock: 모달/Alert 떠 있으면 잠금
   useEffect(() => {
-    if (!open) return;
+    if (!open && !alertOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open]);
+  }, [open, alertOpen]);
 
-  // ✅ draft 즉시 저장 (세부작업 1개만 추가하고 바로 닫아도 안 날아가게)
+  // ✅ draft 즉시 저장
   const persistDraftNow = (next?: Partial<DraftState>) => {
     const payload: Omit<DraftState, 't'> = {
       minorCategory: minorCategory ?? null,
@@ -379,7 +412,6 @@ export default function MonthlyInspectionCreateModal({
     saveDraft(payload);
   };
 
-  // 상태 바뀔 때마다 draft 저장
   useEffect(() => {
     if (!open) return;
     persistDraftNow();
@@ -389,8 +421,8 @@ export default function MonthlyInspectionCreateModal({
   if (!open) return null;
 
   const closeOnly = () => {
-    // ✅ reset하지 않음: 캐시/드래프트 유지
-    setDoneOpen(false);
+    // ✅ export 중엔 닫기 방지(원하면 제거 가능)
+    if (exportLoading) return;
     onClose();
   };
 
@@ -400,11 +432,8 @@ export default function MonthlyInspectionCreateModal({
     setGenLoading(true);
 
     const tasks = detailTasks.map(norm).filter(Boolean);
-
-    // ✅ 캐시 키 생성 (minor + tasks set)
     const { key, minorKey } = stableTasksKey(minorCategory, tasks);
 
-    // ✅ 1) 캐시 hit면 GPT 호출/서버 호출 없이 바로 로드
     const cached = checklistCacheRef.current[key];
     if (cached && Date.now() - cached.t <= CHECKLIST_CACHE_TTL_MS) {
       setSections(cached.sections);
@@ -418,11 +447,9 @@ export default function MonthlyInspectionCreateModal({
         sections: cached.sections,
         results: toItems(cached.sections),
       });
-
       return;
     }
 
-    // ✅ 2) 캐시 없으면 서버 호출
     try {
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-checklist', {
         method: 'POST',
@@ -456,7 +483,6 @@ export default function MonthlyInspectionCreateModal({
 
       const finalSections = anyEmpty ? buildFallbackSections(tasks) : cleaned;
 
-      // ✅ 캐시에 저장
       const store = checklistCacheRef.current;
       store[key] = {
         t: Date.now(),
@@ -479,7 +505,6 @@ export default function MonthlyInspectionCreateModal({
         results: toItems(finalSections),
       });
     } catch (e) {
-      // fallback
       const fb = buildFallbackSections(tasks);
       setSections(fb);
       setItems(toItems(fb));
@@ -499,7 +524,6 @@ export default function MonthlyInspectionCreateModal({
     setItems(nextItems);
     setStep(2);
 
-    // ✅ 편집된 섹션도 캐시에 덮어쓰기
     const tasks = detailTasks.map(norm).filter(Boolean);
     const { key, minorKey, tasksKey } = stableTasksKey(minorCategory, tasks);
 
@@ -523,11 +547,17 @@ export default function MonthlyInspectionCreateModal({
   };
 
   const handleFinish = async () => {
-    // ✅ 로그인(아이디=email) 없으면 저장/다운로드 불가
+    // ✅ 로그인 체크
     if (!userEmail) {
-      setGenError('로그인이 필요합니다. (user email 없음)');
+      openAlert({
+        title: '로그인이 필요합니다',
+        lines: ['월 순회 점검표를 저장/다운로드하려면 로그인이 필요합니다.', '로그인 후 다시 시도해주세요.'],
+        confirmText: '확인',
+      });
       return;
     }
+
+    if (exportLoading) return;
 
     const payload: MonthlyInspectionPayload = {
       dateISO,
@@ -536,25 +566,43 @@ export default function MonthlyInspectionCreateModal({
       results: items,
     };
 
+    // ✅ 핵심: “점검완료” 누르는 즉시 Alert 먼저 띄우기
+    openAlert({
+      title: '점검완료 요청',
+      lines: ['점검완료 요청을 접수했습니다.', '서버에서 문서를 생성 중이며, 완료되면 파일 다운로드가 시작됩니다.'],
+      confirmText: '확인',
+      onConfirm: () => closeAlert(),
+    });
+
+    // ✅ 중복 클릭 방지 + UI 반영 한 프레임 보장
     setExportLoading(true);
+    await nextFrame();
 
     try {
       // (옵션) DB 저장/로그
       await onSubmit?.(payload);
 
-      // ✅ 엑셀 다운로드 + 서버 저장 (x-user-email로 저장 주체 결정)
+      // ✅ 엑셀 다운로드 + 서버 저장
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-export-excel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': userEmail, // ✅ 핵심: 아이디로 저장
+          'x-user-email': userEmail, // ✅ 아이디로 저장
         },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
-        throw new Error(`export excel failed: ${res.status} ${txt}`);
+        openAlert({
+          title: '생성 실패',
+          lines: [
+            `엑셀 생성에 실패했습니다. (HTTP ${res.status})`,
+            txt ? txt.slice(0, 160) : '잠시 후 다시 시도해주세요.',
+          ],
+          confirmText: '확인',
+        });
+        return;
       }
 
       const blob = await res.blob();
@@ -571,114 +619,143 @@ export default function MonthlyInspectionCreateModal({
       a.remove();
       window.URL.revokeObjectURL(url);
 
-      setDoneOpen(true);
+      // ✅ (선택) 이미 떠 있는 Alert을 “다운로드 시작” 안내로 업데이트
+      openAlert({
+        title: '다운로드 시작',
+        lines: ['파일 다운로드가 시작되었습니다.', `파일명: ${filename}`],
+        confirmText: '확인',
+        onConfirm: () => closeAlert(),
+      });
+
+      // ✅ 원하면 완료 후 모달 닫기 (TBM처럼)
+      onClose();
     } catch (e) {
-      setGenError((e as Error)?.message || '엑셀 생성에 실패했습니다.');
+      openAlert({
+        title: '오류',
+        lines: ['문서 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
+        confirmText: '확인',
+      });
     } finally {
       setExportLoading(false);
     }
   };
 
   return (
-    <div
-      className={s.overlay}
-      role="dialog"
-      aria-modal="true"
-      aria-label="월 작업장 순회 점검표"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) closeOnly();
-      }}
-    >
-      <div className={s.modal}>
-        <div className={s.topBar}>
-          <span className={s.pill}>월 작업장 순회 점검표</span>
-          <button type="button" className={s.iconBtn} onClick={closeOnly} aria-label="닫기">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className={s.card}>
-          <div className={s.header}>
-            <h3 className={s.title}>월 작업장 순회 점검표</h3>
-            <p className={s.desc}>
-              세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을 생성합니다. <br />
-              <span className={s.subDesc}>{weekLabel}</span>
-            </p>
+    <>
+      <div
+        className={s.overlay}
+        role="dialog"
+        aria-modal="true"
+        aria-label="월 작업장 순회 점검표"
+        onMouseDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          closeOnly();
+        }}
+      >
+        <div className={s.modal}>
+          <div className={s.topBar}>
+            <span className={s.pill}>월 작업장 순회 점검표</span>
+            <button
+              type="button"
+              className={s.iconBtn}
+              onClick={closeOnly}
+              aria-label="닫기"
+              disabled={exportLoading}
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          {step === 0 && (
-            <>
-              <label className={s.label}>세부 작업 검색</label>
+          <div className={s.card}>
+            <div className={s.header}>
+              <h3 className={s.title}>월 작업장 순회 점검표</h3>
+              <p className={s.desc}>
+                세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을 생성합니다. <br />
+                <span className={s.subDesc}>{weekLabel}</span>
+              </p>
+            </div>
 
-              <MonthlyInspectionDetailTaskAutocompleteInput
-                value={detailTasks}
-                onChange={(next) => {
-                  markDirty();
-                  setDetailTasks(next);
-                  // ✅ 즉시 draft 저장
-                  persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
-                }}
+            {step === 0 && (
+              <>
+                <label className={s.label}>세부 작업 검색</label>
+
+                <MonthlyInspectionDetailTaskAutocompleteInput
+                  value={detailTasks}
+                  onChange={(next) => {
+                    markDirty();
+                    setDetailTasks(next);
+                    persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
+                  }}
+                />
+
+                {genError && <div className={s.errorText}>{genError}</div>}
+
+                <button
+                  type="button"
+                  className={s.primaryBtn}
+                  disabled={!canGoStep1 || genLoading}
+                  onClick={handleCreateChecklist}
+                >
+                  {genLoading ? (
+                    <>
+                      <Loader2 size={18} className={s.spin} />
+                      점검 항목 생성 중...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={18} />
+                      월 작업장 순회 점검표 생성
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+
+            {step === 1 && (
+              <StepBuildChecklist
+                detailTasks={detailTasks}
+                initialSections={sections}
+                onBack={() => setStep(0)}
+                onNext={handleConfirmChecklist}
               />
+            )}
 
-              {genError && <div className={s.errorText}>{genError}</div>}
-
-              <button
-                type="button"
-                className={s.primaryBtn}
-                disabled={!canGoStep1 || genLoading}
-                onClick={handleCreateChecklist}
-              >
-                {genLoading ? (
-                  <>
-                    <Loader2 size={18} className={s.spin} />
-                    점검 항목 생성 중...
-                  </>
-                ) : (
-                  <>
-                    <FileText size={18} />
-                    월 작업장 순회 점검표 생성
-                  </>
-                )}
-              </button>
-            </>
-          )}
-
-          {step === 1 && (
-            <StepBuildChecklist
-              detailTasks={detailTasks}
-              initialSections={sections}
-              onBack={() => setStep(0)}
-              onNext={handleConfirmChecklist}
-            />
-          )}
-
-          {step === 2 && (
-            <StepRunChecklist
-              detailTasks={detailTasks}
-              items={items}
-              onChangeItems={(next) => {
-                markDirty();
-                setItems(next);
-                // ✅ 결과/조치사항도 draft로 저장
-                persistDraftNow({ results: next, step: 2 });
-              }}
-              onBack={() => setStep(1)}
-              onFinish={handleFinish}
-              finishDisabled={!canFinish || exportLoading}
-            />
-          )}
+            {step === 2 && (
+              <StepRunChecklist
+                detailTasks={detailTasks}
+                items={items}
+                onChangeItems={(next) => {
+                  markDirty();
+                  setItems(next);
+                  persistDraftNow({ results: next, step: 2 });
+                }}
+                onBack={() => setStep(1)}
+                onFinish={handleFinish}
+                finishDisabled={!canFinish || exportLoading}
+              />
+            )}
+          </div>
         </div>
       </div>
 
-      <CompletionToastModal
-        open={doneOpen}
-        title="순회 점검 완료"
-        message={`${weekLabel} 작업장 순회 점검이 완료되었습니다.`}
+      {/* ✅ Alert Modal */}
+      <CenteredAlertModal
+        open={alertOpen}
+        title={alertTitle}
+        lines={alertLines}
+        confirmText={alertConfirmText}
         onConfirm={() => {
-          setDoneOpen(false);
-          closeOnly();
+          const fn = alertOnConfirmRef.current;
+          closeAlert();
+          fn?.();
+        }}
+        showClose={alertShowClose}
+        onClose={() => {
+          const fn = alertOnCloseRef.current;
+          closeAlert();
+          fn?.();
         }}
       />
-    </div>
+    </>
   );
 }
