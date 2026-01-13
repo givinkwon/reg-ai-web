@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 };
 
 const GTM_ID = "GTM-MS4RQT3J"; // 필요시 env로 이동
-const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"
+const ADS_ID = "AW-17610431883"; // ✅ Google Ads tag ID
+const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"; // (현재 코드에선 미사용)
 
 export default function RootLayout({
   children,
@@ -57,6 +58,20 @@ export default function RootLayout({
           src="https://developers.kakao.com/sdk/js/kakao.min.js"
           strategy="afterInteractive"
         />
+
+        {/* ✅ Google Ads gtag.js (AW-...) */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${ADS_ID}');
+          `}
+        </Script>
 
         {/* Google Tag Manager */}
         <Script id="gtm-base" strategy="afterInteractive">
