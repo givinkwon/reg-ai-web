@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
@@ -17,17 +16,24 @@ import s from './page.module.css';
 import WeeklySafetyNewsModal from './components/news/WeeklySafetyNewsModal';
 import NewsArticlesModal from './components/news/NewsArticlesModal';
 
-export default function ChatPage() {
-  const searchParams = useSearchParams();
-  const view = searchParams.get('view'); // ✅ e.g. 'docs'
+function getQueryParam(name: string): string | null {
+  // ✅ 서버/프리렌더 단계 방지
+  if (typeof window === 'undefined') return null;
+  try {
+    return new URLSearchParams(window.location.search).get(name);
+  } catch {
+    return null;
+  }
+}
 
+export default function ChatPage() {
   const {
     sidebarMobileOpen,
     setSidebarMobileOpen,
     showLoginModal,
     setShowLoginModal,
     mainView, // 'chat' | 'docs'
-    setMainView, // ✅ 추가: store에 있어야 함
+    setMainView, // ✅ store에 있어야 함
   } = useChatStore();
 
   const user = useUserStore((st) => st.user);
@@ -46,12 +52,13 @@ export default function ChatPage() {
 
   /**
    * ✅ 이메일 딥링크 진입: /chat?view=docs
-   * - 문서함 자동 오픈
-   * - 비로그인 시 로그인 모달 자동 오픈
+   * - useSearchParams() 미사용 (Suspense 에러 회피)
+   * - 클라이언트에서 window.location.search 파싱
    */
   useEffect(() => {
     if (!initialized) return;
 
+    const view = getQueryParam('view');
     if (view === 'docs') {
       setMainView('docs');
 
@@ -59,8 +66,13 @@ export default function ChatPage() {
       if (!user?.email) {
         setShowLoginModal(true);
       }
+
+      // (선택) URL 깔끔하게: /chat 로 바꾸고 싶으면 주석 해제
+      // try {
+      //   window.history.replaceState(null, '', '/chat');
+      // } catch {}
     }
-  }, [initialized, view, user?.email, setMainView, setShowLoginModal]);
+  }, [initialized, user?.email, setMainView, setShowLoginModal]);
 
   /**
    * ✅ 새로고침 후에도 “가입 미완료”면 무조건 추가정보 모달을 띄우기
@@ -105,7 +117,6 @@ export default function ChatPage() {
   }, [initialized, user?.email, user?.isSignupComplete, refreshSignupStatus]);
 
   const showExtraModal = forceExtraOpen && !!accountEmail;
-
   const showDocs = mainView === 'docs';
 
   return (
@@ -128,10 +139,7 @@ export default function ChatPage() {
       {/* 본문: chat/docs 분기 */}
       <div className={s.main}>
         {showDocs ? (
-          <DocsVault
-            userEmail={user?.email ?? null}
-            onRequireLogin={() => setShowLoginModal(true)}
-          />
+          <DocsVault userEmail={user?.email ?? null} onRequireLogin={() => setShowLoginModal(true)} />
         ) : (
           <ChatArea />
         )}
