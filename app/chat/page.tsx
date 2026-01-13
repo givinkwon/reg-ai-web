@@ -2,6 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import RightPanel from './components/RightPannel';
@@ -16,12 +18,16 @@ import WeeklySafetyNewsModal from './components/news/WeeklySafetyNewsModal';
 import NewsArticlesModal from './components/news/NewsArticlesModal';
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
+  const view = searchParams.get('view'); // ✅ e.g. 'docs'
+
   const {
     sidebarMobileOpen,
     setSidebarMobileOpen,
     showLoginModal,
     setShowLoginModal,
-    mainView, // ✅ 추가: 'chat' | 'docs'
+    mainView, // 'chat' | 'docs'
+    setMainView, // ✅ 추가: store에 있어야 함
   } = useChatStore();
 
   const user = useUserStore((st) => st.user);
@@ -37,6 +43,24 @@ export default function ChatPage() {
   useEffect(() => {
     initUserStore();
   }, []);
+
+  /**
+   * ✅ 이메일 딥링크 진입: /chat?view=docs
+   * - 문서함 자동 오픈
+   * - 비로그인 시 로그인 모달 자동 오픈
+   */
+  useEffect(() => {
+    if (!initialized) return;
+
+    if (view === 'docs') {
+      setMainView('docs');
+
+      // 비로그인이라면 로그인 모달 오픈
+      if (!user?.email) {
+        setShowLoginModal(true);
+      }
+    }
+  }, [initialized, view, user?.email, setMainView, setShowLoginModal]);
 
   /**
    * ✅ 새로고침 후에도 “가입 미완료”면 무조건 추가정보 모달을 띄우기
@@ -101,7 +125,7 @@ export default function ChatPage() {
         <Sidebar />
       </div>
 
-      {/* 본문: ✅ chat/docs 분기 */}
+      {/* 본문: chat/docs 분기 */}
       <div className={s.main}>
         {showDocs ? (
           <DocsVault
@@ -113,7 +137,7 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* 오른쪽 근거 패널: 문서함에서는 숨김(원하면 유지 가능) */}
+      {/* 오른쪽 근거 패널: 문서함에서는 숨김 */}
       <div className={s.rightDesktop}>{showDocs ? null : <RightPanel />}</div>
 
       {/* ✅ 전역: 가입 미완료면 강제 추가정보 모달 */}
@@ -134,6 +158,7 @@ export default function ChatPage() {
       {showLoginModal && !showExtraModal && (
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
+
       <WeeklySafetyNewsModal />
       <NewsArticlesModal />
     </div>

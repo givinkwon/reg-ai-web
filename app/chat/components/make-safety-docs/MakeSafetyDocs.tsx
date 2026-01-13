@@ -265,7 +265,7 @@ export default function MakeSafetyDocs({
         open={tbmModalOpen}
         onClose={() => setTbmModalOpen(false)}
         onSubmit={(payload) => {
-          if (tbmTarget) onSelectDoc?.(tbmTarget.category, tbmTarget.doc);
+          // if (tbmTarget) onSelectDoc?.(tbmTarget.category, tbmTarget.doc);
 
           if (tbmTarget) {
             onCreateTbm?.({

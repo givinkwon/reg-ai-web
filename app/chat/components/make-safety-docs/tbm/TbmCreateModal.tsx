@@ -7,6 +7,7 @@ import s from './TbmCreateModal.module.css';
 
 import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
 import ProgressDownloadModal from './ui/ProgressDownloadModal';
+import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 
 export type TbmAttendee = {
@@ -26,7 +27,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
 
-  onSubmit?: (payload: TbmCreatePayload) => void;
+  onSubmit?: (payload: TbmCreatePayload) => void | Promise<void>;
 
   minorCategory?: string | null;
   defaultValue?: Partial<TbmCreatePayload>;
@@ -123,6 +124,38 @@ export default function TbmCreateModal({
   const progressTimerRef = useRef<number | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
 
+  // ✅ AlertModal 상태
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('안내');
+  const [alertLines, setAlertLines] = useState<string[]>([]);
+  const [alertConfirmText, setAlertConfirmText] = useState('확인');
+  const [alertShowClose, setAlertShowClose] = useState(false);
+  const alertOnConfirmRef = useRef<null | (() => void)>(null);
+  const alertOnCloseRef = useRef<null | (() => void)>(null);
+
+  const openAlert = (opts: {
+    title?: string;
+    lines: string[];
+    confirmText?: string;
+    showClose?: boolean;
+    onConfirm?: () => void;
+    onClose?: () => void;
+  }) => {
+    setAlertTitle(opts.title ?? '안내');
+    setAlertLines(opts.lines);
+    setAlertConfirmText(opts.confirmText ?? '확인');
+    setAlertShowClose(!!opts.showClose);
+    alertOnConfirmRef.current = opts.onConfirm ?? null;
+    alertOnCloseRef.current = opts.onClose ?? null;
+    setAlertOpen(true);
+  };
+
+  const closeAlert = () => {
+    setAlertOpen(false);
+    alertOnConfirmRef.current = null;
+    alertOnCloseRef.current = null;
+  };
+
   const stopProgressTimer = () => {
     if (progressTimerRef.current) {
       window.clearInterval(progressTimerRef.current);
@@ -134,7 +167,7 @@ export default function TbmCreateModal({
     stopProgressTimer();
     progressTimerRef.current = window.setInterval(() => {
       setProgressPercent((prev) => {
-        if (prev >= 92) return prev; // ✅ 성공 시에만 100 찍기
+        if (prev >= 92) return prev;
         const bump = prev < 25 ? 3 : prev < 50 ? 2 : 1;
         return Math.min(92, prev + bump);
       });
@@ -243,13 +276,13 @@ export default function TbmCreateModal({
 
   // ✅ submitting 동안도 스크롤 잠금
   useEffect(() => {
-    if (!open && !submitting) return;
+    if (!open && !submitting && !alertOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open, submitting]);
+  }, [open, submitting, alertOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -301,23 +334,41 @@ export default function TbmCreateModal({
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
+    return filename;
   };
 
-  const closeProgress = () => {
+  const closeProgress = (opts?: { showCancelAlert?: boolean }) => {
     stopProgressTimer();
     exportAbortRef.current?.abort();
     exportAbortRef.current = null;
     setProgressOpen(false);
     setProgressError(null);
     setSubmitting(false);
+
+    if (opts?.showCancelAlert) {
+      openAlert({
+        title: '요청 취소',
+        lines: ['TBM 생성 요청이 취소되었습니다.'],
+        confirmText: '확인',
+      });
+    }
   };
 
   const handleSubmit = async () => {
     if (submitting) return;
 
     if (!user?.email) {
-      alert('TBM 활동일지를 생성하려면 로그인이 필요합니다.');
-      onRequireLogin?.();
+      openAlert({
+        title: '로그인이 필요합니다',
+        lines: ['TBM 활동일지를 생성하려면 로그인이 필요합니다.', '로그인 후 다시 시도해주세요.'],
+        confirmText: '로그인하기',
+        showClose: true,
+        onConfirm: () => {
+          closeAlert();
+          onRequireLogin?.();
+        },
+        onClose: () => closeAlert(),
+      });
       return;
     }
 
@@ -335,9 +386,9 @@ export default function TbmCreateModal({
     };
 
     let success = false;
+    let downloadedFilename: string | null = null;
 
     try {
-      // ✅ 1) Progress 모달을 "무조건 먼저" 띄우기 (렌더 커밋 강제)
       flushSync(() => {
         setSubmitting(true);
         setProgressError(null);
@@ -348,9 +399,9 @@ export default function TbmCreateModal({
       await nextFrame();
       startFakeProgress();
 
-      onSubmit?.(payloadForParent);
+      // ✅ 부모에 "생성 요청" 알려야 하면 여기서 전달
+      await Promise.resolve(onSubmit?.(payloadForParent));
 
-      // ✅ 2) 퍼센트 점프(체감 개선)
       setProgressPercent((p) => Math.max(p, 18));
 
       let company =
@@ -378,7 +429,6 @@ export default function TbmCreateModal({
         attendees: cleanedAttendees,
       };
 
-      // ✅ 3) 취소 가능 (AbortController)
       const ac = new AbortController();
       exportAbortRef.current = ac;
 
@@ -398,16 +448,23 @@ export default function TbmCreateModal({
         exportAbortRef.current = null;
 
         setProgressError(`TBM 엑셀 생성 실패 (${res.status})`);
-        // ✅ 에러시에는 모달을 유지(팝업 위 팝업) + 뒤는 submitting 풀어서 다시 수정 가능
         setSubmitting(false);
 
-        alert(`TBM 엑셀 생성 실패 (${res.status}) ${txt.slice(0, 200)}`);
+        openAlert({
+          title: '생성 실패',
+          lines: [
+            `TBM 엑셀 생성에 실패했습니다. (HTTP ${res.status})`,
+            txt ? txt.slice(0, 160) : '잠시 후 다시 시도해주세요.',
+          ],
+          confirmText: '확인',
+          onConfirm: () => closeAlert(),
+        });
         return;
       }
 
       setProgressPercent((p) => Math.max(p, 85));
 
-      await downloadBlob(res);
+      downloadedFilename = await downloadBlob(res);
 
       stopProgressTimer();
       setProgressPercent(100);
@@ -420,20 +477,48 @@ export default function TbmCreateModal({
       if (e?.name === 'AbortError') {
         setProgressError('요청이 취소되었습니다.');
         setSubmitting(false);
+
+        openAlert({
+          title: '요청 취소',
+          lines: ['TBM 생성 요청이 취소되었습니다.'],
+          confirmText: '확인',
+          onConfirm: () => closeAlert(),
+        });
         return;
       }
 
       setProgressError('생성 중 오류가 발생했습니다.');
       setSubmitting(false);
-      throw e;
+
+      openAlert({
+        title: '오류',
+        lines: ['TBM 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
+        confirmText: '확인',
+        onConfirm: () => closeAlert(),
+      });
+      return;
     } finally {
       stopProgressTimer();
       exportAbortRef.current = null;
 
       if (success) {
+        // ✅ 1) Progress 닫기
         setProgressOpen(false);
         setSubmitting(false);
+
+        // ✅ 2) TBM 모달 닫기
         onClose();
+
+        // ✅ 3) Alert 띄우기 (TBM 모달 위에)
+        openAlert({
+          title: '생성 완료',
+          lines: [
+            'TBM 활동일지가 생성되었습니다.',
+            downloadedFilename ? `파일 다운로드가 시작되었습니다: ${downloadedFilename}` : '파일 다운로드가 시작되었습니다.',
+          ],
+          confirmText: '확인',
+          onConfirm: () => closeAlert(),
+        });
       }
     }
   };
@@ -529,19 +614,34 @@ export default function TbmCreateModal({
                 <FileText size={18} />
                 {submitting ? '생성 중…' : 'TBM 활동일지 생성하기'}
               </button>
+
+              {/* (선택) 회사명 로딩 표시가 필요하면 여기에 accountLoading 활용 */}
+              {accountLoading && (
+                <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
+                  회사명 정보를 불러오는 중…
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ✅ 팝업 위 팝업: Portal로 body 최상단에 뜸 */}
-      <ProgressDownloadModal
-        open={progressOpen}
-        percent={progressPercent}
-        title="TBM 활동일지를 생성하고 있어요"
-        errorText={progressError}
-        onCancel={() => {
-          closeProgress();
+      {/* ✅ Alert Modal */}
+      <CenteredAlertModal
+        open={alertOpen}
+        title={alertTitle}
+        lines={alertLines}
+        confirmText={alertConfirmText}
+        onConfirm={() => {
+          const fn = alertOnConfirmRef.current;
+          closeAlert();
+          fn?.();
+        }}
+        showClose={alertShowClose}
+        onClose={() => {
+          const fn = alertOnCloseRef.current;
+          closeAlert();
+          fn?.();
         }}
       />
     </>
