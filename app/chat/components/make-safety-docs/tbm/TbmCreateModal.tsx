@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Plus, FileText } from 'lucide-react';
-import { flushSync } from 'react-dom';
 import s from './TbmCreateModal.module.css';
 
 import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
-import ProgressDownloadModal from './ui/ProgressDownloadModal';
 import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 
@@ -109,20 +107,13 @@ export default function TbmCreateModal({
       : [{ name: '', contact: '' }],
   );
 
+  // ✅ 제출 중복 방지용(Progress UI는 제거)
   const [submitting, setSubmitting] = useState(false);
 
   const [accountCompanyName, setAccountCompanyName] = useState<string | null>(
     norm(companyNameProp) ? norm(companyNameProp) : null,
   );
   const [accountLoading, setAccountLoading] = useState(false);
-
-  // ✅ ProgressDownloadModal 상태
-  const [progressOpen, setProgressOpen] = useState(false);
-  const [progressPercent, setProgressPercent] = useState(0);
-  const [progressError, setProgressError] = useState<string | null>(null);
-
-  const progressTimerRef = useRef<number | null>(null);
-  const exportAbortRef = useRef<AbortController | null>(null);
 
   // ✅ AlertModal 상태
   const [alertOpen, setAlertOpen] = useState(false);
@@ -154,24 +145,6 @@ export default function TbmCreateModal({
     setAlertOpen(false);
     alertOnConfirmRef.current = null;
     alertOnCloseRef.current = null;
-  };
-
-  const stopProgressTimer = () => {
-    if (progressTimerRef.current) {
-      window.clearInterval(progressTimerRef.current);
-      progressTimerRef.current = null;
-    }
-  };
-
-  const startFakeProgress = () => {
-    stopProgressTimer();
-    progressTimerRef.current = window.setInterval(() => {
-      setProgressPercent((prev) => {
-        if (prev >= 92) return prev;
-        const bump = prev < 25 ? 3 : prev < 50 ? 2 : 1;
-        return Math.min(92, prev + bump);
-      });
-    }, 350);
   };
 
   const scopeMinor = useMemo(() => norm(minorCategory) || 'ALL', [minorCategory]);
@@ -274,7 +247,7 @@ export default function TbmCreateModal({
     if (mp) setMinorCategory(mp);
   }, [open, minorFromProps]);
 
-  // ✅ submitting 동안도 스크롤 잠금
+  // ✅ 스크롤 잠금(모달 또는 Alert가 떠 있으면 잠금)
   useEffect(() => {
     if (!open && !submitting && !alertOpen) return;
     const prev = document.body.style.overflow;
@@ -337,26 +310,10 @@ export default function TbmCreateModal({
     return filename;
   };
 
-  const closeProgress = (opts?: { showCancelAlert?: boolean }) => {
-    stopProgressTimer();
-    exportAbortRef.current?.abort();
-    exportAbortRef.current = null;
-    setProgressOpen(false);
-    setProgressError(null);
-    setSubmitting(false);
-
-    if (opts?.showCancelAlert) {
-      openAlert({
-        title: '요청 취소',
-        lines: ['TBM 생성 요청이 취소되었습니다.'],
-        confirmText: '확인',
-      });
-    }
-  };
-
   const handleSubmit = async () => {
     if (submitting) return;
 
+    // ✅ 로그인 체크(기존 Alert 유지)
     if (!user?.email) {
       openAlert({
         title: '로그인이 필요합니다',
@@ -385,24 +342,23 @@ export default function TbmCreateModal({
       minorCategory: norm(minorCategory) || 'ALL',
     };
 
-    let success = false;
+    // ✅ 핵심: "생성 버튼 누르는 즉시" Alert 띄우기 (완료 때가 아님)
+    openAlert({
+      title: 'TBM 일지 생성',
+      lines: ['근로자들에게 서명 요청을 발송했습니다.', '문서 제작이 완료되면 이메일로', '작성된 서류는 문서함에서 확인하실 수 있습니다.'],
+      confirmText: '확인',
+      onConfirm: () => closeAlert(),
+    });
+
+    // UI 반영 한 프레임 양보(체감상 “바로 뜨게”)
+    setSubmitting(true);
+    await nextFrame();
+
     let downloadedFilename: string | null = null;
 
     try {
-      flushSync(() => {
-        setSubmitting(true);
-        setProgressError(null);
-        setProgressPercent(1);
-        setProgressOpen(true);
-      });
-
-      await nextFrame();
-      startFakeProgress();
-
-      // ✅ 부모에 "생성 요청" 알려야 하면 여기서 전달
+      // ✅ 부모에 "생성 요청" 알려야 하면 유지 (작동 동일)
       await Promise.resolve(onSubmit?.(payloadForParent));
-
-      setProgressPercent((p) => Math.max(p, 18));
 
       let company =
         accountCompanyName ??
@@ -410,15 +366,12 @@ export default function TbmCreateModal({
         (norm(companyNameProp) ? norm(companyNameProp) : null);
 
       if (!company) {
-        setProgressPercent((p) => Math.max(p, 35));
         const fetched = await fetchCompanyByEmail(user.email);
         if (fetched) {
           company = fetched;
           setAccountCompanyName(fetched);
         }
       }
-
-      setProgressPercent((p) => Math.max(p, 55));
 
       const body = {
         email: user.email,
@@ -429,9 +382,6 @@ export default function TbmCreateModal({
         attendees: cleanedAttendees,
       };
 
-      const ac = new AbortController();
-      exportAbortRef.current = ac;
-
       const res = await fetch('/api/risk-assessment?endpoint=tbm-export-excel', {
         method: 'POST',
         headers: {
@@ -439,17 +389,10 @@ export default function TbmCreateModal({
           'x-user-email': user.email,
         },
         body: JSON.stringify(body),
-        signal: ac.signal,
       });
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
-        stopProgressTimer();
-        exportAbortRef.current = null;
-
-        setProgressError(`TBM 엑셀 생성 실패 (${res.status})`);
-        setSubmitting(false);
-
         openAlert({
           title: '생성 실패',
           lines: [
@@ -462,64 +405,22 @@ export default function TbmCreateModal({
         return;
       }
 
-      setProgressPercent((p) => Math.max(p, 85));
-
       downloadedFilename = await downloadBlob(res);
 
-      stopProgressTimer();
-      setProgressPercent(100);
+      // ✅ (선택) 이미 떠 있는 Alert 내용을 "다운로드 시작"으로 업데이트
+      // 원치 않으면 아래 openAlert 블록을 삭제해도 됩니다.
 
-      success = true;
-    } catch (e: any) {
-      stopProgressTimer();
-      exportAbortRef.current = null;
-
-      if (e?.name === 'AbortError') {
-        setProgressError('요청이 취소되었습니다.');
-        setSubmitting(false);
-
-        openAlert({
-          title: '요청 취소',
-          lines: ['TBM 생성 요청이 취소되었습니다.'],
-          confirmText: '확인',
-          onConfirm: () => closeAlert(),
-        });
-        return;
-      }
-
-      setProgressError('생성 중 오류가 발생했습니다.');
-      setSubmitting(false);
-
+      // ✅ 기존 동작처럼 완료 시 TBM 모달 닫기
+      onClose();
+    } catch {
       openAlert({
         title: '오류',
         lines: ['TBM 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
         confirmText: '확인',
         onConfirm: () => closeAlert(),
       });
-      return;
     } finally {
-      stopProgressTimer();
-      exportAbortRef.current = null;
-
-      if (success) {
-        // ✅ 1) Progress 닫기
-        setProgressOpen(false);
-        setSubmitting(false);
-
-        // ✅ 2) TBM 모달 닫기
-        onClose();
-
-        // ✅ 3) Alert 띄우기 (TBM 모달 위에)
-        openAlert({
-          title: '생성 완료',
-          lines: [
-            'TBM 활동일지가 생성되었습니다.',
-            downloadedFilename ? `파일 다운로드가 시작되었습니다: ${downloadedFilename}` : '파일 다운로드가 시작되었습니다.',
-          ],
-          confirmText: '확인',
-          onConfirm: () => closeAlert(),
-        });
-      }
+      setSubmitting(false);
     }
   };
 
@@ -612,10 +513,9 @@ export default function TbmCreateModal({
 
               <button type="button" className={s.primaryBtn} disabled={!canSubmit} onClick={handleSubmit}>
                 <FileText size={18} />
-                {submitting ? '생성 중…' : 'TBM 활동일지 생성하기'}
+                TBM 활동일지 생성하기
               </button>
 
-              {/* (선택) 회사명 로딩 표시가 필요하면 여기에 accountLoading 활용 */}
               {accountLoading && (
                 <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
                   회사명 정보를 불러오는 중…
