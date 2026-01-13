@@ -87,7 +87,6 @@ import MakeSafetyEduMaterials from './MakeSafetyEduMaterials';
 
 import RiskAssessmentWizard, {
   type RiskAssessmentDraft,
-  draftToPrompt,
 } from './risk-assessment/RiskAssessmentWizard'
 
 import { useLawNoticeModal } from './law-notice/UseLawNoticeModal';
