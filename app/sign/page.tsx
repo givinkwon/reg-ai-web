@@ -1,9 +1,8 @@
-// app/sign/SignPage.tsx
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import s from "./page.module.css";
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import s from './page.module.css';
 
 type TbmSignData = {
   title: string;
@@ -16,18 +15,14 @@ type TbmSignData = {
   attendeePhone?: string;
 };
 
-// const DEV_UI = process.env.NEXT_PUBLIC_TBM_SIGN_DEV === '1';
-// const DEV_PASSPHRASE =
-//   process.env.NEXT_PUBLIC_TBM_SIGN_TEST_PASSPHRASE || 'dev-open';
-
 const DEV_UI = true;
-const DEV_PASSPHRASE = "dev-open";
+const DEV_PASSPHRASE = 'dev-open';
 
 function formatPhone(raw?: string) {
-  const v = (raw || "").replace(/\D/g, "");
+  const v = (raw || '').replace(/\D/g, '');
   if (v.length === 11) return `${v.slice(0, 3)}-${v.slice(3, 7)}-${v.slice(7)}`;
   if (v.length === 10) return `${v.slice(0, 3)}-${v.slice(3, 6)}-${v.slice(6)}`;
-  return raw || "";
+  return raw || '';
 }
 
 /** 간단 서명패드 */
@@ -41,13 +36,12 @@ function SignaturePad({
   const lastRef = useRef<{ x: number; y: number } | null>(null);
   const [hasInk, setHasInk] = useState(false);
 
-  // DPR 스케일 + 리사이즈
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
 
     const clear = () => {
-      const ctx = c.getContext("2d");
+      const ctx = c.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, c.width, c.height);
       setHasInk(false);
@@ -68,22 +62,20 @@ function SignaturePad({
       c.width = Math.floor(cssW * dpr);
       c.height = Math.floor(cssH * dpr);
 
-      const ctx = c.getContext("2d");
+      const ctx = c.getContext('2d');
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.lineWidth = 2;
-      ctx.strokeStyle = "#111";
+      ctx.strokeStyle = '#111';
 
-      // 리사이즈 시 잉크 유지하려면 이미지 백업/복원이 필요하지만
-      // 테스트/서명용에서는 보통 clear 후 다시 서명하도록 둠.
       clear();
     };
 
     resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -97,7 +89,7 @@ function SignaturePad({
     const c = canvasRef.current;
     if (!c) return null;
     try {
-      return c.toDataURL("image/png");
+      return c.toDataURL('image/png');
     } catch {
       return null;
     }
@@ -106,7 +98,7 @@ function SignaturePad({
   const clear = () => {
     const c = canvasRef.current;
     if (!c) return;
-    const ctx = c.getContext("2d");
+    const ctx = c.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, c.width, c.height);
     setHasInk(false);
@@ -125,7 +117,7 @@ function SignaturePad({
 
     const onMove = (e: PointerEvent) => {
       if (!drawingRef.current) return;
-      const ctx = c.getContext("2d");
+      const ctx = c.getContext('2d');
       if (!ctx) return;
 
       const p = getPoint(e);
@@ -141,7 +133,6 @@ function SignaturePad({
       ctx.stroke();
 
       lastRef.current = p;
-
       if (!hasInk) setHasInk(true);
     };
 
@@ -152,18 +143,18 @@ function SignaturePad({
       onChangeDataUrl?.(url);
     };
 
-    c.addEventListener("pointerdown", onDown);
-    c.addEventListener("pointermove", onMove);
-    c.addEventListener("pointerup", onUp);
-    c.addEventListener("pointercancel", onUp);
-    c.addEventListener("pointerleave", onUp);
+    c.addEventListener('pointerdown', onDown);
+    c.addEventListener('pointermove', onMove);
+    c.addEventListener('pointerup', onUp);
+    c.addEventListener('pointercancel', onUp);
+    c.addEventListener('pointerleave', onUp);
 
     return () => {
-      c.removeEventListener("pointerdown", onDown);
-      c.removeEventListener("pointermove", onMove);
-      c.removeEventListener("pointerup", onUp);
-      c.removeEventListener("pointercancel", onUp);
-      c.removeEventListener("pointerleave", onUp);
+      c.removeEventListener('pointerdown', onDown);
+      c.removeEventListener('pointermove', onMove);
+      c.removeEventListener('pointerup', onUp);
+      c.removeEventListener('pointercancel', onUp);
+      c.removeEventListener('pointerleave', onUp);
     };
   }, [hasInk, onChangeDataUrl]);
 
@@ -178,7 +169,7 @@ function SignaturePad({
       <div className={s.canvasWrap}>
         <canvas ref={canvasRef} className={s.canvas} />
       </div>
-      <div className={s.signMeta}>{hasInk ? "서명이 입력되었습니다." : "아직 서명이 없습니다."}</div>
+      <div className={s.signMeta}>{hasInk ? '서명이 입력되었습니다.' : '아직 서명이 없습니다.'}</div>
     </div>
   );
 }
@@ -200,30 +191,32 @@ function SignView({
     setSubmitMsg(null);
 
     if (!sigUrl) {
-      setSubmitMsg("서명을 먼저 입력해 주세요.");
+      setSubmitMsg('서명을 먼저 입력해 주세요.');
       return;
     }
 
     if (isMock) {
-      setSubmitMsg("✅ (MOCK) 서명 제출 성공처럼 처리했습니다. (실제 저장은 안 함)");
+      setSubmitMsg('✅ (MOCK) 서명 제출 성공처럼 처리했습니다. (실제 저장은 안 함)');
       return;
     }
 
     setSubmitLoading(true);
     try {
-      const res = await fetch("/api/tbm-sign/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/tbm-sign/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
           signaturePngDataUrl: sigUrl,
         }),
       });
+
       const text = await res.text();
       if (!res.ok) throw new Error(text);
-      setSubmitMsg("✅ 서명이 제출되었습니다.");
+
+      setSubmitMsg('✅ 서명이 제출되었습니다.');
     } catch (e: any) {
-      setSubmitMsg(`❌ 제출 실패: ${e?.message || "unknown error"}`);
+      setSubmitMsg(`❌ 제출 실패: ${e?.message || 'unknown error'}`);
     } finally {
       setSubmitLoading(false);
     }
@@ -233,7 +226,7 @@ function SignView({
     <div className={s.card}>
       <div className={s.headerRow}>
         <div>
-          <h1 className={s.h1}>{data.title || "TBM 서명"}</h1>
+          <h1 className={s.h1}>{data.title || 'TBM 서명'}</h1>
           <div className={s.sub}>
             <span className={s.badge}>{data.company}</span>
             <span className={s.dot} />
@@ -272,11 +265,11 @@ function SignView({
       <div className={s.infoRow}>
         <div className={s.infoItem}>
           <div className={s.infoKey}>서명자</div>
-          <div className={s.infoVal}>{data.attendeeName || "—"}</div>
+          <div className={s.infoVal}>{data.attendeeName || '—'}</div>
         </div>
         <div className={s.infoItem}>
           <div className={s.infoKey}>연락처</div>
-          <div className={s.infoVal}>{formatPhone(data.attendeePhone) || "—"}</div>
+          <div className={s.infoVal}>{formatPhone(data.attendeePhone) || '—'}</div>
         </div>
       </div>
 
@@ -292,7 +285,7 @@ function SignView({
 
       <div className={s.footer}>
         <button className={s.btn} type="button" onClick={submit} disabled={submitLoading}>
-          {submitLoading ? "제출 중..." : "서명 제출"}
+          {submitLoading ? '제출 중...' : '서명 제출'}
         </button>
         {submitMsg ? <div className={s.msg}>{submitMsg}</div> : null}
       </div>
@@ -300,17 +293,21 @@ function SignView({
   );
 }
 
-export default function SignPage() {
+/**
+ * ✅ 핵심:
+ * useSearchParams()는 반드시 Suspense 아래에서만 호출되도록 분리
+ */
+function SearchParamsGate() {
   const router = useRouter();
   const sp = useSearchParams();
-  const token = (sp.get("token") || "").trim();
+  const token = (sp.get('token') || '').trim();
 
   // DEV 테스트 해금
-  const [pass, setPass] = useState("");
+  const [pass, setPass] = useState('');
   const [unlocked, setUnlocked] = useState(false);
 
   // 토큰 수동 입력 (테스트 편의)
-  const [manualToken, setManualToken] = useState("");
+  const [manualToken, setManualToken] = useState('');
 
   // 실제 데이터 로딩(토큰 있을 때)
   const [loading, setLoading] = useState(false);
@@ -319,22 +316,22 @@ export default function SignPage() {
 
   const mockData: TbmSignData = useMemo(
     () => ({
-      title: "TBM 활동일지 서명(테스트)",
-      company: "테스트사업장(DEV)",
-      dateISO: "2026-01-11",
-      workSummary: "고소작업대 이동 및 점검, 현장 자재 운반 작업을 진행함.",
-      hazardSummary: "추락/협착 위험, 이동 동선 충돌 위험이 있음.",
-      complianceSummary: "안전모·안전대 착용, 작업 전 점검, 동선 통제 및 신호수 배치.",
-      attendeeName: "홍길동",
-      attendeePhone: "01012345678",
+      title: 'TBM 활동일지 서명(테스트)',
+      company: '테스트사업장(DEV)',
+      dateISO: '2026-01-11',
+      workSummary: '고소작업대 이동 및 점검, 현장 자재 운반 작업을 진행함.',
+      hazardSummary: '추락/협착 위험, 이동 동선 충돌 위험이 있음.',
+      complianceSummary: '안전모·안전대 착용, 작업 전 점검, 동선 통제 및 신호수 배치.',
+      attendeeName: '홍길동',
+      attendeePhone: '01012345678',
     }),
     []
   );
 
   const viewMode = useMemo(() => {
-    if (token) return "REAL_TOKEN";
-    if (DEV_UI && unlocked) return "DEV_UNLOCKED";
-    return "NO_ACCESS";
+    if (token) return 'REAL_TOKEN';
+    if (DEV_UI && unlocked) return 'DEV_UNLOCKED';
+    return 'NO_ACCESS';
   }, [token, unlocked]);
 
   useEffect(() => {
@@ -352,7 +349,7 @@ export default function SignPage() {
         const json = JSON.parse(text) as TbmSignData;
         if (!cancelled) setData(json);
       } catch (e: any) {
-        if (!cancelled) setErr(e?.message || "failed");
+        if (!cancelled) setErr(e?.message || 'failed');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -366,11 +363,9 @@ export default function SignPage() {
   const goWithManualToken = () => {
     const t = manualToken.trim();
     if (!t) return;
-
-    // ✅ 현재 라우트가 /sign 라면 이게 맞음
+    // ✅ /sign 라우트 기준
     router.replace(`/sign?token=${encodeURIComponent(t)}`);
-
-    // 만약 실제 라우트가 /tbm/sign 라면 아래로 바꾸면 됨:
+    // 만약 실제 라우트가 /tbm/sign면 위를 아래로 바꿔:
     // router.replace(`/tbm/sign?token=${encodeURIComponent(t)}`);
   };
 
@@ -379,12 +374,12 @@ export default function SignPage() {
       setUnlocked(true);
       setErr(null);
     } else {
-      setErr("테스트 키가 올바르지 않습니다.");
+      setErr('테스트 키가 올바르지 않습니다.');
     }
   };
 
   // ✅ 1) 토큰 기반 실제 화면
-  if (viewMode === "REAL_TOKEN") {
+  if (viewMode === 'REAL_TOKEN') {
     return (
       <main className={s.wrap}>
         {loading ? (
@@ -423,7 +418,7 @@ export default function SignPage() {
   }
 
   // ✅ 2) DEV 패스프레이즈로 “실제 화면” (MOCK 데이터로)
-  if (viewMode === "DEV_UNLOCKED") {
+  if (viewMode === 'DEV_UNLOCKED') {
     return (
       <main className={s.wrap}>
         <SignView data={mockData} isMock />
@@ -476,11 +471,34 @@ export default function SignPage() {
             </div>
           </div>
         ) : (
-          <div className={s.notice}>운영 환경에서는 토큰 없이 서명 화면을 열 수 없도록 막는 것을 권장합니다.</div>
+          <div className={s.notice}>
+            운영 환경에서는 토큰 없이 서명 화면을 열 수 없도록 막는 것을 권장합니다.
+          </div>
         )}
 
         {err ? <div className={s.err}>❌ {err}</div> : null}
       </div>
     </main>
+  );
+}
+
+/**
+ * ✅ 파일 1개 유지:
+ * default export = SignPage
+ * 안에서 Suspense로 SearchParamsGate를 감싸서 빌드 에러 해결
+ */
+export default function SignPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className={s.wrap}>
+          <div className={s.card}>
+            <h1 className={s.h1}>불러오는 중…</h1>
+          </div>
+        </main>
+      }
+    >
+      <SearchParamsGate />
+    </Suspense>
   );
 }
