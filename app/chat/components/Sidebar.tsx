@@ -9,13 +9,12 @@ import {
   Trash2,
   Home,
   Folder,
-  X, // ✅ 추가
+  X,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import s from './Sidebar.module.css';
 import { useChatStore } from '../../store/chat';
 import { useUserStore } from '../../store/user';
-
 import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
@@ -32,38 +31,41 @@ export default function Sidebar() {
     setMainView,
     setShowLoginModal,
 
-    // ✅ 모바일 오버레이 닫기용 (스토어에 있어야 함)
+    // ✅ 오버레이 열림/닫힘 (스토어에 있어야 함)
     sidebarMobileOpen,
     setSidebarMobileOpen,
   } = useChatStore();
 
   const router = useRouter();
 
-  // ✅ 모바일 판별
-  const [isMobile, setIsMobile] = useState(false);
+  /**
+   * ✅ 모바일+태블릿(컴팩트) 판별
+   * - 기존: max-width: 768px (mobile)
+   * - 변경: max-width: 1024px (tablet 포함)
+   */
+  const [isCompact, setIsCompact] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const sync = () => setIsMobile(mq.matches);
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const sync = () => setIsCompact(mq.matches);
     sync();
     mq.addEventListener('change', sync);
     return () => mq.removeEventListener('change', sync);
   }, []);
 
-  // ✅ 모바일에서는 collapsed 상태가 적용되지 않게 강제로 풀어줌(선택이지만 추천)
+  // ✅ 컴팩트(모바일/태블릿)에서는 collapsed 상태가 적용되지 않게 강제로 풀어줌
   useEffect(() => {
-    if (isMobile && collapsed) setCollapsed(false);
-  }, [isMobile, collapsed, setCollapsed]);
+    if (isCompact && collapsed) setCollapsed(false);
+  }, [isCompact, collapsed, setCollapsed]);
 
   const toggleCollapse = () => setCollapsed(!collapsed);
-
   const handleLogoClick = () => router.push('/');
 
-  const closeMobileOverlay = () => {
-    if (isMobile && sidebarMobileOpen) setSidebarMobileOpen(false);
+  const closeCompactOverlay = () => {
+    if (isCompact && sidebarMobileOpen) setSidebarMobileOpen(false);
   };
 
   const handleHomeClick = () => {
-    closeMobileOverlay();
+    closeCompactOverlay();
 
     try {
       // @ts-ignore
@@ -80,17 +82,17 @@ export default function Sidebar() {
       return;
     }
     setMainView('docs');
-    closeMobileOverlay();
+    closeCompactOverlay();
   };
 
   return (
-    // ✅ 모바일에서는 collapsed 클래스 적용 금지
-    <aside className={`${s.wrap} ${!isMobile && collapsed ? s.collapsed : ''}`}>
+    // ✅ 컴팩트(모바일/태블릿)에서는 collapsed 클래스 적용 금지
+    <aside className={`${s.wrap} ${!isCompact && collapsed ? s.collapsed : ''}`}>
       {/* Header */}
       <div className={s.header}>
         <div className={s.titleRow}>
           {/* 로고 */}
-          {!(!isMobile && collapsed) && (
+          {!(!isCompact && collapsed) && (
             <div className={s.brand}>
               <img
                 onClick={handleLogoClick}
@@ -101,8 +103,8 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* ✅ 데스크톱: 접기/펼치기 버튼 */}
-          {!isMobile && (
+          {/* ✅ 데스크톱(>=1025px): 접기/펼치기 버튼 */}
+          {!isCompact && (
             <button
               onClick={toggleCollapse}
               className={s.collapseBtn}
@@ -116,8 +118,8 @@ export default function Sidebar() {
             </button>
           )}
 
-          {/* ✅ 모바일: 닫기(X) 버튼 (overlay 닫기) */}
-          {isMobile && (
+          {/* ✅ 컴팩트(모바일/태블릿): 닫기(X) 버튼 (overlay 닫기) */}
+          {isCompact && (
             <button
               type="button"
               className={s.mobileCloseBtn}
@@ -141,8 +143,7 @@ export default function Sidebar() {
           >
             <div className={s.navLeft}>
               <Home className={s.iconSm} />
-              {/* 모바일에서는 항상 텍스트 보여도 됨 */}
-              {!(!isMobile && collapsed) && <span className={s.navText}>Home</span>}
+              {!(!isCompact && collapsed) && <span className={s.navText}>Home</span>}
             </div>
           </div>
 
@@ -155,7 +156,7 @@ export default function Sidebar() {
           >
             <div className={s.navLeft}>
               <Folder className={s.iconSm} />
-              {!(!isMobile && collapsed) && <span className={s.navText}>문서함</span>}
+              {!(!isCompact && collapsed) && <span className={s.navText}>문서함</span>}
             </div>
           </div>
         </div>
@@ -174,13 +175,13 @@ export default function Sidebar() {
               onClick={() => {
                 setMainView('chat');
                 setActiveRoom(r.id);
-                closeMobileOverlay(); // ✅ 모바일에서 대화 선택하면 sidebar 닫힘
+                closeCompactOverlay(); // ✅ 컴팩트에서 대화 선택하면 sidebar 닫힘
               }}
             >
               <MessageSquare className={active ? s.iconSmAccent : s.iconSmMuted} />
               <span className={s.chatText}>{r.title || '새 대화'}</span>
 
-              {active && !(!isMobile && collapsed) && (
+              {active && !(!isCompact && collapsed) && (
                 <button
                   className={s.deleteBtn}
                   onClick={(e) => {
@@ -204,7 +205,7 @@ export default function Sidebar() {
           onClick={() => {
             setMainView('chat');
             createRoom();
-            closeMobileOverlay(); // ✅ 모바일에서 새 대화 만들면 sidebar 닫힘
+            closeCompactOverlay(); // ✅ 컴팩트에서 새 대화 만들면 sidebar 닫힘
           }}
         >
           <Plus className={s.plus} />
