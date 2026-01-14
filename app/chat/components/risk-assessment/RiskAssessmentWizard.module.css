@@ -1,11 +1,12 @@
-/* components/risk-assessment/RiskAssessmentWizard.module.css */
+/* RiskAssessmentWizard.module.css */
 
+/* ✅ 기본(다크) 테마 변수 */
 .wrap {
-  /* form/date input UI도 테마에 맞게 */
+  /* color-scheme: form/date input UI도 테마에 맞게 */
   color-scheme: dark;
 
-  /* ✅ 다크 기본: 투명 금지(라이트 배경에서 흰 글씨 안 보이는 문제 방지) */
-  --ra-bg: rgba(2, 6, 23, 0.86); /* slate-950 계열 */
+  --ra-bg: transparent;
+
   --ra-text: rgba(255, 255, 255, 0.92);
   --ra-subtext: rgba(255, 255, 255, 0.65);
   --ra-muted: rgba(255, 255, 255, 0.35);
@@ -37,57 +38,22 @@
   flex-direction: column;
   gap: 14px;
 
+  /* ✅ 라이트 배경에서도 읽히게 기본 텍스트 색 지정 */
   color: var(--ra-text);
   background: var(--ra-bg);
-
-  border: 1px solid var(--ra-border-soft);
-  border-radius: 22px;
-
-  /* (선택) 카드 느낌 */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-
-  /* (선택) iOS/Safari에서 깔끔하게 */
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
 }
 
-/* ✅ 로컬 테마 제어: data-theme="light" (global selector 금지) */
-.wrap[data-theme='light'] {
-  color-scheme: light;
-
-  --ra-bg: rgba(255, 255, 255, 0.92);
-
-  --ra-text: rgba(15, 23, 42, 0.92);     /* slate-900 */
-  --ra-subtext: rgba(51, 65, 85, 0.85);  /* slate-700 */
-  --ra-muted: rgba(100, 116, 139, 0.75); /* slate-500 */
-
-  --ra-border: rgba(15, 23, 42, 0.14);
-  --ra-border-soft: rgba(15, 23, 42, 0.10);
-
-  --ra-surface: rgba(15, 23, 42, 0.03);
-  --ra-surface-2: rgba(15, 23, 42, 0.05);
-
-  --ra-input-bg: rgba(255, 255, 255, 0.96);
-
-  --ra-tab-border: rgba(15, 23, 42, 0.14);
-  --ra-tab-bg: rgba(255, 255, 255, 0.9);
-  --ra-tab-text: rgba(15, 23, 42, 0.82);
-
-  --ra-tab-active-border: rgba(37, 99, 235, 0.35);
-  --ra-tab-active-bg: rgba(37, 99, 235, 0.10);
-  --ra-tab-active-text: rgba(29, 78, 216, 0.95); /* blue-700 */
-}
-
-/* ✅ JS/attr 없이도 동작하는 fallback (단, data-theme가 없을 때만) */
+/* ✅ 라이트 테마: prefers-color-scheme */
 @media (prefers-color-scheme: light) {
-  .wrap:not([data-theme]) {
+  .wrap {
     color-scheme: light;
 
-    --ra-bg: rgba(255, 255, 255, 0.92);
+    /* 필요하면 투명 대신 살짝 카드 배경을 줘도 됨 */
+    --ra-bg: transparent;
 
-    --ra-text: rgba(15, 23, 42, 0.92);
-    --ra-subtext: rgba(51, 65, 85, 0.85);
-    --ra-muted: rgba(100, 116, 139, 0.75);
+    --ra-text: rgba(15, 23, 42, 0.92);     /* slate-900 */
+    --ra-subtext: rgba(51, 65, 85, 0.85);  /* slate-700 */
+    --ra-muted: rgba(100, 116, 139, 0.75); /* slate-500 */
 
     --ra-border: rgba(15, 23, 42, 0.14);
     --ra-border-soft: rgba(15, 23, 42, 0.10);
@@ -95,7 +61,7 @@
     --ra-surface: rgba(15, 23, 42, 0.03);
     --ra-surface-2: rgba(15, 23, 42, 0.05);
 
-    --ra-input-bg: rgba(255, 255, 255, 0.96);
+    --ra-input-bg: rgba(255, 255, 255, 0.92);
 
     --ra-tab-border: rgba(15, 23, 42, 0.14);
     --ra-tab-bg: rgba(255, 255, 255, 0.9);
@@ -103,8 +69,38 @@
 
     --ra-tab-active-border: rgba(37, 99, 235, 0.35);
     --ra-tab-active-bg: rgba(37, 99, 235, 0.10);
-    --ra-tab-active-text: rgba(29, 78, 216, 0.95);
+    --ra-tab-active-text: rgba(29, 78, 216, 0.95); /* blue-700 */
   }
+}
+
+/* ✅ 라이트 테마: 앱에서 data-theme/class로 제어한다면 이것도 같이 먹게 */
+:global(html[data-theme='light']) .wrap,
+:global(body[data-theme='light']) .wrap,
+:global(html.light) .wrap,
+:global(body.light) .wrap {
+  color-scheme: light;
+
+  --ra-bg: transparent;
+
+  --ra-text: rgba(15, 23, 42, 0.92);
+  --ra-subtext: rgba(51, 65, 85, 0.85);
+  --ra-muted: rgba(100, 116, 139, 0.75);
+
+  --ra-border: rgba(15, 23, 42, 0.14);
+  --ra-border-soft: rgba(15, 23, 42, 0.10);
+
+  --ra-surface: rgba(15, 23, 42, 0.03);
+  --ra-surface-2: rgba(15, 23, 42, 0.05);
+
+  --ra-input-bg: rgba(255, 255, 255, 0.92);
+
+  --ra-tab-border: rgba(15, 23, 42, 0.14);
+  --ra-tab-bg: rgba(255, 255, 255, 0.9);
+  --ra-tab-text: rgba(15, 23, 42, 0.82);
+
+  --ra-tab-active-border: rgba(37, 99, 235, 0.35);
+  --ra-tab-active-bg: rgba(37, 99, 235, 0.10);
+  --ra-tab-active-text: rgba(29, 78, 216, 0.95);
 }
 
 .header {
@@ -135,23 +131,14 @@
   border-radius: 12px;
   border: 1px solid var(--ra-border);
   background: var(--ra-surface-2);
-
-  /* ✅ 기존 black 제거: 다크에서 안 보임 */
-  color: var(--ra-text);
-
+  color: black;
   cursor: pointer;
   font-size: 20px;
   line-height: 0;
-  padding: 10px 12px;
 }
 
 .closeBtn:hover {
   filter: brightness(1.05);
-}
-
-.closeBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .tabs {
@@ -172,11 +159,6 @@
 
 .tab:hover {
   filter: brightness(1.03);
-}
-
-.tab:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .tabActive {
@@ -227,12 +209,6 @@
 
 .metaInput::placeholder {
   color: var(--ra-muted);
-}
-
-/* ✅ iOS에서 date 아이콘 대비(다크에서만 invert) */
-.wrap[data-theme='dark'] .metaDate::-webkit-calendar-picker-indicator,
-.wrap:not([data-theme]) .metaDate::-webkit-calendar-picker-indicator {
-  filter: invert(1);
 }
 
 /* ✅ 포커스 가시성 */
