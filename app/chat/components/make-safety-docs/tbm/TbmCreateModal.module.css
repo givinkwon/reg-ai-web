@@ -194,7 +194,8 @@
   font-size: 13px;
   outline: none;
 
-  border: 1px solid var(--border);
+  -webkit-appearance: none;
+  appearance: none;
   background: var(--input-bg);
   color: var(--input-text);
 }
@@ -331,4 +332,16 @@
 .primaryBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.tagBox {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.chip {
+  background: var(--pill-bg);
+  border: 1px solid var(--border-soft);
+  color: var(--btn-text);
 }
