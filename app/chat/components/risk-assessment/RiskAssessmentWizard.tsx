@@ -58,19 +58,12 @@ export type RiskAssessmentDraft = {
 type StepId = 'tasks' | 'processes' | 'hazards' | 'controls';
 
 type Props = {
-  /**
-   * ✅ (추가) 월점검표와 동일하게, open=false여도 alertOpen이면 Alert는 떠야 해서 optional로 지원
-   * - 기존 호출부는 open을 안 넘겨도 됨(=true로 처리)
-   */
+  /** ✅ 부모에서 open으로 표시/숨김만 제어 (언마운트 방지) */
   open?: boolean;
 
+  /** ✅ “문서 생성 상태(=selectedTask null)”로 복귀시키는 용도 */
   onClose?: () => void;
 
-  /**
-   * ✅ 기존 호출부 유지
-   * - 서버 생성 로직은 onSubmit 내부에서 수행
-   * - UI는 Progress 제거 + “요청 접수 Alert” 패턴
-   */
   onSubmit: (
     draft: RiskAssessmentDraft,
     opts?: { signal?: AbortSignal; userEmail?: string },
@@ -106,10 +99,10 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
   const [draft, setDraft] = useState<RiskAssessmentDraft>(INITIAL_DRAFT);
   const [minor, setMinor] = useState<string>('');
 
-  // ✅ “요청 전송 중” 중복 클릭 방지용 (Progress UI 없음)
+  // ✅ “요청 전송 중” 중복 클릭 방지용
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ Cancel UI는 없지만, 기존 onSubmit이 signal을 받을 수 있으니 유지(자동 abort는 안 함)
+  // ✅ Cancel UI는 없지만, signal 전달 호환성은 유지
   const abortRef = useRef<AbortController | null>(null);
 
   // ✅ AlertModal 상태 (TBM/월점검표 동일 패턴)
@@ -159,7 +152,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     } catch {}
   }, []);
 
-  // ✅ Escape 닫기 (요청 중엔 방지)
+  // ✅ Escape 닫기(요청 중엔 방지)
   useEffect(() => {
     if (!onClose) return;
 
@@ -173,7 +166,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose, submitting]);
 
-  // ✅ body scroll lock (열림/Alert 떠있으면)
+  // ✅ body scroll lock: open 또는 alertOpen이면 잠금
   useEffect(() => {
     if (!open && !alertOpen) return;
     const prev = document.body.style.overflow;
@@ -212,7 +205,8 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
    * ✅ 요구사항:
    * - Progress 없음
    * - 생성 버튼 누르면 즉시 “요청 접수” Alert
-   * - 서버 요청은 계속 진행(사용자는 Alert 확인 후 닫아도 됨)
+   * - 위험성평가는 팝업이 아니므로, 버튼 누른 즉시 “문서 생성 상태”로 복귀(onClose 호출)
+   * - 서버 요청은 계속 진행
    */
   const handleSubmit = async () => {
     if (submitting) return;
@@ -227,7 +221,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
       return;
     }
 
-    // ✅ 1) 요청 접수 Alert을 즉시 띄움
+    // ✅ 1) 요청 접수 Alert 즉시
     openAlert({
       title: '위험성 평가 생성 요청',
       lines: [
@@ -237,17 +231,21 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
       confirmText: '확인',
     });
 
-    // ✅ 2) UI가 Alert을 먼저 그릴 수 있도록 한 프레임 양보
+    // ✅ 2) Alert가 먼저 그려지도록 프레임 양보 + 버튼 잠금
     setSubmitting(true);
     await nextFrame();
 
-    // ✅ 3) 서버 요청 진행 (취소 UI 없으므로 자동 abort 없음)
+    // ✅ 3) “문서 생성 상태”로 즉시 복귀 (부모: setSelectedTask(null))
+    // - 단, 부모는 Wizard를 언마운트하지 말고 open으로 숨겨야 Alert가 유지됩니다.
+    onClose?.();
+
+    // ✅ 4) 서버 요청 계속 진행
     const ac = new AbortController();
     abortRef.current = ac;
 
     try {
       await onSubmit(draft, { signal: ac.signal, userEmail });
-      // ✅ 완료 Alert은 “사용자가 이미 닫았을 수 있음 + 서버에서 알림/파일함 안내” 패턴이면 불필요한 경우가 많아 기본으로는 안 띄움
+      // 완료 Alert는 선택사항: 현재 패턴(요청 접수 안내 + 파일함/메일 안내) 기준으로 기본 미노출
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
 
@@ -266,16 +264,12 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     }
   };
 
-  /**
-   * ✅ 핵심: open=false여도 alertOpen이면 Alert는 렌더 유지
-   * - 부모에서 Wizard를 “조건부 렌더링”으로 아예 제거하면(=컴포넌트 언마운트) Alert 유지 불가
-   * - 그 케이스까지 보장하려면, 부모에서 open prop으로 제어하는 방식으로 바꾸는 게 정석
-   */
+  // ✅ 핵심: open=false여도 alertOpen이면 Alert는 렌더 유지
   if (!open && !alertOpen) return null;
 
   return (
     <>
-      {/* ✅ 본체는 open일 때만 */}
+      {/* ✅ 본체는 open일 때만 표시 */}
       {open && (
         <div className={s.wrap}>
           <div className={s.header}>
@@ -334,7 +328,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
         </div>
       )}
 
-      {/* ✅ Alert Modal: open이 false여도 alertOpen이면 렌더 */}
+      {/* ✅ Alert Modal: open=false여도 alertOpen이면 유지 */}
       <CenteredAlertModal
         open={alertOpen}
         title={alertTitle}
