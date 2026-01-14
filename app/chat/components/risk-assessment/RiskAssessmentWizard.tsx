@@ -58,7 +58,7 @@ export type RiskAssessmentDraft = {
 type StepId = 'tasks' | 'processes' | 'hazards' | 'controls';
 
 type Props = {
-  /** ✅ 부모에서 open으로 표시/숨김만 제어 (언마운트 방지) */
+  /** ✅ 부모에서 open으로 표시/숨김만 제어 (언마운트 방지 권장) */
   open?: boolean;
 
   /** ✅ “문서 생성 상태(=selectedTask null)”로 복귀시키는 용도 */
@@ -68,11 +68,6 @@ type Props = {
     draft: RiskAssessmentDraft,
     opts?: { signal?: AbortSignal; userEmail?: string },
   ) => void | Promise<void>;
-};
-
-const INITIAL_DRAFT: RiskAssessmentDraft = {
-  meta: { siteName: '', dateISO: '' },
-  tasks: [],
 };
 
 const TAB_LABELS: { id: StepId; label: string; helper: string }[] = [
@@ -94,18 +89,54 @@ function nextFrame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
+type Theme = 'light' | 'dark';
+
+function detectTheme(): Theme {
+  // 1) 앱이 html/body에 data-theme를 주는 케이스 대응
+  const html = document.documentElement;
+  const body = document.body;
+
+  const dtHtml = (html.getAttribute('data-theme') || '').toLowerCase();
+  const dtBody = (body.getAttribute('data-theme') || '').toLowerCase();
+
+  if (dtHtml === 'light' || dtBody === 'light') return 'light';
+  if (dtHtml === 'dark' || dtBody === 'dark') return 'dark';
+
+  // 2) class로 light/dark 주는 케이스 대응
+  const clsHtml = html.classList;
+  const clsBody = body.classList;
+  if (clsHtml.contains('light') || clsBody.contains('light')) return 'light';
+  if (clsHtml.contains('dark') || clsBody.contains('dark')) return 'dark';
+
+  // 3) 최종: OS 설정
+  return window.matchMedia?.('(prefers-color-scheme: light)')?.matches ? 'light' : 'dark';
+}
+
+function makeInitialDraft(): RiskAssessmentDraft {
+  return {
+    meta: { siteName: '', dateISO: todayISOClient() },
+    tasks: [],
+  };
+}
+
 export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }: Props) {
   const [step, setStep] = useState<StepId>('tasks');
-  const [draft, setDraft] = useState<RiskAssessmentDraft>(INITIAL_DRAFT);
+  const [draft, setDraft] = useState<RiskAssessmentDraft>(makeInitialDraft());
   const [minor, setMinor] = useState<string>('');
 
-  // ✅ “요청 전송 중” 중복 클릭 방지용
+  // ✅ “요청 전송 중” UI 잠금 (모바일 재신청 이슈 방지 위해 오래 유지하지 않음)
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ Cancel UI는 없지만, signal 전달 호환성은 유지
+  // ✅ 요청 중복 탭 방지 (state flush 타이밍 이슈 대비)
+  const submitLockRef = useRef(false);
+
+  // ✅ Cancel signal 호환
   const abortRef = useRef<AbortController | null>(null);
 
-  // ✅ AlertModal 상태 (TBM/월점검표 동일 패턴)
+  // ✅ theme을 wrap에만 로컬로 반영 (CSS Module에서 data-theme로 처리)
+  const [theme, setTheme] = useState<Theme>('dark');
+
+  // ✅ AlertModal 상태
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTitle, setAlertTitle] = useState('안내');
   const [alertLines, setAlertLines] = useState<string[]>([]);
@@ -140,19 +171,65 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
   // ✅ 로그인 유저(아이디=email)
   const user = useUserStore((st) => st.user);
 
+  // ✅ theme 감지/동기화 (global selector 없이, wrap의 data-theme만 제어)
   useEffect(() => {
-    setDraft((prev) => {
-      if (prev.meta.dateISO) return prev;
-      return { ...prev, meta: { ...prev.meta, dateISO: todayISOClient() } };
-    });
+    const update = () => {
+      try {
+        setTheme(detectTheme());
+      } catch {
+        // ignore
+      }
+    };
 
+    update();
+
+    const mql = window.matchMedia?.('(prefers-color-scheme: light)');
+    const onMqlChange = () => update();
+
+    // safari 호환: addEventListener 없을 수도 있어 분기
+    if (mql?.addEventListener) mql.addEventListener('change', onMqlChange);
+    else if (mql?.addListener) mql.addListener(onMqlChange);
+
+    const mo = new MutationObserver(() => update());
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+
+    return () => {
+      if (mql?.removeEventListener) mql.removeEventListener('change', onMqlChange);
+      else if (mql?.removeListener) mql.removeListener(onMqlChange);
+      mo.disconnect();
+    };
+  }, []);
+
+  // ✅ minor read
+  useEffect(() => {
     try {
       const v = localStorage.getItem('risk_minor_category') || '';
       if (v.trim()) setMinor(v.trim());
     } catch {}
   }, []);
 
-  // ✅ Escape 닫기(요청 중엔 방지)
+  // ✅ open이 다시 true가 되는 순간(재오픈)에 상태 리셋 (모바일 “재신청 버튼 비활성” 방지)
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    const wasOpen = prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    if (open && !wasOpen) {
+      // 새 세션 시작
+      submitLockRef.current = false;
+      setSubmitting(false);
+      setStep('tasks');
+      setDraft(makeInitialDraft());
+
+      // 혹시 남아있을 수 있는 alert 정리(원하면 유지해도 됨)
+      setAlertOpen(false);
+      alertOnConfirmRef.current = null;
+      alertOnCloseRef.current = null;
+    }
+  }, [open]);
+
+  // ✅ Escape 닫기(요청중엔 방지)
   useEffect(() => {
     if (!onClose) return;
 
@@ -175,6 +252,15 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
       document.body.style.overflow = prev;
     };
   }, [open, alertOpen]);
+
+  // ✅ unmount 시 진행 중 요청 abort
+  useEffect(() => {
+    return () => {
+      try {
+        abortRef.current?.abort();
+      } catch {}
+    };
+  }, []);
 
   const canGoNext = useMemo(() => {
     if (step === 'tasks') return draft.tasks.length > 0;
@@ -205,11 +291,12 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
    * ✅ 요구사항:
    * - Progress 없음
    * - 생성 버튼 누르면 즉시 “요청 접수” Alert
-   * - 위험성평가는 팝업이 아니므로, 버튼 누른 즉시 “문서 생성 상태”로 복귀(onClose 호출)
-   * - 서버 요청은 계속 진행
+   * - 버튼 클릭 후 UI는 즉시 풀려서(모바일 포함) 다시 신청 가능해야 함
+   * - 서버 요청은 계속 진행 (await로 UI를 묶지 않음)
    */
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
 
     const userEmail = (user?.email || '').trim();
     if (!userEmail) {
@@ -218,10 +305,14 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
         lines: ['위험성 평가 보고서를 생성하려면 로그인이 필요합니다.', '로그인 후 다시 시도해주세요.'],
         confirmText: '확인',
       });
+      submitLockRef.current = false;
       return;
     }
 
-    // ✅ 1) 요청 접수 Alert 즉시
+    // UI 잠금은 "알림이 뜨는 1프레임" 정도만 사용
+    setSubmitting(true);
+
+    // 1) 요청 접수 Alert 즉시
     openAlert({
       title: '위험성 평가 생성 요청',
       lines: [
@@ -231,47 +322,48 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
       confirmText: '확인',
     });
 
-    // ✅ 2) Alert가 먼저 그려지도록 프레임 양보 + 버튼 잠금
-    setSubmitting(true);
+    // 2) Alert가 먼저 그려지도록 프레임 양보
     await nextFrame();
 
-    // ✅ 3) “문서 생성 상태”로 즉시 복귀 (부모: setSelectedTask(null))
-    // - 단, 부모는 Wizard를 언마운트하지 말고 open으로 숨겨야 Alert가 유지됩니다.
+    // 3) “문서 생성 상태”로 즉시 복귀
     onClose?.();
 
-    // ✅ 4) 서버 요청 계속 진행
+    // 4) 서버 요청은 백그라운드로 계속 진행 (UI를 await로 묶지 않음)
     const ac = new AbortController();
     abortRef.current = ac;
 
-    try {
-      await onSubmit(draft, { signal: ac.signal, userEmail });
-      // 완료 Alert는 선택사항: 현재 패턴(요청 접수 안내 + 파일함/메일 안내) 기준으로 기본 미노출
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return;
+    const snapshotDraft = draft; // 제출 시점의 draft 고정
 
-      console.error(e);
-      openAlert({
-        title: '생성 실패',
-        lines: [
-          '보고서 생성에 실패했습니다.',
-          e?.message ? String(e.message).slice(0, 180) : '잠시 후 다시 시도해주세요.',
-        ],
-        confirmText: '확인',
+    Promise.resolve(onSubmit(snapshotDraft, { signal: ac.signal, userEmail }))
+      .catch((e: any) => {
+        if (e?.name === 'AbortError') return;
+        console.error(e);
+        openAlert({
+          title: '생성 실패',
+          lines: [
+            '보고서 생성 요청 처리 중 오류가 발생했습니다.',
+            e?.message ? String(e.message).slice(0, 180) : '잠시 후 다시 시도해주세요.',
+          ],
+          confirmText: '확인',
+        });
+      })
+      .finally(() => {
+        if (abortRef.current === ac) abortRef.current = null;
       });
-    } finally {
-      abortRef.current = null;
-      setSubmitting(false);
-    }
+
+    // ✅ 핵심: 여기서 바로 UI 잠금 해제 → 모바일 재신청 가능
+    setSubmitting(false);
+    submitLockRef.current = false;
   };
 
-  // ✅ 핵심: open=false여도 alertOpen이면 Alert는 렌더 유지
+  // ✅ open=false여도 alertOpen이면 Alert는 렌더 유지
   if (!open && !alertOpen) return null;
 
   return (
     <>
       {/* ✅ 본체는 open일 때만 표시 */}
       {open && (
-        <div className={s.wrap}>
+        <div className={s.wrap} data-theme={theme}>
           <div className={s.header}>
             <div className={s.headerText}>
               <div className={s.title}>REG AI가 위험성 평가를 도와드려요.</div>
@@ -279,7 +371,13 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
             </div>
 
             {onClose ? (
-              <button className={s.closeBtn} onClick={closeOnly} aria-label="닫기" disabled={submitting}>
+              <button
+                type="button"
+                className={s.closeBtn}
+                onClick={closeOnly}
+                aria-label="닫기"
+                disabled={submitting}
+              >
                 ×
               </button>
             ) : null}
@@ -303,16 +401,21 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
 
           <div className={s.footer}>
             <div className={s.navRow}>
-              <button className={s.navBtn} onClick={goPrev} disabled={step === 'tasks' || submitting}>
+              <button type="button" className={s.navBtn} onClick={goPrev} disabled={step === 'tasks' || submitting}>
                 이전
               </button>
 
               {step !== 'controls' ? (
-                <button className={s.navBtnPrimary} onClick={goNext} disabled={!canGoNext || submitting}>
+                <button
+                  type="button"
+                  className={s.navBtnPrimary}
+                  onClick={goNext}
+                  disabled={!canGoNext || submitting}
+                >
                   다음
                 </button>
               ) : (
-                <button className={s.navBtnPrimary} onClick={handleSubmit} disabled={submitting}>
+                <button type="button" className={s.navBtnPrimary} onClick={handleSubmit} disabled={submitting}>
                   {submitting ? '요청 중…' : '위험성 평가 보고서 생성'}
                 </button>
               )}
