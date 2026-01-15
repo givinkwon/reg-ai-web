@@ -1,7 +1,103 @@
+/* MonthlyInspectionCreateModal.module.css */
+/* ✅ :global 없이, prefers-color-scheme 기반 라이트/다크 자동 대응
+   ✅ 레이아웃/형태 유지 + 색상만 토큰화 */
+
+.overlay {
+  /* Theme tokens (기본=라이트) */
+  color-scheme: light;
+
+  --ov-bg: rgba(0, 0, 0, 0.52);
+
+  --modal-bg: #ffffff;
+  --topbar-bg: #ffffff;
+  --card-bg: transparent; /* card는 스크롤 컨테이너이므로 배경은 필요 시만 */
+
+  --text: rgba(0, 0, 0, 0.85);
+  --subtext: rgba(0, 0, 0, 0.58);
+  --label: rgba(0, 0, 0, 0.70);
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-soft: rgba(0, 0, 0, 0.06);
+
+  --pill-text: #0b62ff;
+  --pill-bg: rgba(11, 98, 255, 0.10);
+  --pill-border: rgba(11, 98, 255, 0.20);
+  --sub-accent: rgba(11, 98, 255, 0.75);
+
+  --icon: rgba(0, 0, 0, 0.6);
+  --icon-hover-bg: rgba(0, 0, 0, 0.05);
+
+  --primary-bg: #0b62ff;
+  --primary-text: #ffffff;
+
+  --danger: #ff6b6b;
+
+  --scroll-thumb: rgba(0, 0, 0, 0.12);
+
+  /* ✅ Tag / Input 공통 (흰색 고정 문제 방지용) */
+  --field-bg: rgba(255, 255, 255, 0.98);
+  --field-border: rgba(0, 0, 0, 0.10);
+  --field-text: rgba(0, 0, 0, 0.85);
+  --placeholder: rgba(0, 0, 0, 0.38);
+
+  --chip-bg: rgba(11, 98, 255, 0.10);
+  --chip-border: rgba(11, 98, 255, 0.18);
+  --chip-text: rgba(0, 0, 0, 0.78);
+  --chip-x: rgba(0, 0, 0, 0.55);
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .overlay {
+    color-scheme: dark;
+
+    --ov-bg: rgba(0, 0, 0, 0.68);
+
+    --modal-bg: rgba(15, 23, 42, 0.96); /* slate-900 */
+    --topbar-bg: rgba(15, 23, 42, 0.96);
+
+    --text: rgba(255, 255, 255, 0.92);
+    --subtext: rgba(255, 255, 255, 0.64);
+    --label: rgba(255, 255, 255, 0.74);
+
+    --border: rgba(255, 255, 255, 0.14);
+    --border-soft: rgba(255, 255, 255, 0.10);
+
+    --pill-text: rgba(147, 197, 253, 0.95);
+    --pill-bg: rgba(37, 99, 235, 0.22);
+    --pill-border: rgba(37, 99, 235, 0.30);
+    --sub-accent: rgba(147, 197, 253, 0.85);
+
+    --icon: rgba(255, 255, 255, 0.70);
+    --icon-hover-bg: rgba(255, 255, 255, 0.08);
+
+    --primary-bg: #2563eb;
+    --primary-text: #ffffff;
+
+    --scroll-thumb: rgba(255, 255, 255, 0.14);
+
+    /* ✅ Tag / Input 다크 */
+    --field-bg: rgba(0, 0, 0, 0.28);
+    --field-border: rgba(255, 255, 255, 0.14);
+    --field-text: rgba(255, 255, 255, 0.92);
+    --placeholder: rgba(255, 255, 255, 0.45);
+
+    --chip-bg: rgba(255, 255, 255, 0.10);
+    --chip-border: rgba(255, 255, 255, 0.14);
+    --chip-text: rgba(255, 255, 255, 0.90);
+    --chip-x: rgba(255, 255, 255, 0.72);
+  }
+}
+
+/* =========================
+   Overlay / Modal Layout (원형 유지)
+========================= */
+
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.52);
+  background: var(--ov-bg);
   display: grid;
   place-items: center;
   padding: 18px;
@@ -15,14 +111,17 @@
   /* ✅ 화면보다 길어지면 내부 스크롤 */
   max-height: calc(100vh - 36px);
 
-  background: #fff;
+  background: var(--modal-bg);
   border-radius: 16px;
-  box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
   overflow: hidden;
 
   /* ✅ 상단바 고정 + 본문 스크롤을 위해 */
   display: flex;
   flex-direction: column;
+
+  border: 1px solid var(--border-soft);
+  color: var(--text);
 }
 
 .topBar {
@@ -31,16 +130,16 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  background: #fff;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--topbar-bg);
 }
 
 .pill {
   font-size: 12px;
   font-weight: 900;
-  color: #0b62ff;
-  background: rgba(11, 98, 255, 0.10);
-  border: 1px solid rgba(11, 98, 255, 0.20);
+  color: var(--pill-text);
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-border);
   padding: 6px 10px;
   border-radius: 999px;
 }
@@ -51,46 +150,63 @@
   cursor: pointer;
   padding: 6px;
   border-radius: 10px;
-  color: rgba(0,0,0,0.6);
+  color: var(--icon);
 }
-.iconBtn:hover { background: rgba(0,0,0,0.05); }
+
+.iconBtn:hover {
+  background: var(--icon-hover-bg);
+}
 
 /* ✅ card를 스크롤 컨테이너로 */
 .card {
   flex: 1 1 auto;
-  min-height: 0;         /* 중요: overflow가 제대로 먹게 */
+  min-height: 0; /* 중요: overflow가 제대로 먹게 */
   overflow: auto;
 
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  color: var(--text);
+  background: var(--card-bg);
 }
 
 /* (선택) 스크롤바 미세 스타일 */
-.card::-webkit-scrollbar { width: 10px; }
-.card::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 999px; }
-.card::-webkit-scrollbar-track { background: transparent; }
+.card::-webkit-scrollbar {
+  width: 10px;
+}
+.card::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 999px;
+}
+.card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =========================
+   Header / Text
+========================= */
 
 .header {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  border-bottom: 1px solid var(--border);
 }
 
 .title {
   margin: 0;
   font-size: 15px;
   font-weight: 900;
-  color: rgba(0,0,0,0.85);
+  color: var(--text);
 }
 
 .desc {
   margin: 0;
   font-size: 12px;
-  color: rgba(0,0,0,0.58);
+  color: var(--subtext);
   line-height: 1.35;
 }
 
@@ -98,14 +214,18 @@
   display: inline-block;
   margin-top: 4px;
   font-weight: 800;
-  color: rgba(11, 98, 255, 0.75);
+  color: var(--sub-accent);
 }
 
 .label {
   font-size: 12px;
-  color: rgba(0,0,0,0.70);
+  color: var(--label);
   font-weight: 800;
 }
+
+/* =========================
+   Primary Button
+========================= */
 
 .primaryBtn {
   margin-top: 6px;
@@ -113,8 +233,8 @@
   border-radius: 14px;
   border: 0;
   cursor: pointer;
-  background: #0b62ff;
-  color: #fff;
+  background: var(--primary-bg);
+  color: var(--primary-text);
   font-weight: 900;
   font-size: 13px;
   display: inline-flex;
@@ -128,11 +248,92 @@
   cursor: not-allowed;
 }
 
-.spin { animation: spin 0.9s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .errorText {
   margin-top: 10px;
   font-size: 12px;
-  color: #ff6b6b;
+  color: var(--danger);
+}
+
+/* =========================
+   ✅ Tag / Input (흰색 고정 방지용)
+   - 월순회 점검표의 "세부 작업 검색" 태그/입력 박스가
+     다크에서 흰색으로 남을 때 이 블록이 해결합니다.
+   - 아래 클래스명은 프로젝트에서 쓰는 이름에 맞춰 연결하세요.
+========================= */
+
+/* 태그/입력 전체 박스 (예: tagWrap / searchBox 등) */
+.tagWrap,
+.searchBox,
+.inputBox {
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 16px;
+  color: var(--field-text);
+}
+
+/* 실제 입력 */
+.searchInput,
+.input,
+.textarea {
+  width: 100%;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--field-text);
+  outline: none;
+}
+
+.searchInput::placeholder,
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--placeholder);
+}
+
+.searchInput:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible,
+.primaryBtn:focus-visible,
+.iconBtn:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
+/* 태그 pill */
+.chip,
+.tag,
+.pillChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--chip-text);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* 태그 X */
+.chipX,
+.tagX,
+.pillChip button {
+  color: var(--chip-x);
+}
+
+/* 모바일에서 너무 꽉 차면 */
+@media (max-width: 520px) {
+  .modal {
+    width: 100%;
+  }
 }
