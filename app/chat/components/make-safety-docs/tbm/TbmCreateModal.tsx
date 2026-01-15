@@ -85,6 +85,37 @@ function nextFrame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
+/** ✅ fetch 타임아웃(모바일에서 다운로드/응답 대기 스톨 방지) */
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), timeoutMs);
+
+  try {
+    // 외부 signal이 있으면 함께 abort 되도록 연결
+    const ext = init.signal;
+    if (ext) {
+      if (ext.aborted) ac.abort();
+      else ext.addEventListener('abort', () => ac.abort(), { once: true });
+    }
+
+    return await fetch(input, { ...init, signal: ac.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** ✅ 모바일/태블릿(터치)에서는 blob 다운로드를 생략하기 위한 감지 */
+function detectCoarsePointer() {
+  try {
+    const mq = window.matchMedia?.('(pointer: coarse)');
+    const coarse = !!mq?.matches;
+    const touch = (navigator as any)?.maxTouchPoints > 0;
+    return coarse || touch;
+  } catch {
+    return false;
+  }
+}
+
 export default function TbmCreateModal({
   open,
   onClose,
@@ -107,8 +138,25 @@ export default function TbmCreateModal({
       : [{ name: '', contact: '' }],
   );
 
-  // ✅ 제출 중복 방지용(Progress UI는 제거)
+  // ✅ 제출 중복 방지용
   const [submitting, setSubmitting] = useState(false);
+
+  // ✅ 모바일/태블릿 터치 환경 감지: blob 다운로드 생략에 사용
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const mq = window.matchMedia?.('(pointer: coarse)');
+    const sync = () => setIsCoarsePointer(detectCoarsePointer());
+    sync();
+    mq?.addEventListener?.('change', sync);
+    return () => mq?.removeEventListener?.('change', sync);
+  }, [open]);
+
+  // ✅ 모달 재오픈 시 submitting이 남아있는 상태를 방지(모바일에서 특히 중요)
+  useEffect(() => {
+    if (!open) return;
+    setSubmitting(false);
+  }, [open]);
 
   const [accountCompanyName, setAccountCompanyName] = useState<string | null>(
     norm(companyNameProp) ? norm(companyNameProp) : null,
@@ -172,12 +220,16 @@ export default function TbmCreateModal({
 
   const fetchCompanyByEmail = async (email: string, signal?: AbortSignal): Promise<string | null> => {
     try {
-      const res = await fetch('/api/accounts/find-by-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-        signal,
-      });
+      const res = await fetchWithTimeout(
+        '/api/accounts/find-by-email',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+          signal,
+        },
+        12_000,
+      );
       if (!res.ok) return null;
 
       const data = await res.json().catch(() => null);
@@ -310,10 +362,17 @@ export default function TbmCreateModal({
     return filename;
   };
 
+  /** ✅ 닫기는 submitting이어도 막지 않음(모바일 스톨 시 탈출 경로) */
+  const requestClose = () => {
+    onClose();
+    // 다음 오픈 때 버튼/입력이 막히지 않게 즉시 풀어줌
+    setSubmitting(false);
+  };
+
   const handleSubmit = async () => {
     if (submitting) return;
 
-    // ✅ 로그인 체크(기존 Alert 유지)
+    // ✅ 로그인 체크
     if (!user?.email) {
       openAlert({
         title: '로그인이 필요합니다',
@@ -342,22 +401,25 @@ export default function TbmCreateModal({
       minorCategory: norm(minorCategory) || 'ALL',
     };
 
-    // ✅ 핵심: "생성 버튼 누르는 즉시" Alert 띄우기 (완료 때가 아님)
+    // ✅ 즉시 안내(Alert)
     openAlert({
       title: 'TBM 일지 생성',
-      lines: ['근로자들에게 서명 요청을 발송했습니다.', '문서 제작이 완료되면 이메일로', '작성된 서류는 문서함에서 확인하실 수 있습니다.'],
+      lines: [
+        '근로자들에게 서명 요청을 발송했습니다.',
+        '문서 제작이 완료되면 이메일로 안내됩니다.',
+        '작성된 서류는 문서함에서 확인하실 수 있습니다.',
+        // ✅ 모바일에서는 자동 다운로드를 생략하므로 혼선 방지
+        ...(isCoarsePointer ? ['(모바일에서는 자동 다운로드가 제한될 수 있어 문서함/이메일로 확인해주세요.)'] : []),
+      ],
       confirmText: '확인',
       onConfirm: () => closeAlert(),
     });
 
-    // UI 반영 한 프레임 양보(체감상 “바로 뜨게”)
     setSubmitting(true);
     await nextFrame();
 
-    let downloadedFilename: string | null = null;
-
     try {
-      // ✅ 부모에 "생성 요청" 알려야 하면 유지 (작동 동일)
+      // ✅ 부모 훅(있으면 유지)
       await Promise.resolve(onSubmit?.(payloadForParent));
 
       let company =
@@ -382,14 +444,21 @@ export default function TbmCreateModal({
         attendees: cleanedAttendees,
       };
 
-      const res = await fetch('/api/risk-assessment?endpoint=tbm-export-excel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-email': user.email,
+      // ✅ 모바일 스톨 방지: export 요청에 타임아웃 부여
+      const exportTimeout = isCoarsePointer ? 25_000 : 90_000;
+
+      const res = await fetchWithTimeout(
+        '/api/risk-assessment?endpoint=tbm-export-excel',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-email': user.email,
+          },
+          body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-      });
+        exportTimeout,
+      );
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
@@ -405,17 +474,27 @@ export default function TbmCreateModal({
         return;
       }
 
-      downloadedFilename = await downloadBlob(res);
+      // ✅ 핵심 수정:
+      // - 모바일/태블릿(터치)에서는 blob 다운로드를 기다리지 않음(여기서 스톨 → submitting 고정이 자주 발생)
+      if (!isCoarsePointer) {
+        await downloadBlob(res);
+      } else {
+        try {
+          res.body?.cancel?.(); // body 소비를 끊어서 빠르게 종료
+        } catch {}
+      }
 
-      // ✅ (선택) 이미 떠 있는 Alert 내용을 "다운로드 시작"으로 업데이트
-      // 원치 않으면 아래 openAlert 블록을 삭제해도 됩니다.
+      // ✅ 성공 시 모달 닫기
+      requestClose();
+    } catch (e: any) {
+      const msg =
+        e?.name === 'AbortError'
+          ? '요청 시간이 초과되었습니다. 문서함/이메일을 확인하거나 다시 시도해주세요.'
+          : 'TBM 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
 
-      // ✅ 기존 동작처럼 완료 시 TBM 모달 닫기
-      onClose();
-    } catch {
       openAlert({
         title: '오류',
-        lines: ['TBM 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
+        lines: [msg],
         confirmText: '확인',
         onConfirm: () => closeAlert(),
       });
@@ -434,8 +513,7 @@ export default function TbmCreateModal({
           aria-label="TBM 활동일지"
           onMouseDown={(e) => {
             if (e.target !== e.currentTarget) return;
-            if (submitting) return;
-            onClose();
+            requestClose();
           }}
         >
           <div className={s.modal}>
@@ -444,12 +522,9 @@ export default function TbmCreateModal({
               <button
                 type="button"
                 className={s.iconBtn}
-                onClick={() => {
-                  if (submitting) return;
-                  onClose();
-                }}
+                onClick={requestClose}
                 aria-label="닫기"
-                disabled={submitting}
+                disabled={false}
               >
                 <X size={18} />
               </button>
@@ -468,7 +543,12 @@ export default function TbmCreateModal({
 
               <div className={s.sectionRow}>
                 <span className={s.sectionTitle}>참석자 명단</span>
-                <button type="button" className={s.addBtn} onClick={addAttendee} disabled={submitting}>
+                <button
+                  type="button"
+                  className={s.addBtn}
+                  onClick={addAttendee}
+                  disabled={submitting}
+                >
                   <Plus size={16} />
                   새로운 작업자 추가
                 </button>
@@ -513,7 +593,7 @@ export default function TbmCreateModal({
 
               <button type="button" className={s.primaryBtn} disabled={!canSubmit} onClick={handleSubmit}>
                 <FileText size={18} />
-                TBM 활동일지 생성하기
+                {submitting ? '요청 중…' : 'TBM 활동일지 생성하기'}
               </button>
 
               {accountLoading && (
@@ -526,7 +606,6 @@ export default function TbmCreateModal({
         </div>
       )}
 
-      {/* ✅ Alert Modal */}
       <CenteredAlertModal
         open={alertOpen}
         title={alertTitle}
