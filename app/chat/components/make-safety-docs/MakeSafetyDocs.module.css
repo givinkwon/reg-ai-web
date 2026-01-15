@@ -1419,6 +1419,9 @@ body[data-theme='dark'] .safety-doc-download-badge {
   .docWrap {
     width: 100%;
   }
+  .docCategoryList {
+    width: 100%;
+  }
   .quickGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1429,6 +1432,9 @@ body[data-theme='dark'] .safety-doc-download-badge {
    ========================================================= */
 @media (max-width: 768px) {
   .docWrap {
+    width: 100%;
+  }
+  .docCategoryList {
     width: 100%;
   }
   .wrap {
