@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import s from './page.module.css';
 
 type TbmSignData = {
@@ -13,23 +12,34 @@ type TbmSignData = {
   hazardSummary: string;
   complianceSummary: string;
   attendeeName?: string;
-
   alreadySigned?: boolean;
   expiresAt?: string;
 };
 
-const DEV_UI = true; // 운영에서는 env로 끄는 것 권장
+const DEV_UI = true;
 const DEV_PASSPHRASE = 'dev-open';
 
-function safeShort(str: string, n = 260) {
-  const t = (str || '').replace(/\s+/g, ' ').trim();
+function safeShort(s: string, n = 280) {
+  const t = (s || '').replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-function readTokenFromLocation() {
+function readTokenFromLocation(): string {
   if (typeof window === 'undefined') return '';
   const sp = new URLSearchParams(window.location.search);
   return (sp.get('token') || '').trim();
+}
+
+function setTokenToUrl(token: string) {
+  if (typeof window === 'undefined') return;
+  const t = token.trim();
+  const url = t ? `/sign?token=${encodeURIComponent(t)}` : '/sign';
+  window.history.replaceState(null, '', url);
+}
+
+function scheduleMicrotask(fn: () => void) {
+  if (typeof queueMicrotask === 'function') queueMicrotask(fn);
+  else Promise.resolve().then(fn);
 }
 
 /** 간단 서명패드 */
@@ -152,7 +162,8 @@ function SignaturePad({
       if (disabled) return;
       drawingRef.current = false;
       lastRef.current = null;
-      onChangeDataUrl?.(exportDataUrl());
+      const url = exportDataUrl();
+      onChangeDataUrl?.(url);
     };
 
     c.addEventListener('pointerdown', onDown);
@@ -190,15 +201,7 @@ function SignaturePad({
   );
 }
 
-function SignView({
-  data,
-  token,
-  isMock,
-}: {
-  data: TbmSignData;
-  token?: string;
-  isMock?: boolean;
-}) {
+function SignView({ data, token, isMock }: { data: TbmSignData; token: string; isMock?: boolean }) {
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
@@ -210,9 +213,18 @@ function SignView({
     setSubmitMsg(null);
     setDetailErr(null);
 
-    if (locked) return setSubmitMsg('이미 서명 완료된 건입니다.');
-    if (!sigUrl) return setSubmitMsg('서명을 먼저 입력해 주세요.');
-    if (isMock) return setSubmitMsg('✅ (MOCK) 서명 제출 성공처럼 처리했습니다. (실제 저장은 안 함)');
+    if (locked) {
+      setSubmitMsg('이미 서명 완료된 건입니다.');
+      return;
+    }
+    if (!sigUrl) {
+      setSubmitMsg('서명을 먼저 입력해 주세요.');
+      return;
+    }
+    if (isMock) {
+      setSubmitMsg('✅ (MOCK) 서명 제출 성공처럼 처리했습니다. (실제 저장은 안 함)');
+      return;
+    }
 
     setSubmitLoading(true);
     try {
@@ -231,11 +243,11 @@ function SignView({
       if (!res.ok) {
         try {
           const j = JSON.parse(raw) as any;
-          const msg = j?.detail ? safeShort(String(j.detail), 240) : safeShort(raw, 240);
+          const msg = j?.detail ? safeShort(String(j.detail), 260) : safeShort(raw, 260);
           setSubmitMsg(`❌ 제출 실패: ${msg}`);
           setDetailErr(String(j?.detail || raw));
         } catch {
-          setSubmitMsg(`❌ 제출 실패: ${safeShort(raw, 240)}`);
+          setSubmitMsg(`❌ 제출 실패: ${safeShort(raw, 260)}`);
           setDetailErr(raw);
         }
         return;
@@ -273,24 +285,10 @@ function SignView({
               </>
             ) : null}
 
-            {data.expiresAt ? (
-              <>
-                <span className={s.dot} />
-                <span className={s.mono}>expires: {data.expiresAt}</span>
-              </>
-            ) : null}
-
             {token ? (
               <>
                 <span className={s.dot} />
                 <span className={s.mono}>token: {token}</span>
-              </>
-            ) : null}
-
-            {isMock ? (
-              <>
-                <span className={s.dot} />
-                <span className={s.badge2}>MOCK</span>
               </>
             ) : null}
           </div>
@@ -348,28 +346,57 @@ function SignView({
 }
 
 export default function SignPage() {
-  const router = useRouter();
-
-  // ✅ token을 useSearchParams 대신 location에서 읽는다 (Suspense 이슈 제거)
   const [token, setToken] = useState('');
+  const [manualToken, setManualToken] = useState('');
+
   const [pass, setPass] = useState('');
   const [unlocked, setUnlocked] = useState(false);
-
-  const [manualToken, setManualToken] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [errDetail, setErrDetail] = useState<string | null>(null);
   const [data, setData] = useState<TbmSignData | null>(null);
 
+  // 최초 token 로드 + URL 변화 감지(popstate + history 후킹)
   useEffect(() => {
-    // 최초 진입
-    setToken(readTokenFromLocation());
+    const sync = () => setToken(readTokenFromLocation());
 
-    // 뒤로가기/앞으로가기 대응
-    const onPop = () => setToken(readTokenFromLocation());
+    sync();
+
+    const onPop = () => sync();
+
+    const origPush = history.pushState;
+    const origReplace = history.replaceState;
+
+    const notify = () => {
+      // queueMicrotask가 없는 환경도 대비
+      if (typeof queueMicrotask === 'function') queueMicrotask(sync);
+      else Promise.resolve().then(sync);
+    };
+
+    history.pushState = function (
+      this: History,
+      ...args: Parameters<History['pushState']>
+    ): void {
+      origPush.apply(this, args);
+      notify();
+    };
+
+    history.replaceState = function (
+      this: History,
+      ...args: Parameters<History['replaceState']>
+    ): void {
+      origReplace.apply(this, args);
+      notify();
+    };
+
+
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      history.pushState = origPush;
+      history.replaceState = origReplace;
+    };
   }, []);
 
   const mockData: TbmSignData = useMemo(
@@ -394,6 +421,7 @@ export default function SignPage() {
     return 'NO_ACCESS';
   }, [token, unlocked]);
 
+  // token이 있으면 데이터 로드
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -408,13 +436,14 @@ export default function SignPage() {
         const res = await fetch(`/api/tbm-sign/get?token=${encodeURIComponent(token)}`, {
           cache: 'no-store',
         });
+
         const raw = await res.text();
 
         if (!res.ok) {
+          // 대부분 여기서 HTML이 들어오면: 프록시가 아직 HTML을 받고 있다는 뜻
           try {
             const j = JSON.parse(raw) as any;
-            const msg = j?.detail ? safeShort(String(j.detail), 260) : safeShort(raw, 260);
-            throw new Error(msg);
+            throw new Error(j?.detail ? safeShort(String(j.detail), 260) : safeShort(raw, 260));
           } catch {
             throw new Error(safeShort(raw, 260));
           }
@@ -440,8 +469,8 @@ export default function SignPage() {
   const goWithManualToken = () => {
     const t = manualToken.trim();
     if (!t) return;
-    router.replace(`/sign?token=${encodeURIComponent(t)}`);
-    setToken(t); // ✅ 같은 페이지 내 이동이라 popstate가 안 뜰 수 있어 직접 갱신
+    setTokenToUrl(t);
+    setToken(t);
   };
 
   const unlock = () => {
@@ -472,7 +501,7 @@ export default function SignPage() {
             {errDetail ? (
               <details className={s.details}>
                 <summary>자세히 보기</summary>
-                <pre className={s.pre}>{errDetail.slice(0, 2000)}</pre>
+                <pre className={s.pre}>{errDetail.slice(0, 4000)}</pre>
               </details>
             ) : null}
 
@@ -503,7 +532,7 @@ export default function SignPage() {
   if (viewMode === 'DEV_UNLOCKED') {
     return (
       <main className={s.wrap}>
-        <SignView data={mockData} isMock />
+        <SignView data={mockData} token="DEV-MOCK" isMock />
       </main>
     );
   }
