@@ -996,11 +996,10 @@ body[data-theme='dark'] .hintChip {
   border-color: rgba(37, 99, 235, 0.25);
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
 }
-
 .docCategoryHeader {
   display: flex;
   width: 100%;
-  align-items: center;
+  align-items: flex-start;           /* ✅ 모바일에서 2줄일 때 아이콘이 위로 */
   justify-content: space-between;
   gap: 12px;
   padding: 0;
@@ -1010,22 +1009,19 @@ body[data-theme='dark'] .hintChip {
 }
 
 .docCategoryText {
-  flex: 1;
-  min-width: 0;
-}
-
-.docCategoryTitle {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--accent);
-  margin-bottom: 4px;
+  flex: 1 1 auto;
+  min-width: 0;                      /* ✅ flex 자식 줄어들게 (이미 있음, 유지) */
 }
 
 .docCategoryDesc {
   display: block;
   font-size: 0.8rem;
   color: var(--muted);
+
+  /* ✅ 이 3줄이 “모바일 넘침” 해결 핵심 */
+  white-space: normal;
+  overflow-wrap: anywhere;           /* 긴 단어/URL도 줄바꿈 */
+  word-break: keep-all;              /* 한글 자연스럽게 */
 }
 
 .docCategoryArrow {
@@ -1060,6 +1056,9 @@ body[data-theme='dark'] .hintChip {
   background: var(--surface-2);
   font-size: 0.78rem;
   color: var(--text);
+
+  max-width: 100%;     /* ✅ 칩이 컨테이너 밖으로 못 나가게 */
+  min-width: 0;        /* ✅ 내부 텍스트 ellipsis 가능하게 */
 }
 
 .docChip:hover {
@@ -1074,7 +1073,11 @@ body[data-theme='dark'] .hintChip {
 }
 
 .docChipLabel {
-  white-space: nowrap;
+  white-space: nowrap;        /* 한 줄 유지 */
+  overflow: hidden;           /* ✅ 넘치면 */
+  text-overflow: ellipsis;    /* ✅ ... */
+  min-width: 0;
+  max-width: 52vw;            /* ✅ 모바일에서 너무 길면 잘리게(원하면 조절) */
 }
 
 .docEmpty {
@@ -1419,9 +1422,6 @@ body[data-theme='dark'] .safety-doc-download-badge {
   .docWrap {
     width: 100%;
   }
-  .docCategoryList .docCategoryText .docCategoryDesc .docCategoryHeader {
-    width: 100%;
-  }
   .quickGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1432,9 +1432,6 @@ body[data-theme='dark'] .safety-doc-download-badge {
    ========================================================= */
 @media (max-width: 768px) {
   .docWrap {
-    width: 100%;
-  }
-  .docCategoryList .docCategoryText .docCategoryDesc .docCategoryHeader {
     width: 100%;
   }
   .wrap {
@@ -1501,9 +1498,6 @@ body[data-theme='dark'] .safety-doc-download-badge {
 
 /* 아주 작은 모바일 */
 @media (max-width: 480px) {
-  .docCategoryList .docCategoryText .docCategoryDesc .docCategoryHeader {
-    width: 100%;
-  }
   .quickTitle {
     font-size: 18px;
   }
