@@ -265,9 +265,11 @@
   }
 
   .modal {
-    width: 85vw;
-    max-height: 88vh;
-    border-radius: 16px 16px 0 0;
+    margin-left: 5vw;
+    margin-right: 5vw;
+    margin-bottom: 5vh;
+    margin-top: 5vh;
+    border-radius: 12px;
     border-left: 0;
     border-right: 0;
     border-bottom: 0;
