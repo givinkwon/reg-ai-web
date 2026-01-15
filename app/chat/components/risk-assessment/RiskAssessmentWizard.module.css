@@ -34,6 +34,7 @@
   max-width: 980px;
   margin: 0 auto;
   padding: 24px 18px 10px;
+
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -41,6 +42,12 @@
   /* ✅ 라이트 배경에서도 읽히게 기본 텍스트 색 지정 */
   color: var(--ra-text);
   background: var(--ra-bg);
+
+  /* ✅ 모바일/레이아웃에서 1~2px 가로 밀림 방지(보조 안전장치) */
+  overflow-x: hidden;
+
+  /* ✅ flex/grid 자식이 줄어들 수 있게 */
+  min-width: 0;
 }
 
 /* ✅ 라이트 테마: prefers-color-scheme */
@@ -48,11 +55,10 @@
   .wrap {
     color-scheme: light;
 
-    /* 필요하면 투명 대신 살짝 카드 배경을 줘도 됨 */
     --ra-bg: transparent;
 
-    --ra-text: rgba(15, 23, 42, 0.92);     /* slate-900 */
-    --ra-subtext: rgba(51, 65, 85, 0.85);  /* slate-700 */
+    --ra-text: rgba(15, 23, 42, 0.92); /* slate-900 */
+    --ra-subtext: rgba(51, 65, 85, 0.85); /* slate-700 */
     --ra-muted: rgba(100, 116, 139, 0.75); /* slate-500 */
 
     --ra-border: rgba(15, 23, 42, 0.14);
@@ -108,43 +114,63 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+
+  /* ✅ 자식이 줄어들 수 있게 */
+  min-width: 0;
 }
 
 .headerText {
   display: flex;
   flex-direction: column;
   gap: 6px;
+
+  /* ✅ 긴 제목/부제목이 있어도 폭 안 밀리게 */
+  min-width: 0;
 }
 
 .title {
   font-size: 22px;
   font-weight: 900;
   color: var(--ra-text);
+
+  /* ✅ 혹시라도 길어지면 자연스럽게 줄바꿈 */
+  overflow-wrap: anywhere;
 }
 
 .subTitle {
   font-size: 13px;
   color: var(--ra-subtext);
+
+  overflow-wrap: anywhere;
 }
 
 .closeBtn {
   border-radius: 12px;
   border: 1px solid var(--ra-border);
   background: var(--ra-surface-2);
-  color: black;
+
+  /* ✅ 다크 모드에서 검정이면 안 보임 */
+  color: var(--ra-text);
+
   cursor: pointer;
   font-size: 20px;
   line-height: 0;
+
+  /* ✅ 버튼이 줄어들지 않게 */
+  flex: 0 0 auto;
 }
 
 .closeBtn:hover {
   filter: brightness(1.05);
 }
 
+/* ✅ 탭: 데스크탑은 wrap 가능 / 모바일은 가로 스크롤(아래 미디어쿼리) */
 .tabs {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+
+  min-width: 0;
 }
 
 .tab {
@@ -155,6 +181,13 @@
   padding: 10px 14px;
   font-weight: 900;
   cursor: pointer;
+
+  /* ✅ 탭도 컨테이너 폭 이상 커지지 않게 */
+  max-width: 100%;
+  min-width: 0;
+
+  /* ✅ 긴 탭 텍스트가 있으면 줄바꿈 */
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -171,6 +204,9 @@
   font-size: 13px;
   color: var(--ra-subtext);
   margin-top: 2px;
+
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .content {
@@ -181,6 +217,9 @@
 
   /* ✅ Step 컴포넌트 안쪽 텍스트가 상속받게 */
   color: var(--ra-text);
+
+  /* ✅ Step 내부가 길어도 layout 밀지 않게 */
+  min-width: 0;
 }
 
 .footer {
@@ -189,12 +228,17 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  min-width: 0;
 }
 
 .metaRow {
   display: grid;
   grid-template-columns: 1fr 180px;
   gap: 10px;
+
+  /* ✅ grid overflow 방지 */
+  min-width: 0;
 }
 
 .metaInput,
@@ -205,6 +249,9 @@
   border-radius: 14px;
   padding: 12px 14px;
   outline: none;
+
+  /* ✅ grid 안에서 줄어들 수 있게 */
+  min-width: 0;
 }
 
 .metaInput::placeholder {
@@ -226,6 +273,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+
+  min-width: 0;
 }
 
 .navBtn {
@@ -236,6 +285,8 @@
   padding: 14px 12px;
   font-weight: 900;
   cursor: pointer;
+
+  min-width: 0;
 }
 
 .navBtn:disabled {
@@ -251,6 +302,8 @@
   padding: 14px 12px;
   font-weight: 950;
   cursor: pointer;
+
+  min-width: 0;
 }
 
 .navBtnPrimary:disabled {
@@ -258,8 +311,25 @@
   cursor: not-allowed;
 }
 
+/* ✅ 모바일 최적화 */
 @media (max-width: 520px) {
   .metaRow {
     grid-template-columns: 1fr;
+  }
+
+  /* ✅ 모바일에서는 탭이 가장 자주 overflow 원인이라 탭 영역만 스크롤로 안전하게 */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: 0 0 auto;
   }
 }
