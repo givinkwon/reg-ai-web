@@ -1,12 +1,15 @@
+// components/DocReviewUploadPane.tsx
 'use client';
 
-import { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import type { SafetyDocCategory, SafetyDoc } from './make-safety-docs/MakeSafetyDocs';
+import { UploadCloud } from 'lucide-react';
 import s from './DocReviewUploadPane.module.css';
 
 type DocReviewUploadPaneProps = {
   category: SafetyDocCategory;
   doc: SafetyDoc;
+
   // ✅ 업로드 + 질의까지 한 번에 진행하는 콜백
   onUploadAndAsk: (params: {
     category: SafetyDocCategory;
@@ -21,6 +24,7 @@ export default function DocReviewUploadPane({
   onUploadAndAsk,
 }: DocReviewUploadPaneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const handleClick = () => {
     inputRef.current?.click();
@@ -39,22 +43,51 @@ export default function DocReviewUploadPane({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+    e.stopPropagation();
+    setDragActive(false);
 
+    if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
     const files = Array.from(e.dataTransfer.files);
+
     onUploadAndAsk({ category, doc, files });
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
+    // 드롭 가능 커서
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 내부 요소들(자식 div)로 enter/leave가 튀는 현상 방지:
+    // 현재 떠나는 타겟이 root 영역 밖으로 나갈 때만 false 처리
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+
+    setDragActive(false);
   };
 
   return (
     <div
-      className={s.root}
+      className={`${s.root} ${dragActive ? s.dragActive : ''}`}
       onClick={handleClick}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      role="button"
+      tabIndex={0}
+      aria-label="파일 업로드 영역"
     >
       <input
         ref={inputRef}
@@ -76,11 +109,14 @@ export default function DocReviewUploadPane({
           REG AI가 바로 문서 내용을 분석해서 검토 결과를 알려드려요.
         </p>
 
-        <div className={s.illustration}>
+        <div className={s.illustration} aria-hidden="true">
           <div className={s.square} />
           <div className={s.squareSmall} />
           <div className={s.squareDoc} />
+          <UploadCloud className={s.uploadIcon} />
         </div>
+
+        {dragActive && <div className={s.dragHint}>여기에 놓으면 업로드됩니다</div>}
       </div>
     </div>
   );
