@@ -1,14 +1,14 @@
 'use client';
 
 import { ChevronDown, FileText, Download, Search, X } from 'lucide-react';
-import s from './ChatArea.module.css';
+import s from './MakeSafetyEduMaterials.module.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   loadSafetyEduData,
   type SafetyEduCategory,
   type SafetyEduMaterial,
   type SafetyEduGuide,
-} from './SafetyEduCatalog'; // ✅ 경로는 네 프로젝트에 맞게
+} from '../SafetyEduCatalog'; // ✅ 경로는 네 프로젝트에 맞게
 
 export type MakeSafetyEduMaterialsProps = {
   onSelectMaterial?: (params: {
@@ -53,7 +53,7 @@ function isExcluded(title: string, rules: ExcludeRule[]) {
         const re = new RegExp(v, 'i');
         if (re.test(raw)) return true;
       } catch {
-        // regex 문법 오류면 무시(앱 죽지 않게)
+        // regex 문법 오류면 무시
       }
     }
   }
@@ -131,7 +131,7 @@ export default function MakeSafetyEduMaterials({
 
         if (!alive) return;
 
-        // ✅ catalog.yml의 exclude 룰을 사용 (SafetyEduCatalog.ts가 exclude를 리턴해야 함)
+        // ✅ catalog.yml의 exclude 룰
         const excludeRules: ExcludeRule[] = (data as any).exclude ?? [];
         const filtered = applyExcludeToCategories(data.categories, excludeRules);
 
@@ -159,7 +159,7 @@ export default function MakeSafetyEduMaterials({
     };
   }, []);
 
-  // ✅ 검색 결과는 guide를 미리 넣지 말고, 렌더에서 getGuide로 통일
+  // ✅ 검색 결과 (최대 100개)
   const searchResults = useMemo(() => {
     if (!nq) return [];
     const out: Array<{ cat: SafetyEduCategory; m: SafetyEduMaterial }> = [];
@@ -174,28 +174,10 @@ export default function MakeSafetyEduMaterials({
   }, [categories, nq]);
 
   const DefaultPane = (cat: SafetyEduCategory, m: SafetyEduMaterial, guide: SafetyEduGuide) => {
-    const bullets = Array.isArray(guide.bulletPoints) ? guide.bulletPoints : [];
     const label = guide.downloadLabel ?? '자료 다운로드';
 
     return (
       <div className={s.eduPane}>
-        {/* <div className={s.eduPaneHead}>
-          <div className={s.eduPaneTitle}>{m.title}</div>
-          <div className={s.eduMetaRow}>
-            <span className={s.eduBadge}>{cat.title}</span>
-            {m.source ? <span className={s.eduMeta}>{m.source}</span> : null}
-            {m.publishedAt ? <span className={s.eduMeta}>{m.publishedAt}</span> : null}
-          </div>
-        </div>
-
-        <div className={s.eduIntro}>{guide.intro}</div> */}
-
-        {/* <ul className={s.eduBullets}>
-          {bullets.map((b: any, idx: any) => (
-            <li key={idx}>{b}</li>
-          ))}
-        </ul> */}
-
         <div className={s.eduActions}>
           <a
             className={s.eduDownloadBtn}
@@ -217,9 +199,9 @@ export default function MakeSafetyEduMaterials({
 
   if (loading) {
     return (
-      <div className={s.docWrap}>
-        <h2 className={s.docTitle}>{titleText}</h2>
-        <p className={s.docSubtitle}>{subtitleText}</p>
+      <div className={s.wrap}>
+        <h2 className={s.title}>{titleText}</h2>
+        <p className={s.subtitle}>{subtitleText}</p>
         <div className={s.eduLoading}>교육자료 목록을 불러오는 중…</div>
       </div>
     );
@@ -227,9 +209,9 @@ export default function MakeSafetyEduMaterials({
 
   if (errorMsg) {
     return (
-      <div className={s.docWrap}>
-        <h2 className={s.docTitle}>{titleText}</h2>
-        <p className={s.docSubtitle}>{subtitleText}</p>
+      <div className={s.wrap}>
+        <h2 className={s.title}>{titleText}</h2>
+        <p className={s.subtitle}>{subtitleText}</p>
         <div className={s.eduError}>
           <div>데이터 로드 실패</div>
           <div className={s.eduErrorMsg}>{errorMsg}</div>
@@ -239,10 +221,11 @@ export default function MakeSafetyEduMaterials({
   }
 
   return (
-    <div className={s.docWrap}>
-      <h2 className={s.docTitle}>{titleText}</h2>
-      <p className={s.docSubtitle}>
-        {subtitleText} <span className={s.eduCount}>(총 {totalCount.toLocaleString()}개)</span>
+    <div className={s.wrap}>
+      <h2 className={s.title}>{titleText}</h2>
+      <p className={s.subtitle}>
+        {subtitleText}{' '}
+        <span className={s.eduCount}>(총 {totalCount.toLocaleString()}개)</span>
       </p>
 
       <div className={s.eduSearchBar}>
@@ -264,30 +247,30 @@ export default function MakeSafetyEduMaterials({
       {nq ? (
         <div className={s.eduSearchResults}>
           {searchResults.length === 0 ? (
-            <div className={s.docEmpty}>검색 결과가 없습니다.</div>
+            <div className={s.empty}>검색 결과가 없습니다.</div>
           ) : (
             searchResults.map(({ cat, m }) => {
               const isSelected = selectedId === m.id;
               const g = getGuide(m);
 
               return (
-                <div key={m.id} className={s.docRow}>
+                <div key={m.id} className={s.row}>
                   <button
                     type="button"
-                    className={`${s.docChip} ${isSelected ? s.docChipActive : ''}`}
+                    className={`${s.chip} ${isSelected ? s.chipActive : ''}`}
                     onClick={() => {
                       setOpenCategoryId(cat.id);
                       setInternalSelectedId(m.id);
                       onSelectMaterial?.({ category: cat, material: m, guide: g });
                     }}
                   >
-                    <FileText className={s.docChipIcon} />
-                    <span className={s.docChipLabel}>{m.title}</span>
+                    <FileText className={s.chipIcon} />
+                    <span className={s.chipLabel}>{m.title}</span>
                     <span className={s.eduChipMeta}>{cat.title}</span>
                   </button>
 
                   {isSelected && (
-                    <div className={s.docDropdownPane}>
+                    <div className={s.dropdownPane}>
                       {(renderSelectedMaterialPane ?? DefaultPane)(cat, m, g)}
                     </div>
                   )}
@@ -298,58 +281,56 @@ export default function MakeSafetyEduMaterials({
         </div>
       ) : (
         /* ✅ 브라우징 모드 */
-        <div className={s.docCategoryList}>
+        <div className={s.categoryList}>
           {categories.map((cat) => {
             const isOpen = cat.id === openCategoryId;
             const visibleCount = visibleCountByCat[cat.id] ?? PAGE_SIZE;
             const shown = cat.materials.slice(0, visibleCount);
 
             return (
-              <div
-                key={cat.id}
-                className={`${s.docCategoryCard} ${isOpen ? s.docCategoryCardOpen : ''}`}
-              >
+              <div key={cat.id} className={`${s.card} ${isOpen ? s.cardOpen : ''}`}>
                 <button
                   type="button"
-                  className={s.docCategoryHeader}
+                  className={s.cardHeader}
                   onClick={() => setOpenCategoryId(isOpen ? null : cat.id)}
                 >
-                  <div className={s.docCategoryText}>
-                    <span className={s.docCategoryTitle}>
+                  <div className={s.cardText}>
+                    <span className={s.cardTitle}>
                       {cat.title}
-                      <span className={s.eduCatCount}> ({cat.materials.length.toLocaleString()})</span>
+                      <span className={s.eduCatCount}>
+                        {' '}
+                        ({cat.materials.length.toLocaleString()})
+                      </span>
                     </span>
-                    <span className={s.docCategoryDesc}>{cat.description}</span>
+                    <span className={s.cardDesc}>{cat.description}</span>
                   </div>
-                  <ChevronDown
-                    className={`${s.docCategoryArrow} ${isOpen ? s.docCategoryArrowOpen : ''}`}
-                  />
+                  <ChevronDown className={`${s.arrow} ${isOpen ? s.arrowOpen : ''}`} />
                 </button>
 
                 {isOpen && (
-                  <div className={s.docList}>
+                  <div className={s.list}>
                     {shown.length > 0 ? (
                       <>
-                        {shown.map((m: any) => {
+                        {shown.map((m) => {
                           const isSelected = selectedId === m.id;
                           const g = getGuide(m);
 
                           return (
-                            <div key={m.id} className={s.docRow}>
+                            <div key={m.id} className={s.row}>
                               <button
                                 type="button"
-                                className={`${s.docChip} ${isSelected ? s.docChipActive : ''}`}
+                                className={`${s.chip} ${isSelected ? s.chipActive : ''}`}
                                 onClick={() => {
                                   setInternalSelectedId(m.id);
                                   onSelectMaterial?.({ category: cat, material: m, guide: g });
                                 }}
                               >
-                                <FileText className={s.docChipIcon} />
-                                <span className={s.docChipLabel}>{m.title}</span>
+                                <FileText className={s.chipIcon} />
+                                <span className={s.chipLabel}>{m.title}</span>
                               </button>
 
                               {isSelected && (
-                                <div className={s.docDropdownPane}>
+                                <div className={s.dropdownPane}>
                                   {(renderSelectedMaterialPane ?? DefaultPane)(cat, m, g)}
                                 </div>
                               )}
@@ -360,7 +341,7 @@ export default function MakeSafetyEduMaterials({
                         {cat.materials.length > visibleCount && (
                           <button
                             type="button"
-                            className={s.eduMoreBtn}
+                            className={s.moreBtn}
                             onClick={() =>
                               setVisibleCountByCat((prev) => ({
                                 ...prev,
@@ -373,7 +354,7 @@ export default function MakeSafetyEduMaterials({
                         )}
                       </>
                     ) : (
-                      <div className={s.docEmpty}>이 카테고리에 해당하는 자료가 없습니다.</div>
+                      <div className={s.empty}>이 카테고리에 해당하는 자료가 없습니다.</div>
                     )}
                   </div>
                 )}

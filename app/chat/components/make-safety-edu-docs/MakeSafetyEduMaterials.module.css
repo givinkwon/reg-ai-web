@@ -1,0 +1,354 @@
+/* components/MakeSafetyEduMaterials.module.css */
+
+/* 기본 토큰: ChatArea 변수를 그대로 쓰고 싶으면 여기서도 동일한 변수 구조를 쓰거나
+   상위에서 내려오는 CSS 변수를 그대로 사용해도 됨. */
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 12px 24px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: var(--text, #111827);
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+  margin: 0 0 14px;
+}
+
+.eduCount {
+  opacity: 0.75;
+  font-weight: 700;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+}
+
+/* 검색바 */
+.eduSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  background: var(--surface-2, #f3f4f6);
+  margin: 12px 0 16px;
+  color: var(--text, #111827);
+  min-width: 0;
+}
+
+.eduSearchIcon {
+  opacity: 0.7;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+  flex: 0 0 auto;
+}
+
+.eduSearchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text, #111827);
+  font-size: 14px;
+}
+
+.eduSearchInput::placeholder {
+  color: var(--muted-2, rgba(17, 24, 39, 0.45));
+}
+
+.eduSearchClear {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 4px;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+  flex: 0 0 auto;
+}
+
+.eduSearchClear:hover {
+  opacity: 1;
+  color: var(--text, #111827);
+}
+
+/* 상태 */
+.eduLoading {
+  padding: 14px 12px;
+  opacity: 0.8;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+}
+
+.eduError {
+  padding: 14px 12px;
+  border: 1px solid rgba(255, 120, 120, 0.25);
+  background: rgba(255, 120, 120, 0.06);
+  border-radius: 12px;
+  color: var(--text, #111827);
+}
+
+.eduErrorMsg {
+  margin-top: 6px;
+  opacity: 0.85;
+  font-size: 13px;
+}
+
+/* 검색 결과 */
+.eduSearchResults {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* 브라우징 리스트 */
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.card {
+  border-radius: 18px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #fff);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-1, 0 1px 3px rgba(15, 23, 42, 0.08));
+}
+
+.cardOpen {
+  border-color: rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
+}
+
+.cardHeader {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  min-width: 0;
+}
+
+.cardText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cardTitle {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--accent, #2563eb);
+  margin-bottom: 4px;
+}
+
+.eduCatCount {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-left: 6px;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+  font-weight: 700;
+}
+
+.cardDesc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+}
+
+.arrow {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 3px;
+  transition: transform 0.18s ease;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+}
+
+.arrowOpen {
+  transform: rotate(180deg);
+}
+
+.list {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* ✅ row / dropdown */
+.row {
+  width: 100%;
+  min-width: 0;
+}
+
+.dropdownPane {
+  margin-top: 10px;
+}
+
+/* ✅ 핵심: chip overflow 방지 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+
+  color: var(--text, #111827);
+  font-size: 13px;
+  cursor: pointer;
+
+  max-width: 100%;
+  min-width: 0;
+}
+
+.chip:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.10);
+}
+
+.chipActive {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.chipIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+  flex: 0 0 auto;
+}
+
+/* ✅ 핵심: 텍스트 줄임 + ellipsis */
+.chipLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  /* 모바일에서 특히 길어지는 제목 대응 */
+  max-width: 62vw;
+}
+
+/* 검색에서 같이 붙는 메타도 줄어들게 */
+.eduChipMeta {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 26vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: 12px;
+  opacity: 0.65;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+}
+
+/* 더보기 */
+.moreBtn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border, #e5e7eb);
+  background: var(--surface, #fff);
+  cursor: pointer;
+  opacity: 0.92;
+  color: var(--text, #111827);
+}
+
+.moreBtn:hover {
+  opacity: 1;
+  background: var(--surface-2, #f3f4f6);
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--muted, rgba(17, 24, 39, 0.55));
+}
+
+/* 다운로드 pane */
+.eduPane {
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #fff);
+  border-radius: 14px;
+  padding: 12px;
+  color: var(--text, #111827);
+}
+
+.eduActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eduDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+  text-decoration: none;
+  color: var(--text, #111827);
+  cursor: pointer;
+  opacity: 0.98;
+}
+
+.eduDownloadBtn:hover {
+  background: rgba(37, 99, 235, 0.10);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.eduDownloadBtn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 모바일 */
+@media (max-width: 768px) {
+  .wrap {
+    width: 100%;
+  }
+  .chipLabel {
+    max-width: 56vw;
+  }
+  .eduChipMeta {
+    max-width: 28vw;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    padding: 14px 12px 22px;
+  }
+  .chip {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .chipLabel {
+    max-width: 54vw;
+  }
+  .eduChipMeta {
+    max-width: 30vw;
+  }
+}

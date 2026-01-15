@@ -83,7 +83,7 @@ import MakeSafetyDocs, {
   SafetyDocCategory,
 } from './make-safety-docs/MakeSafetyDocs';
 import DocReviewUploadPane from './DocReviewUploadPane';
-import MakeSafetyEduMaterials from './MakeSafetyEduMaterials';
+import MakeSafetyEduMaterials from './make-safety-edu-docs/MakeSafetyEduMaterials';
 
 import RiskAssessmentWizard, {
   type RiskAssessmentDraft,
