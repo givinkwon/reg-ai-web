@@ -1419,7 +1419,7 @@ body[data-theme='dark'] .safety-doc-download-badge {
   .docWrap {
     width: 100%;
   }
-  .docCategoryList {
+  .docCategoryList .docCategoryText {
     width: 100%;
   }
   .quickGrid {
@@ -1434,7 +1434,7 @@ body[data-theme='dark'] .safety-doc-download-badge {
   .docWrap {
     width: 100%;
   }
-  .docCategoryList {
+  .docCategoryList .docCategoryText {
     width: 100%;
   }
   .wrap {
