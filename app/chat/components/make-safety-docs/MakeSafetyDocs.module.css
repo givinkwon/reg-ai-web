@@ -278,12 +278,13 @@ body[data-theme='dark'] .wrap {
   background: var(--bubble-ai-bg);
   color: var(--bubble-ai-text);
   font-size: 14px;
-  line-height: 1.75;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  line-height: 1.75;            /* 1.6 → 1.75 추천 */
+  word-break: keep-all;         /* break-word → keep-all */
+  overflow-wrap: anywhere; 
   border: 1px solid var(--border);
 }
 
+/* 큰 제목: 1) 답변 */
 /* 큰 제목: 1) 답변 */
 .aiBubble h3[data-ai='title'] {
   margin: 0 0 10px;
@@ -317,7 +318,7 @@ body[data-theme='dark'] .wrap {
   min-width: 0;
 }
 
-/* 소제목: 1. 출입통제: ... */
+/* 소제목: 1. 출입통제: ... (num/head만 bold는 strong으로 처리됨) */
 .aiBubble p[data-ai='subheading'] {
   margin: 10px 0 6px;
 }
@@ -364,6 +365,7 @@ body[data-theme='dark'] .wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* width: 26px; */
   height: 26px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -768,7 +770,7 @@ body[data-theme='dark'] .wrap {
   align-items: center;
   padding: 32px 16px 24px;
   gap: 24px;
-  margin: 0 auto;
+  margin: 0 auto; 
 }
 
 .quickTitle {
@@ -785,33 +787,44 @@ body[data-theme='dark'] .wrap {
   color: var(--muted);
   margin-bottom: 10px;
 }
-
 .quickGrid {
   display: grid;
   width: 80%;
   margin-left: 10%;
   margin-right: 10%;
+
+  /* ✅ 셀 폭에 맞춰 버튼이 동일하게 늘어나도록 */
   justify-items: stretch;
+
   column-gap: 18px;
   row-gap: 14px;
+
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .quickBtn {
+  /* ✅ 고정폭/inline-flex 제거 → 셀 폭 기준으로 통일 */
   width: 100%;
-  height: 56px;
+  height: 56px; /* height 대신 min-height로 통일감 + 줄바꿈 대응 */
+
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+
   padding: 0 20px;
   border-radius: 999px;
+
   border: 1px solid var(--quick-border);
   background: var(--quick-bg);
   color: var(--quick-text);
+
   font-size: 14px;
   font-weight: 600;
+
+  /* ✅ 라벨이 길어도 버튼 크기 흔들리지 않게 */
   box-sizing: border-box;
+
   box-shadow: var(--quick-shadow);
   cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease,
@@ -832,7 +845,7 @@ body[data-theme='dark'] .quickBtn:hover {
 .quickIconWrap {
   width: 28px;
   height: 28px;
-  flex: 0 0 28px;
+  flex: 0 0 28px; /* ✅ 고정 */
 
   border-radius: 999px;
   display: flex;
@@ -852,12 +865,13 @@ body[data-theme='dark'] .quickBtn:hover {
 .quickLabel {
   line-height: 1.2;
   text-align: left;
+
+  /* ✅ 길면 2줄까지만, 넘치면 ... */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 /* =========================================================
    13) 힌트 칩
    ========================================================= */
@@ -949,11 +963,6 @@ body[data-theme='dark'] .hintChip {
   max-width: 720px;
   margin: 0 auto;
   padding: 16px 12px 24px;
-
-  /* ✅ overflow 방지 (모바일에서 중요) */
-  width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
 }
 
 .docTitle {
@@ -981,10 +990,6 @@ body[data-theme='dark'] .hintChip {
   background: var(--surface);
   padding: 12px 14px;
   box-shadow: var(--shadow-1);
-
-  /* ✅ overflow 방지 */
-  min-width: 0;
-  box-sizing: border-box;
 }
 
 .docCategoryCardOpen {
@@ -1002,8 +1007,6 @@ body[data-theme='dark'] .hintChip {
   background: transparent !important;
   border: none;
   text-align: left;
-
-  min-width: 0;
 }
 
 .docCategoryText {
@@ -1045,9 +1048,6 @@ body[data-theme='dark'] .hintChip {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-
-  /* ✅ overflow 방지 */
-  min-width: 0;
 }
 
 .docChip {
@@ -1060,11 +1060,6 @@ body[data-theme='dark'] .hintChip {
   background: var(--surface-2);
   font-size: 0.78rem;
   color: var(--text);
-
-  /* ✅ 핵심: 칩이 화면 밖으로 나가지 않게 */
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
 }
 
 .docChip:hover {
@@ -1076,16 +1071,10 @@ body[data-theme='dark'] .hintChip {
   width: 14px;
   height: 14px;
   color: var(--muted);
-  flex-shrink: 0;
 }
 
 .docChipLabel {
-  /* ✅ 기존 nowrap 유지하되 말줄임 가능하도록 */
   white-space: nowrap;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .docEmpty {
@@ -1222,6 +1211,7 @@ body[data-theme='dark'] .safety-doc-download-badge {
 
 /* =========================================================
    16) Safety Edu: Search / Pane / Meta
+   (기존 네 스타일을 "라이트/다크 둘 다" 보이게 정리)
    ========================================================= */
 .eduCount {
   opacity: 0.75;
@@ -1253,7 +1243,6 @@ body[data-theme='dark'] .safety-doc-download-badge {
   background: transparent;
   color: var(--text);
   font-size: 14px;
-  min-width: 0;
 }
 
 .eduSearchInput::placeholder {
@@ -1427,6 +1416,9 @@ body[data-theme='dark'] .safety-doc-download-badge {
    17) 기타 레이아웃 (WEB)
    ========================================================= */
 @media (max-width: 1200px) {
+  .docWrap {
+    width: 100%;
+  }
   .quickGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1436,6 +1428,9 @@ body[data-theme='dark'] .safety-doc-download-badge {
    18) 모바일 레이아웃 (MOBILE OVERRIDES)
    ========================================================= */
 @media (max-width: 768px) {
+  .docWrap {
+    width: 100%;
+  }
   .wrap {
     border-radius: 0;
     border-left: none;
@@ -1486,24 +1481,23 @@ body[data-theme='dark'] .safety-doc-download-badge {
 
   .quickGrid {
     width: 100%;
-    margin-left: 0%;
-    margin-right: 0%;
+    margin-left:0%;
+    margin-right:0%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .quickBtn {
     width: 100%;
+    /* justify-content: flex-start; */
     padding: 0 16px;
-  }
-
-  /* ✅ 모바일에서 문서칩이 더 안전하게 줄어들도록 */
-  .docWrap {
-    padding: 14px 10px 22px;
   }
 }
 
 /* 아주 작은 모바일 */
 @media (max-width: 480px) {
+  .docWrap {
+    width: 100%;
+  }
   .quickTitle {
     font-size: 18px;
   }
