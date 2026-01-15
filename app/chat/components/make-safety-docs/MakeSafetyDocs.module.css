@@ -1419,7 +1419,7 @@ body[data-theme='dark'] .safety-doc-download-badge {
   .docWrap {
     width: 100%;
   }
-  .docCategoryList .docCategoryText .docCategoryDesc {
+  .docCategoryList .docCategoryText .docCategoryDesc .docCategoryHeader {
     width: 100%;
   }
   .quickGrid {
@@ -1434,7 +1434,7 @@ body[data-theme='dark'] .safety-doc-download-badge {
   .docWrap {
     width: 100%;
   }
-  .docCategoryList .docCategoryText .docCategoryDesc {
+  .docCategoryList .docCategoryText .docCategoryDesc .docCategoryHeader {
     width: 100%;
   }
   .wrap {
@@ -1501,7 +1501,7 @@ body[data-theme='dark'] .safety-doc-download-badge {
 
 /* 아주 작은 모바일 */
 @media (max-width: 480px) {
-  .docCategoryList .docCategoryText .docCategoryDesc {
+  .docCategoryList .docCategoryText .docCategoryDesc .docCategoryHeader {
     width: 100%;
   }
   .quickTitle {
