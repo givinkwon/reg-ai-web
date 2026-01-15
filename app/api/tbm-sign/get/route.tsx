@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs'; // 안전하게 node로
 
 // const ORIGIN = process.env.FASTAPI_ORIGIN;
-const ORIGIN = "https://api.reg.ai.kr"
+const ORIGIN = "https://reg.ai.kr"
 
 function short(s: string, n = 400) {
   const t = (s || '').replace(/\s+/g, ' ').trim();
