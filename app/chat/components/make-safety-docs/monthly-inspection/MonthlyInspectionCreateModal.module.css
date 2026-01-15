@@ -337,3 +337,103 @@
     width: 100%;
   }
 }
+
+@media (prefers-color-scheme: dark) {
+  /* 태그 입력 영역 래퍼(프로젝트마다 class명이 달라도 잡히게) */
+  .tagWrap,
+  .searchBox,
+  .inputBox,
+  .tagInput,
+  .tagInputWrap,
+  .tagContainer,
+  .tagArea {
+    background: rgba(0, 0, 0, 0.28) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  /* 2) 실제 입력(input/textarea)이 흰색으로 남는 문제 */
+  .tagWrap input,
+  .tagWrap textarea,
+  .searchBox input,
+  .searchBox textarea,
+  .inputBox input,
+  .inputBox textarea,
+  .tagInput input,
+  .tagInput textarea,
+  .tagInputWrap input,
+  .tagInputWrap textarea,
+  .modal input,
+  .modal textarea {
+    background: rgba(0, 0, 0, 0.28) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  .tagWrap input::placeholder,
+  .tagWrap textarea::placeholder,
+  .searchBox input::placeholder,
+  .searchBox textarea::placeholder,
+  .inputBox input::placeholder,
+  .inputBox textarea::placeholder,
+  .tagInput input::placeholder,
+  .tagInput textarea::placeholder,
+  .tagInputWrap input::placeholder,
+  .tagInputWrap textarea::placeholder,
+  .modal input::placeholder,
+  .modal textarea::placeholder {
+    color: rgba(255, 255, 255, 0.45) !important;
+  }
+
+  /* 3) 태그 pill(칩) 글씨가 안 보이는 문제 (대부분 color가 투명/어두움으로 박혀있음) */
+  .chip,
+  .tag,
+  .pillChip,
+  .tagItem,
+  .tagPill {
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  /* tag 내부 텍스트 span/div/p 등 광범위 커버 */
+  .chip *,
+  .tag *,
+  .pillChip *,
+  .tagItem *,
+  .tagPill * {
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  /* 4) 태그 삭제(X) 아이콘 */
+  .chipX,
+  .tagX,
+  .pillChip button,
+  .tagItem button,
+  .tagPill button,
+  .chip svg,
+  .tag svg,
+  .pillChip svg,
+  .tagItem svg,
+  .tagPill svg {
+    color: rgba(255, 255, 255, 0.72) !important;
+    fill: currentColor !important;
+    opacity: 0.9;
+  }
+
+  /* 5) 자동완성/드롭다운이 있다면 (흰색 팝업 방지) */
+  .suggestList,
+  .autocomplete,
+  .dropdown,
+  .menu {
+    background: rgba(15, 23, 42, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+  }
+  .suggestItem,
+  .autocompleteItem,
+  .dropdownItem,
+  .menuItem {
+    color: rgba(255, 255, 255, 0.90) !important;
+  }
+}
