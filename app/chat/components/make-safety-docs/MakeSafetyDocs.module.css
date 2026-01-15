@@ -999,7 +999,7 @@ body[data-theme='dark'] .hintChip {
 .docCategoryHeader {
   display: flex;
   width: 100%;
-  align-items: flex-start;           /* ✅ 모바일에서 2줄일 때 아이콘이 위로 */
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 0;
@@ -1010,7 +1010,15 @@ body[data-theme='dark'] .hintChip {
 
 .docCategoryText {
   flex: 1 1 auto;
-  min-width: 0;                      /* ✅ flex 자식 줄어들게 (이미 있음, 유지) */
+  min-width: 0;
+}
+
+.docCategoryTitle {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);      /* ✅ accent 대신 text로 (안 보임 방지) */
+  margin-bottom: 4px;
 }
 
 .docCategoryDesc {
@@ -1018,11 +1026,17 @@ body[data-theme='dark'] .hintChip {
   font-size: 0.8rem;
   color: var(--muted);
 
-  /* ✅ 이 3줄이 “모바일 넘침” 해결 핵심 */
   white-space: normal;
-  overflow-wrap: anywhere;           /* 긴 단어/URL도 줄바꿈 */
-  word-break: keep-all;              /* 한글 자연스럽게 */
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+
+  /* (선택) 2줄까지만 보이게 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
+
 
 .docCategoryArrow {
   flex-shrink: 0;
