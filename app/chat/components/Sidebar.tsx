@@ -95,6 +95,7 @@ export default function Sidebar() {
           {!(!isCompact && collapsed) && (
             <div className={s.brand}>
               <img
+                data-ga-id="Chat:Sidebar:ClickLogo"
                 onClick={handleLogoClick}
                 src="/logo.png"
                 className={s.fav}
@@ -106,6 +107,7 @@ export default function Sidebar() {
           {/* ✅ 데스크톱(>=1025px): 접기/펼치기 버튼 */}
           {!isCompact && (
             <button
+              data-ga-id={collapsed ? 'Chat:Sidebar:ExpandCollapse' : 'Chat:Sidebar:MinimizeCollapse'}
               onClick={toggleCollapse}
               className={s.collapseBtn}
               aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
@@ -122,6 +124,7 @@ export default function Sidebar() {
           {isCompact && (
             <button
               type="button"
+              data-ga-id="Chat:Sidebar:Close"
               className={s.mobileCloseBtn}
               onClick={() => setSidebarMobileOpen(false)}
               aria-label="사이드바 닫기"
@@ -137,6 +140,7 @@ export default function Sidebar() {
           <div
             className={s.navItem}
             role="button"
+            data-ga-id="Chat:Sidebar:OpenHome"
             tabIndex={0}
             onClick={handleHomeClick}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleHomeClick()}
@@ -150,6 +154,7 @@ export default function Sidebar() {
           <div
             className={s.navItem}
             role="button"
+            data-ga-id="Chat:Sidebar:OpenDocs"
             tabIndex={0}
             onClick={handleDocsClick}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDocsClick()}
@@ -172,6 +177,8 @@ export default function Sidebar() {
             <div
               key={r.id}
               className={`${s.chatItem} ${active ? s.chatActive : ''}`}
+              data-ga-id="Chat:Sidebar:OpenRoom"
+              data-ga-label={r.title || '새 대화'}
               onClick={() => {
                 setMainView('chat');
                 setActiveRoom(r.id);
@@ -183,6 +190,8 @@ export default function Sidebar() {
 
               {active && !(!isCompact && collapsed) && (
                 <button
+                  data-ga-id="Chat:Sidebar:DeleteRoom"
+                  data-ga-label={r.title || '새 대화'}
                   className={s.deleteBtn}
                   onClick={(e) => {
                     e.stopPropagation();

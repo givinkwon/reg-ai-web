@@ -2,6 +2,7 @@
 import "./globals.css";
 import Script from "next/script";
 import type { Metadata } from "next";
+import GAEventBridge from "./components/analytics/GAEventBridge";
 
 export const metadata: Metadata = {
   title: "reg-ai-web",
@@ -49,10 +50,7 @@ export default function RootLayout({
           content="default"
         />
 
-        {/* (선택) 파비콘 */}
-        {/* <link rel="icon" href="/favicon.ico" /> */}
-
-        {/* ✅ Kakao JS SDK: onLoad 없이 스크립트만 로드 */}
+        {/* ✅ Kakao JS SDK */}
         <Script
           id="kakao-sdk"
           src="https://developers.kakao.com/sdk/js/kakao.min.js"
@@ -67,7 +65,9 @@ export default function RootLayout({
         <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
+            // ✅ gtag를 window에 붙여두면 다른 코드에서도 사용할 수 있음
             function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
             gtag('js', new Date());
             gtag('config', '${ADS_ID}');
           `}
@@ -83,7 +83,6 @@ export default function RootLayout({
             })(window,document,'script','dataLayer','${GTM_ID}');
           `}
         </Script>
-        {/* End Google Tag Manager */}
       </head>
 
       <body>
@@ -96,7 +95,9 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-        {/* End Google Tag Manager (noscript) */}
+
+        {/* ✅ 전역 GA(=dataLayer) 브릿지 */}
+        <GAEventBridge />
 
         {children}
       </body>

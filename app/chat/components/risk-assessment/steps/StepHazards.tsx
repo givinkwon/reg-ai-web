@@ -89,8 +89,8 @@ function safeWriteCache(key: string, payload: HazardCache) {
 function toText(x: any) {
   if (typeof x === 'string') return x;
   if (x && typeof x === 'object') {
-    // 위험요인/상황 관련 흔한 필드 후보들
     return (
+      x._id ?? // ✅ FIX: Mongo group/distinct 결과 { _id: "..." } 지원
       x.title ??
       x.name ??
       x.risk_situation_result ??
@@ -163,7 +163,9 @@ export default function StepHazards({ draft, setDraft }: Props) {
           `${t.id}|${norm(t.title)}|` +
           t.processes
             .map((p) => {
-              const hs = (p.hazards ?? []).map((h: any) => `${norm(h.title)}:${h.likelihood ?? ''}:${h.severity ?? ''}`).join(',');
+              const hs = (p.hazards ?? [])
+                .map((h: any) => `${norm(h.title)}:${h.likelihood ?? ''}:${h.severity ?? ''}`)
+                .join(',');
               return `${p.id}:${norm(p.title)}[${hs}]`;
             })
             .join(';'),
@@ -204,10 +206,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
             return {
               ...p,
-              hazards: [
-                ...(p.hazards ?? []),
-                { id: uid(), title: v, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' },
-              ],
+              hazards: [...(p.hazards ?? []), { id: uid(), title: v, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' }],
             };
           }),
         };
@@ -304,9 +303,9 @@ export default function StepHazards({ draft, setDraft }: Props) {
   // 캐시 우선 → 없으면 API 호출
   //
   // ✅ FIX:
-  // 1) 응답 형태 정규화(extractItems)
-  // 2) deps를 procSig로 (hazards 추가로 effect 재시작/abort 방지)
-  // 3) AbortError 시 return 금지(continue)
+  // 1) toText에 _id 추가
+  // 2) AbortError 시 cooldown(attempt) 삭제해서 "첫 공정만 안 채워짐" 방지
+  // 3) res.ok 실패/빈 결과도 attempt 정리(다음 run에서 재시도 가능)
   // =========================
   useEffect(() => {
     let cancelled = false;
@@ -383,7 +382,11 @@ export default function StepHazards({ draft, setDraft }: Props) {
               signal: ac.signal,
             });
 
-            if (!res.ok) continue;
+            if (!res.ok) {
+              // ✅ FIX: 비정상 응답이면 다음 run에서 재시도 가능하게 attempt 삭제
+              attemptRef.current.delete(scopeKey);
+              continue;
+            }
 
             const raw = await res.json();
 
@@ -392,6 +395,10 @@ export default function StepHazards({ draft, setDraft }: Props) {
             }
 
             const items = extractItems(raw);
+
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[StepHazards] extracted items:', items);
+            }
 
             if (items.length > 0) {
               addHazardsBulk(t.id, p.id, items);
@@ -412,10 +419,19 @@ export default function StepHazards({ draft, setDraft }: Props) {
               });
 
               completedRef.current.add(scopeKey);
+            } else {
+              // ✅ FIX: 빈 결과면 attempt 남겨두면 "첫 공정만 계속 안채워짐"이 생길 수 있어 정리
+              attemptRef.current.delete(scopeKey);
             }
           } catch (e: any) {
-            // ✅ AbortError는 전체 중단(return)하지 말고 해당 공정만 스킵
-            if (e?.name === 'AbortError') continue;
+            // ✅ FIX: AbortError는 cooldown을 남기지 않게 해서 다음 run에서 즉시 재시도
+            if (e?.name === 'AbortError') {
+              attemptRef.current.delete(scopeKey);
+              continue;
+            }
+
+            console.error('[StepHazards] fetch failed:', e);
+            attemptRef.current.delete(scopeKey);
           } finally {
             setAutoLoading((prev) => ({ ...prev, [uiKey]: false }));
           }
@@ -429,11 +445,10 @@ export default function StepHazards({ draft, setDraft }: Props) {
       cancelled = true;
       controllers.forEach((c) => c.abort());
     };
-  }, [procSig, user?.email]); // ✅ tasks 대신 procSig
+  }, [procSig, user?.email]);
 
   // =========================
   // ✅ 사용자가 수동 추가/삭제한 hazards도 캐시에 반영 (빈 캐시 저장 금지)
-  //    (hazardsSig로 바꿔서 실제로 반응하게)
   // =========================
   useEffect(() => {
     const u = user?.email ?? null;
@@ -469,7 +484,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
         });
       }
     }
-  }, [hazardsSig, user?.email]); // ✅ tasks 대신 hazardsSig
+  }, [hazardsSig, user?.email]);
 
   return (
     <div className={s.wrap}>

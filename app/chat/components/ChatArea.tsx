@@ -95,6 +95,7 @@ import LawNoticeArticlesModal from './law-notice/LawNoticeArticlesModal';
 
 import { formatAssistantHtml } from '../../utils/formatAssistantHtml';
 
+import { track } from '../../lib/ga';
 
 // 🔹 추가: 쿠키에서 카운트 읽기
 const getGuestMsgCountFromCookie = () => {
@@ -114,6 +115,8 @@ const setGuestMsgCountToCookie = (value: number) => {
 };
 
 export default function ChatArea() {
+  
+  const inputStartedRef = useRef(false);
   const {
     messages,
     input,
@@ -1072,7 +1075,7 @@ export default function ChatArea() {
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className={s.iconXs} />
+                    <LogOut data-ga-id={`Chat:ChatArea:Logout`} className={s.iconXs} />
                     <span>로그아웃</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1081,6 +1084,7 @@ export default function ChatArea() {
               <Button
                 variant="outline"
                 size="sm"
+                data-ga-id={`Chat:ChatArea:Login`}
                 className={s.settingsBtn}
                 onClick={() => setShowLoginModal(true)}
               >
@@ -1244,6 +1248,7 @@ export default function ChatArea() {
                                     key={action.id}
                                     type="button"
                                     className={s.quickBtn}
+                                    data-ga-id={`Chat:ChatArea:QuickButton:${action.id}`}
                                     onClick={() => handleQuickActionClick(action)}
                                   >
                                     <span className={s.quickIconWrap}>
@@ -1444,6 +1449,7 @@ export default function ChatArea() {
                 <button
                   type="button"
                   className={s.plusBtn}
+                  data-ga-id="Chat:ChatArea:OpenTaskModal"
                   onClick={() => setShowTaskModal(true)}
                   aria-label="작업 선택"
                   title="작업 선택"
@@ -1457,6 +1463,7 @@ export default function ChatArea() {
                     <span className={s.taskChipLabel}>{currentTaskMeta.label}</span>
                     <button
                       type="button"
+                      data-ga-id="Chat:ChatArea:RemoveTaskTag"
                       className={s.taskChipClose}
                       onClick={() => setSelectedTask(null)}
                       aria-label="작업 태그 제거"
@@ -1469,7 +1476,22 @@ export default function ChatArea() {
                 <input
                   className={`${s.input} ${currentTaskMeta ? s.inputHasChip : ''} chat-input`}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+
+                    if (!inputStartedRef.current && v.trim().length > 0) {
+                      inputStartedRef.current = true;
+                      track('Chat_ChatArea_Typing_Start', {
+                        ui_id: 'Chat:ChatArea:TypingStart',
+                        page_path: window.location.pathname,
+                      });
+                    }
+
+                    // 입력이 완전히 비면 다시 “시작” 잡을 수 있게 리셋(선택)
+                    if (v.trim().length === 0) inputStartedRef.current = false;
+
+                    setInput(v);
+                  }}
                   onKeyDown={onKey}
                   placeholder="질문을 입력하거나 파일을 끌어다 놓으세요"
                 />
@@ -1478,6 +1500,7 @@ export default function ChatArea() {
 
             <button
               type="button"
+              data-ga-id="Chat:ChatArea:AttachFile"
               className={s.attachBtn}
               onClick={() => fileInputRef.current?.click()}
               aria-label="파일 첨부"
@@ -1485,7 +1508,7 @@ export default function ChatArea() {
               <Paperclip className={s.iconMd} />
             </button>
 
-            <button onClick={handleSend} className={s.sendBtn} aria-label="전송">
+            <button data-ga-id="Chat:ChatArea:Submit" onClick={handleSend} className={s.sendBtn} aria-label="전송">
               <ArrowUp className={s.iconMdAccent} />
             </button>
 

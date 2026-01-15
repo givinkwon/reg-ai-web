@@ -145,12 +145,17 @@
 
 .chipRow { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .chip {
-  padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid rgba(59, 130, 246, 0.28);
   background: rgba(255,255,255,0.04);
   color: #1d4ed8;
   font-size: 12px;
+  width: 100%;
+  white-space: normal;         /* 한 줄 고정 해제 */
+  overflow-wrap: anywhere;     /* 긴 단어도 줄바꿈 */
+  word-break: keep-all;        /* 한글 단어 중간 쪼개짐 최소화 */
+  text-align: left;            /* 보기 좋게(선택) */
+  gap: 8px;
 }
 .chipActive {
   border-color: rgba(90,160,255,0.7);

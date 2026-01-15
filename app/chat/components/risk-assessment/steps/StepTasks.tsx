@@ -35,7 +35,7 @@ type StepTasksCache = {
   tasks: RiskAssessmentDraft['tasks'];
 };
 
-function cacheKey(userEmail: string | null | undefined, minorCategory: string | null) {
+function cacheKey(userEmail: string | null | undefined, minorCategory: string | null | undefined) {
   const u = norm(userEmail) || 'guest';
   const m = norm(minorCategory) || 'ALL';
   return `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(m)}`;
@@ -69,6 +69,33 @@ function safeWriteCache(key: string, payload: StepTasksCache) {
     localStorage.setItem(key, JSON.stringify(payload));
   } catch {
     // ignore
+  }
+}
+
+/**
+ * ✅ minorCategory를 못 찾는 경우(=null)에도 새로고침 복구를 위해
+ *    해당 유저(또는 guest)의 캐시 중 "가장 최신 ts"를 찾아 복원하는 폴백.
+ */
+function findLatestCacheForUser(userEmail: string | null | undefined): { key: string; cache: StepTasksCache } | null {
+  try {
+    const u = norm(userEmail) || 'guest';
+    const prefix = `${CACHE_PREFIX}:${encodeURIComponent(u)}:`;
+
+    let best: { key: string; cache: StepTasksCache } | null = null;
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(prefix)) continue;
+
+      const c = safeReadCache(k);
+      if (!c) continue;
+
+      if (!best || c.ts > best.cache.ts) best = { key: k, cache: c };
+    }
+
+    return best;
+  } catch {
+    return null;
   }
 }
 
@@ -165,24 +192,14 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
   }, [user?.email, minorCategory, overrideMinor]);
 
   // =========================
-  // ✅ 1) 캐시 우선 복원 (scope 단위)
+  // ✅ 1) 캐시 우선 복원 (minor 없어도 ALL/최신캐시 폴백)
   // =========================
   useEffect(() => {
-    if (!minorCategory) {
-      setRecommended([]);
-      setRecoError(null);
-      setRecoLoading(false);
-
-      autoAppliedRef.current = null;
-      cacheCheckedRef.current = null;
-      prevMinorRef.current = null;
-      prevScopeRef.current = null;
-      return;
-    }
-
-    const currentMinor = norm(minorCategory);
     const userEmail = user?.email ?? null;
-    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
+    const userId = norm(userEmail) || 'guest';
+
+    // ✅ minor가 없더라도 ALL로 스코프를 만든다 (새로고침 복구 핵심)
+    let currentMinor = norm(minorCategory) || 'ALL';
 
     // minor 전환 체크
     const prevMinor = prevMinorRef.current;
@@ -190,6 +207,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     prevMinorRef.current = currentMinor;
 
     // scope 전환 체크 (guest → user 등)
+    const scope = `${userId}|${currentMinor}`;
     const prevScope = prevScopeRef.current;
     const isScopeSwitch = !!prevScope && prevScope !== scope;
     prevScopeRef.current = scope;
@@ -197,8 +215,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     // 같은 scope에서 중복 체크 방지
     if (cacheCheckedRef.current === scope) return;
 
-    // ✅ scope가 바뀌면 화면 목록을 비워서 로딩 모달 조건이 성립하게(=recommended 비어있으면 로딩)
-    //    (캐시가 있으면 바로 채워짐)
+    // scope가 바뀌면 화면 목록을 비워서(캐시 있으면 즉시 채움) UX 맞추기
     if (isMinorSwitch || isScopeSwitch) {
       setRecommended([]);
       setRecoError(null);
@@ -208,11 +225,46 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
     cacheCheckedRef.current = scope;
 
-    const key = cacheKey(userEmail, currentMinor);
-    const cached = safeReadCache(key);
-    if (!cached) return; // 캐시 없으면 아래 API 로드로
+    // ✅ 1) 1순위: 현재 user+minor(또는 ALL) 캐시
+    let key = cacheKey(userEmail, currentMinor);
+    let cached = safeReadCache(key);
 
-    // ✅ 1) tasks 복원: scope가 바뀌었으면(guest→user) 기존 tasks가 있어도 덮어쓰는 게 맞음
+    // ✅ 2) 2순위: 로그인 직후인데 유저 캐시가 없다면 guest 캐시에서 가져오기(마이그레이션)
+    if (!cached && userEmail) {
+      const guestKey = cacheKey(null, currentMinor);
+      const guestCached = safeReadCache(guestKey);
+      if (guestCached) {
+        cached = guestCached;
+        // (key는 그대로 두어도 됨. 곧 save effect에서 user키로 재저장됨)
+      }
+    }
+
+    // ✅ 3) 3순위: minorCategory 자체가 없어서 ALL로 들어온 경우 → 최신 캐시를 찾아 복원
+    if (!cached && (!norm(minorCategory) || currentMinor === 'ALL')) {
+      const latestUser = findLatestCacheForUser(userEmail);
+      const latestGuest = findLatestCacheForUser(null);
+      const latest =
+        latestUser && latestGuest
+          ? (latestUser.cache.ts >= latestGuest.cache.ts ? latestUser : latestGuest)
+          : (latestUser ?? latestGuest);
+
+      if (latest?.cache) {
+        cached = latest.cache;
+        const cachedMinor = norm(cached.minor) || 'ALL';
+        currentMinor = cachedMinor;
+
+        // ✅ UI도 같이 복원: overrideMinor가 없고, 현재 minorCategory가 비어있다면 캐시 minor로 세팅
+        if (!overrideMinor && !norm(minorCategory) && cachedMinor !== 'ALL') {
+          setMinorCategory(cachedMinor);
+        }
+      }
+    }
+
+    if (!cached) return;
+
+    const resolvedScope = `${userId}|${norm(cached.minor) || currentMinor || 'ALL'}`;
+
+    // ✅ tasks 복원: (새로고침 복구 핵심) prev.tasks가 있어도 "빈 상태면" 덮어쓰기
     if (Array.isArray(cached.tasks) && cached.tasks.length > 0) {
       setDraft((prev) => {
         const prevLen = prev.tasks?.length ?? 0;
@@ -221,11 +273,10 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         return { ...prev, tasks: cached.tasks };
       });
 
-      // ✅ tasks가 복원된 경우에만 “이미 적용됨”으로 마킹 (여기서만 autoAppliedRef 세팅)
-      autoAppliedRef.current = scope;
+      autoAppliedRef.current = resolvedScope;
     }
 
-    // ✅ 2) 목록 복원
+    // ✅ 목록 복원
     const cachedReco =
       Array.isArray(cached.recommended) && cached.recommended.length > 0
         ? cached.recommended
@@ -234,19 +285,19 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     setRecommended(Array.from(new Set(cachedReco.map(norm).filter(Boolean))));
     setRecoError(null);
     setRecoLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minorCategory, user?.email, setDraft]);
+  }, [minorCategory, user?.email, overrideMinor, setDraft]);
 
   // =========================
-  // ✅ 2) 캐시 없을 때만 API로 recommended 로드 (scope 단위 쿨다운)
+  // ✅ 2) 캐시 없을 때만 API로 recommended 로드 (minor가 있을 때만)
   // =========================
   useEffect(() => {
-    if (!minorCategory) return;
-
     const currentMinor = norm(minorCategory);
+    if (!currentMinor) return; // ✅ minor 없으면 API 호출 안함(대신 캐시/직접추가로 유지)
+    if (currentMinor === 'ALL') return;
+
     const userEmail = user?.email ?? null;
     const key = cacheKey(userEmail, currentMinor);
-    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor}`;
 
     const cached = safeReadCache(key);
     if (cached) return; // 유효 캐시 있으면 API 호출 X
@@ -284,7 +335,12 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
         setRecommended(uniq);
       } catch (e: any) {
-        if (e?.name === 'AbortError') return;
+        if (e?.name === 'AbortError') {
+          // ✅ AbortError면 쿨다운 남기지 않기(다음 렌더에서 재시도 가능)
+          attemptRef.current.delete(scope);
+          return;
+        }
+        attemptRef.current.delete(scope);
         setRecommended([]);
         setRecoError(e?.message ?? '목록 로드 중 오류');
       } finally {
@@ -300,13 +356,12 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
   //    - scope 단위로 1회만
   // =========================
   useEffect(() => {
-    if (!minorCategory) return;
+    const currentMinor = norm(minorCategory) || 'ALL';
     if (recoLoading || recoError) return;
     if (recommended.length === 0) return;
 
-    const currentMinor = norm(minorCategory);
     const userEmail = user?.email ?? null;
-    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor}`;
 
     if (autoAppliedRef.current === scope) return;
 
@@ -330,15 +385,13 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
   // =========================
   // ✅ 4) 저장: tasks / recommended 바뀌면 캐시에 기록
-  //    - recommended만 있고 tasks가 아직 비어있는 “중간 상태”는 저장하지 않음(깨진 캐시 방지)
+  //    - minor 없어도 ALL로 저장되게 변경 (새로고침 복구 핵심)
   // =========================
   useEffect(() => {
-    if (!minorCategory) return;
-
-    const currentMinor = norm(minorCategory);
+    const currentMinor = norm(minorCategory) || 'ALL';
     const userEmail = user?.email ?? null;
     const key = cacheKey(userEmail, currentMinor);
-    const scope = `${norm(userEmail) || 'guest'}|${currentMinor || 'ALL'}`;
+    const scope = `${norm(userEmail) || 'guest'}|${currentMinor}`;
 
     const tasksToSave = draft.tasks ?? [];
     const recoToSave =
@@ -351,8 +404,8 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     // ✅ recommended는 있는데 아직 auto-merge 전이면(=tasks 0 && autoAppliedRef !== scope) 저장 스킵
     if (recoToSave.length > 0 && tasksToSave.length === 0 && autoAppliedRef.current !== scope) return;
 
-    const payload = {
-      v: 2 as const,
+    const payload: StepTasksCache = {
+      v: 2,
       ts: Date.now(),
       user: norm(userEmail) || 'guest',
       minor: currentMinor || 'ALL',
@@ -369,15 +422,11 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     return Array.from(new Set(draft.tasks.map((t) => norm(t.title)).filter(Boolean)));
   }, [recommended, draft.tasks]);
 
-  // ✅ 요구사항 그대로:
-  // - recommended(=표시할 목록)가 비어있으면 로딩창 ON
-  // - 캐시든 API든 채워지면 OFF
-  // - 단, 에러면 로딩창 OFF (에러 메시지 보여야 함)
-  const showLoadingModal = !!minorCategory && !recoError && displayList.length === 0;
+  // ✅ 로딩 모달: minor가 있고, 에러 없고, 표시할 목록이 없을 때
+  const showLoadingModal = !!norm(minorCategory) && !recoError && displayList.length === 0;
 
   return (
     <div className={s.wrap}>
-      {/* ✅ recommended가 비어있으면 로딩 모달 */}
       <AnimatedLoadingModal
         open={showLoadingModal}
         title="작업 목록을 불러오는 중…"
@@ -388,12 +437,12 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         <div>
           <div className={s.sectionTitle}>사전 준비 - 작업 파악</div>
           <div className={s.sectionDesc}>
-            {minorCategory ? (
+            {norm(minorCategory) ? (
               <>
                 소분류 <b className={s.badge}>{minorCategory}</b> 기준 세부작업을 불러와 <b>자동 선택</b>합니다. 필요하면 클릭해서 해제하세요.
               </>
             ) : (
-              <>소분류 정보를 찾지 못했습니다. “직접 추가”로 검색해서 선택할 수 있어요.</>
+              <>소분류 정보를 찾지 못했습니다. “직접 추가”로 검색해서 선택할 수 있어요. (선택한 항목은 새로고침해도 유지됩니다)</>
             )}
           </div>
         </div>

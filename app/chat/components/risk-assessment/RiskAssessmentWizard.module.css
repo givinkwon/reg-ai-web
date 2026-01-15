@@ -43,6 +43,10 @@
   background: var(--ra-bg);
 }
 
+.docWrap {
+  width: 100%;
+}
+
 /* ✅ 라이트 테마: prefers-color-scheme */
 @media (prefers-color-scheme: light) {
   .wrap {

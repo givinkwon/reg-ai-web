@@ -6,6 +6,7 @@ import LogoMarquee from './components/landing/LogoMarquee';
 import ProductBanners from './components/landing/ProductBanners';
 import ReviewsBanner from './components/landing/ReviewsBanner';
 import FooterBanner from './components/landing/FooterBanner';
+import ChatCtaRibbon from './components/landing/ChatCtaRibbon';
 
 export default function Page() {
   return (
@@ -15,7 +16,8 @@ export default function Page() {
       {/* <LogoMarquee /> */}
       <ProductBanners />
       <ReviewsBanner />
-      <FooterBanner />
+      {/* <FooterBanner /> */}
+      <ChatCtaRibbon />
     </main>
   );
 }

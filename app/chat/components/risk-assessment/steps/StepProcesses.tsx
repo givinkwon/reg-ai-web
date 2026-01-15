@@ -1,3 +1,4 @@
+// components/risk-assessment/steps/StepProcesses.tsx
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,6 +15,7 @@ type Props = {
 
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
+const minorScope = (v?: string | null) => (norm(v) ? norm(v) : 'ALL');
 
 const SUGGEST_PROCESSES = ['절단/절삭', '가공(밀링/선반)', '세척/탈지', '조립/체결', '검사/측정', '포장/적재'];
 
@@ -33,10 +35,10 @@ type ProcessCache = {
   subProcesses: string[];
 };
 
-function cacheKey(userEmail: string | null | undefined, processName: string, minorCategory?: string | null) {
+function cacheKey(userEmail: string | null | undefined, processName: string, minorCat?: string | null) {
   const u = norm(userEmail) || 'guest';
   const pn = norm(processName);
-  const mc = norm(minorCategory);
+  const mc = minorScope(minorCat);
   return `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(pn)}:${encodeURIComponent(mc)}`;
 }
 
@@ -50,7 +52,6 @@ function safeReadCache(key: string): ProcessCache | null {
     if (!parsed?.ts || !Array.isArray(parsed?.subProcesses)) return null;
     if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
 
-    // ✅ 빈 캐시는 MISS 처리(= 다시 API 타게)
     if (parsed.subProcesses.length === 0) return null;
 
     return parsed;
@@ -67,11 +68,45 @@ function safeWriteCache(key: string, payload: ProcessCache) {
   }
 }
 
-/** ✅ 응답이 string[] / {items:...} / {value:...} / 객체배열 등 무엇이든 "문자열 배열"로 정규화 */
+/** ✅ (옵션) minor=ALL일 때 같은 user+processName 중 최신 캐시 찾기 */
+function findLatestCacheForUserAndProcess(userEmail: string | null | undefined, processName: string) {
+  try {
+    const u = norm(userEmail) || 'guest';
+    const pn = norm(processName);
+    if (!pn) return null;
+
+    const prefix = `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(pn)}:`;
+    let best: ProcessCache | null = null;
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (!k.startsWith(prefix)) continue;
+
+      const c = safeReadCache(k);
+      if (!c) continue;
+      if (!best || c.ts > best.ts) best = c;
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
+/** ✅ 응답 정규화 */
 function toText(x: any) {
   if (typeof x === 'string') return x;
   if (x && typeof x === 'object') {
-    return x.title ?? x.name ?? x.sub_process ?? x.subProcess ?? x.process ?? '';
+    return (
+      x._id ??
+      x.title ??
+      x.name ??
+      x.sub_process ??
+      x.subProcess ??
+      x.process ??
+      x.value ??
+      ''
+    );
   }
   return '';
 }
@@ -100,7 +135,9 @@ function extractItems(payload: any): string[] {
                         ? payload.value.subProcesses
                         : Array.isArray(payload?.value?.rows)
                           ? payload.value.rows
-                          : [];
+                          : Array.isArray(payload?.value?.data)
+                            ? payload.value.data
+                            : [];
 
   return Array.from(new Set(arr.map(toText).map(norm).filter(Boolean)));
 }
@@ -111,20 +148,18 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   const [sheetOpen, setSheetOpen] = useState(false);
   const [targetTaskId, setTargetTaskId] = useState<string | null>(null);
 
-  // ✅ “성공적으로 채운 task”만 완료 처리
+  // ✅ scopeKey(ck 포함)로 완료/시도 관리
   const completedRef = useRef<Set<string>>(new Set());
-  // ✅ 실패/빈 응답이어도 연타 방지
   const attemptRef = useRef<Map<string, number>>(new Map());
+
   const [autoLoadingIds, setAutoLoadingIds] = useState<Record<string, boolean>>({});
 
-  const tasks = useMemo(() => draft.tasks, [draft.tasks]);
+  const tasks = useMemo(() => draft.tasks ?? [], [draft.tasks]);
 
-  // ✅ effect deps용 시그니처: title 변화/작업 추가삭제만 감지 (processes 변화 제외)
-  const tasksSig = useMemo(() => {
-    return tasks.map((t) => `${t.id}|${norm(t.title)}`).join('||');
-  }, [tasks]);
+  // ✅ processes 변화로 자동 로딩 effect가 재실행되지 않게
+  const tasksSig = useMemo(() => tasks.map((t) => `${t.id}|${norm(t.title)}`).join('||'), [tasks]);
 
-  // ✅ 캐시 저장용 시그니처: processes 변화까지 감지
+  // ✅ 수동/자동으로 processes가 바뀔 때 캐시 저장 트리거
   const processesSig = useMemo(() => {
     return tasks
       .map((t) => `${t.id}|${norm(t.title)}|${(t.processes ?? []).map((p) => norm(p.title)).join(',')}`)
@@ -144,36 +179,40 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== targetTaskId) return t;
 
-        const exists = new Set(t.processes.map((p) => norm(p.title)));
-        if (exists.has(v)) return t;
+        const cur = Array.isArray(t.processes) ? t.processes : [];
+        const exists = new Set(cur.map((p) => norm(p.title)));
+        if (exists.has(v)) return { ...t, processes: cur };
 
-        return { ...t, processes: [...t.processes, { id: uid(), title: v, hazards: [] }] };
+        return { ...t, processes: [...cur, { id: uid(), title: v, hazards: [] }] };
       }),
     }));
   };
 
   const addProcessesBulk = (taskId: string, titles: string[]) => {
-    const uniq = Array.from(new Set(titles.map(norm))).filter(Boolean);
+    const uniq = Array.from(new Set((titles ?? []).map(norm))).filter(Boolean);
     if (uniq.length === 0) return;
 
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== taskId) return t;
 
-        const exists = new Set(t.processes.map((p) => norm(p.title)));
-        const next = [...t.processes];
+        const cur = Array.isArray(t.processes) ? t.processes : [];
+        const exists = new Set(cur.map((p) => norm(p.title)));
+        const next = [...cur];
 
+        let changed = false;
         for (const title of uniq) {
           if (exists.has(title)) continue;
           next.push({ id: uid(), title, hazards: [] });
           exists.add(title);
+          changed = true;
         }
 
-        return { ...t, processes: next };
+        return changed ? { ...t, processes: next } : { ...t, processes: cur };
       }),
     }));
   };
@@ -181,20 +220,19 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   const removeChip = (taskId: string, processId: string) => {
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== taskId) return t;
-        return { ...t, processes: t.processes.filter((p) => p.id !== processId) };
+        const cur = Array.isArray(t.processes) ? t.processes : [];
+        return { ...t, processes: cur.filter((p) => p.id !== processId) };
       }),
     }));
   };
 
   // =========================
-  // ✅ 자동 채움: task.title -> sub_process(distinct)
-  // ✅ deps를 tasksSig로(= processes 추가로 effect 재시작/abort 안됨)
+  // ✅ 자동 채움 (AbortController 제거 버전)
   // =========================
   useEffect(() => {
     let cancelled = false;
-    const controllers: AbortController[] = [];
 
     const run = async () => {
       for (const t of tasks) {
@@ -203,86 +241,115 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         const processName = norm(t.title);
         if (!processName) continue;
 
-        // ✅ 이미 성공적으로 채운 task면 스킵
-        if (completedRef.current.has(t.id)) continue;
+        const uiKey = t.id;
+        const mc = minorScope(minorCategory);
+        const ck = cacheKey(user?.email ?? null, processName, mc);
+        const scopeKey = `${t.id}|${ck}`;
 
-        // ✅ 이미 공정이 들어있으면: 완료로 처리 + 캐시 저장
-        if (t.processes && t.processes.length > 0) {
-          completedRef.current.add(t.id);
-          const ck = cacheKey(user?.email, processName, minorCategory);
+        const curProcs = Array.isArray(t.processes) ? t.processes : [];
+
+        // ✅ 공정을 다 지운 경우 완료 마킹 해제
+        if (completedRef.current.has(scopeKey) && curProcs.length === 0) {
+          completedRef.current.delete(scopeKey);
+        }
+
+        // ✅ 완료+현재도 공정이 있으면 스킵
+        if (completedRef.current.has(scopeKey) && curProcs.length > 0) continue;
+
+        // ✅ 이미 공정이 있으면 완료 처리 + 캐시 저장
+        if (curProcs.length > 0) {
+          completedRef.current.add(scopeKey);
           safeWriteCache(ck, {
             v: 2,
             ts: Date.now(),
             user: norm(user?.email) || 'guest',
             processName,
-            minorCategory: minorCategory ?? null,
-            subProcesses: t.processes.map((p) => norm(p.title)).filter(Boolean),
+            minorCategory: mc,
+            subProcesses: curProcs.map((p) => norm(p.title)).filter(Boolean),
           });
           continue;
         }
 
-        // ✅ 쿨다운
-        const last = attemptRef.current.get(t.id);
+        // ✅ 쿨다운 (scope 기준)
+        const last = attemptRef.current.get(scopeKey);
         if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
 
-        // ✅ 1) 캐시
-        const ck = cacheKey(user?.email, processName, minorCategory);
-        const cached = safeReadCache(ck);
+        // ✅ 1) 캐시 (정확키)
+        let cached = safeReadCache(ck);
+
+        // ✅ 2) user 캐시 없으면 guest 폴백
+        if (!cached && user?.email) {
+          const guestCk = cacheKey(null, processName, mc);
+          cached = safeReadCache(guestCk);
+        }
+
+        // ✅ 3) minor=ALL이면 최신 캐시 폴백
+        if (!cached && mc === 'ALL') {
+          const latestUser = findLatestCacheForUserAndProcess(user?.email ?? null, processName);
+          const latestGuest = findLatestCacheForUserAndProcess(null, processName);
+          const latest =
+            latestUser && latestGuest
+              ? latestUser.ts >= latestGuest.ts
+                ? latestUser
+                : latestGuest
+              : latestUser ?? latestGuest;
+
+          if (latest) cached = latest;
+        }
+
         if (cached) {
-          addProcessesBulk(t.id, cached.subProcesses);
-          completedRef.current.add(t.id);
+          if (!cancelled) addProcessesBulk(t.id, cached.subProcesses);
+          completedRef.current.add(scopeKey);
           continue;
         }
 
         // ✅ 2) API
-        attemptRef.current.set(t.id, Date.now());
-        setAutoLoadingIds((prev) => ({ ...prev, [t.id]: true }));
-
-        const ac = new AbortController();
-        controllers.push(ac);
+        attemptRef.current.set(scopeKey, Date.now());
+        setAutoLoadingIds((prev) => ({ ...prev, [uiKey]: true }));
 
         try {
           const qs = new URLSearchParams();
           qs.set('endpoint', 'sub-processes');
           qs.set('process_name', processName);
           qs.set('limit', '50');
-          if (norm(minorCategory)) qs.set('minor', norm(minorCategory));
-
-          const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
-            cache: 'no-store',
-            signal: ac.signal,
-          });
-
-          if (!res.ok) continue;
-
-          const raw = await res.json();
-
-          // 🔎 개발 중이면 실제 응답 형태를 꼭 확인
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[StepProcesses] sub-processes raw:', raw, 'isArray?', Array.isArray(raw));
-          }
-
-          const items = extractItems(raw);
-
-          if (items.length > 0) {
-            addProcessesBulk(t.id, items);
-
-            safeWriteCache(ck, {
-              v: 2,
-              ts: Date.now(),
-              user: norm(user?.email) || 'guest',
-              processName,
-              minorCategory: minorCategory ?? null,
-              subProcesses: items,
+          if (norm(minorCategory)) qs.set('minor', norm(minorCategory)) 
+          try {
+            const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
+              cache: 'no-store',
             });
+            if (!res.ok) {
+              attemptRef.current.delete(scopeKey); // ✅ 실패면 바로 재시도 가능하게
+              continue;
+            }
 
-            completedRef.current.add(t.id);
+            const raw = await res.json();
+            const items = extractItems(raw);
+
+            if (items.length > 0) {
+              if (!cancelled) addProcessesBulk(t.id, items);
+
+              safeWriteCache(ck, {
+                v: 2,
+                ts: Date.now(),
+                user: norm(user?.email) || 'guest',
+                processName,
+                minorCategory: mc,
+                subProcesses: items,
+              });
+
+              completedRef.current.add(scopeKey);
+            } else {
+              // ✅ 빈 응답이면 완료 처리 X (쿨다운 후 재시도)
+            }
+          } catch (e: any) {
+            console.log('[StepProcesses] fetch rejected', e?.name, e?.message);
+            throw e;
           }
-          // items=0이면 completed 처리 X → 재시도 가능(쿨다운)
+
         } catch (e: any) {
-          if (e?.name === 'AbortError') continue;
+          attemptRef.current.delete(scopeKey); // ✅ 네트워크 오류도 바로 재시도 가능
         } finally {
-          setAutoLoadingIds((prev) => ({ ...prev, [t.id]: false }));
+          if (!cancelled) setAutoLoadingIds((prev) => ({ ...prev, [uiKey]: false }));
         }
       }
     };
@@ -291,29 +358,30 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
     return () => {
       cancelled = true;
-      controllers.forEach((c) => c.abort());
     };
   }, [tasksSig, user?.email, minorCategory]);
 
   // =========================
-  // ✅ 수동 추가/삭제도 캐시에 반영(0개면 저장 안함)
-  //    (processesSig로 바꿔서 실제로 반응하게)
+  // ✅ processes가 생기면 캐시에 저장
   // =========================
   useEffect(() => {
+    const mc = minorScope(minorCategory);
+
     for (const t of tasks) {
       const processName = norm(t.title);
       if (!processName) continue;
 
-      const subProcesses = (t.processes ?? []).map((p) => norm(p.title)).filter(Boolean);
+      const cur = Array.isArray(t.processes) ? t.processes : [];
+      const subProcesses = cur.map((p) => norm(p.title)).filter(Boolean);
       if (subProcesses.length === 0) continue;
 
-      const ck = cacheKey(user?.email, processName, minorCategory);
+      const ck = cacheKey(user?.email, processName, mc);
       safeWriteCache(ck, {
         v: 2,
         ts: Date.now(),
         user: norm(user?.email) || 'guest',
         processName,
-        minorCategory: minorCategory ?? null,
+        minorCategory: mc,
         subProcesses,
       });
     }
@@ -323,36 +391,40 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
     <div className={s.wrap}>
       <div className={s.topNote}>작업별로 공정을 추가해 주세요. (DB/캐시에 있으면 자동으로 채워집니다)</div>
 
-      {tasks.map((t) => (
-        <div key={t.id} className={s.block}>
-          <div className={s.blockHead}>
-            <div className={s.blockTitle}>{t.title || '(작업명 미입력)'}</div>
-            <button className={s.addBtn} onClick={() => openSheet(t.id)}>
-              공정 추가
-            </button>
-          </div>
+      {tasks.map((t) => {
+        const procs = Array.isArray(t.processes) ? t.processes : [];
 
-          <div className={s.chips}>
-            {t.processes.length === 0 ? (
-              <div className={s.empty}>
-                {autoLoadingIds[t.id] ? '공정을 자동으로 불러오는 중…' : '아직 공정이 없습니다. “공정 추가”를 눌러 주세요.'}
-              </div>
-            ) : (
-              t.processes.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={s.chip}
-                  onClick={() => removeChip(t.id, p.id)}
-                  title="클릭하면 제거됩니다"
-                >
-                  {p.title} <span className={s.chipX}>×</span>
-                </button>
-              ))
-            )}
+        return (
+          <div key={t.id} className={s.block}>
+            <div className={s.blockHead}>
+              <div className={s.blockTitle}>{t.title || '(작업명 미입력)'}</div>
+              <button className={s.addBtn} onClick={() => openSheet(t.id)}>
+                공정 추가
+              </button>
+            </div>
+
+            <div className={s.chips}>
+              {procs.length === 0 ? (
+                <div className={s.empty}>
+                  {autoLoadingIds[t.id] ? '공정을 자동으로 불러오는 중…' : '아직 공정이 없습니다. “공정 추가”를 눌러 주세요.'}
+                </div>
+              ) : (
+                procs.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={s.chip}
+                    onClick={() => removeChip(t.id, p.id)}
+                    title="클릭하면 제거됩니다"
+                  >
+                    {p.title} <span className={s.chipX}>×</span>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <AddItemSheet
         open={sheetOpen}

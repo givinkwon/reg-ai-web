@@ -61,20 +61,31 @@
   }
   
   .chips{
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
+    white-space: normal;         /* 한 줄 고정 해제 */
+    overflow-wrap: anywhere;     /* 긴 단어도 줄바꿈 */
+    word-break: keep-all;        /* 한글 단어 중간 쪼개짐 최소화 */
+    text-align: left;            /* 보기 좋게(선택) */
     gap: 8px;
   }
   
   .chip{
-    display: inline-flex;
+    width: 100%;
+    /* display: flex; */
+    flex-wrap: wrap;
+    white-space: normal;         /* 한 줄 고정 해제 */
+    overflow-wrap: anywhere;     /* 긴 단어도 줄바꿈 */
+    word-break: keep-all;        /* 한글 단어 중간 쪼개짐 최소화 */
+    text-align: left;            /* 보기 좋게(선택) */
     align-items: center;
     gap: 8px;
     border: 1px solid rgba(59, 130, 246, 0.28);
     background: rgba(59, 130, 246, 0.10);
     color: #1d4ed8;
     border-radius: 999px;
-    padding: 7px 10px;
+    /* padding: 7px 10px; */
     font-size: 12px;
     font-weight: 900;
     cursor: pointer;

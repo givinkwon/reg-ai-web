@@ -1,0 +1,114 @@
+.wrap {
+  width: 100%;
+  padding: 18px 16px;
+  margin-top: 18px;
+
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+
+  /* 띠 배너 느낌 */
+  background: linear-gradient(
+    90deg,
+    rgba(37, 99, 235, 0.20),
+    rgba(37, 99, 235, 0.08)
+  );
+}
+
+.inner {
+  max-width: 1040px;
+  margin: 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.desc {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.70);
+
+  /* 모바일에서 길어져도 예쁘게 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 14px;
+
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.95);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.24);
+}
+
+.cta:hover {
+  filter: brightness(1.05);
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 12px;
+
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 모바일: 버튼이 아래로 내려가도록 */
+@media (max-width: 680px) {
+  .inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .cta,
+  .secondary {
+    flex: 1;
+  }
+}

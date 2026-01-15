@@ -18,7 +18,7 @@ export default function LandingHeader() {
     <header className={s.wrap}>
       <div className={s.inner}>
         {/* Left: Logo */}
-        <Link href="/" className={s.logoArea} aria-label="RegAI Home">
+        <Link data-ga-id="Home:Header:ClickLogo" href="/" className={s.logoArea} aria-label="RegAI Home">
           <div className={s.logo}>REG AI</div>
           {/* <div className={s.logoSub}>산업안전 · 보건 실무 AI</div> */}
         </Link>
@@ -39,7 +39,7 @@ export default function LandingHeader() {
             로그인
           </button> */}
 
-          <button className={s.primaryBtn} onClick={goChat}>
+          <button data-ga-id="Home:Header:ClickChat" className={s.primaryBtn} onClick={goChat}>
             바로 사용하기
           </button>
         </div>

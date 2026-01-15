@@ -93,7 +93,7 @@ export default function HeroBanner() {
           </p>
 
           <div className={s.ctaRow}>
-            <button className={s.primaryBtn} onClick={goChat}>
+            <button data-ga-id="Home:HeroBanner:ClickChat:Left" className={s.primaryBtn} onClick={goChat}>
               바로 사용하기
             </button>
             {/* <button className={s.ghostBtn} onClick={() => router.push('#features')}>
@@ -112,6 +112,7 @@ export default function HeroBanner() {
         {/* Right: Chat Mock */}
         <div className={s.right}>
           <div
+            data-ga-id="Home:HeroBanner:ClickChat:Right"
             className={s.chatCard}
             role="button"
             tabIndex={0}
