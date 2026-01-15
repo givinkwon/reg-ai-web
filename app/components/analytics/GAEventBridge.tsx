@@ -1,14 +1,14 @@
 // components/analytics/GAEventBridge.tsx
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { parseDatasetParams, track, trackClick, trackPageView } from '../../lib/ga';
 
 function closestGaEl(start: HTMLElement | null): HTMLElement | null {
   let el: HTMLElement | null = start;
   while (el) {
-    if (el.dataset?.gaId) return el; // ✅ data-ga-id가 있는 가장 가까운 부모
+    if (el.dataset?.gaId) return el; // data-ga-id가 있는 가장 가까운 부모
     el = el.parentElement;
   }
   return null;
@@ -25,43 +25,100 @@ function pickText(el: HTMLElement): string | undefined {
   return t ? t.slice(0, 80) : undefined;
 }
 
+function buildPagePath(pathname: string) {
+  // ✅ useSearchParams() 대신 location.search 사용 (not-found 프리렌더 이슈 회피)
+  if (typeof window === 'undefined') return pathname;
+  const qs = window.location.search?.replace(/^\?/, '');
+  return `${pathname}${qs ? `?${qs}` : ''}`;
+}
+
+function scheduleMicrotask(fn: () => void) {
+  // queueMicrotask 없는 환경 대비
+  if (typeof queueMicrotask === 'function') queueMicrotask(fn);
+  else Promise.resolve().then(fn);
+}
+
 export default function GAEventBridge() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const lastSentRef = useRef<string>('');
 
-  // ✅ App Router: route change마다 virtual pageview 쏘기
+  // ✅ pathname 변경 감지용 PV
   useEffect(() => {
-    const qs = searchParams?.toString();
-    const page_path = `${pathname}${qs ? `?${qs}` : ''}`;
+    const page_path = buildPagePath(pathname);
+
+    if (lastSentRef.current === page_path) return;
+    lastSentRef.current = page_path;
 
     trackPageView({
       page_path,
       page_location: typeof window !== 'undefined' ? window.location.href : undefined,
       page_title: typeof document !== 'undefined' ? document.title : undefined,
     });
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
-  // ✅ 전역 클릭 캐치 (캡처 단계에서 잡아서 Link/버튼 모두 커버)
+  // ✅ querystring만 바뀌는 경우까지 잡기 위해 history API 후킹 + popstate
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const send = () => {
+      const page_path = buildPagePath(window.location.pathname);
+
+      if (lastSentRef.current === page_path) return;
+      lastSentRef.current = page_path;
+
+      trackPageView({
+        page_path,
+        page_location: window.location.href,
+        page_title: document.title,
+      });
+    };
+
+    const onPopState = () => send();
+
+    type PushState = History['pushState'];
+    type ReplaceState = History['replaceState'];
+
+    const origPushState: PushState = history.pushState;
+    const origReplaceState: ReplaceState = history.replaceState;
+
+    history.pushState = (function (this: History, ...args: Parameters<PushState>) {
+      const ret = origPushState.apply(this, args);
+      scheduleMicrotask(send);
+      return ret;
+    }) as PushState;
+
+    history.replaceState = (function (this: History, ...args: Parameters<ReplaceState>) {
+      const ret = origReplaceState.apply(this, args);
+      scheduleMicrotask(send);
+      return ret;
+    }) as ReplaceState;
+
+    window.addEventListener('popstate', onPopState);
+
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      history.pushState = origPushState;
+      history.replaceState = origReplaceState;
+    };
+  }, []);
+
+  // ✅ 전역 클릭 캐치 (캡처 단계)
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (e.button !== 0) return; // left click only
+      if (e.button !== 0) return;
 
       const target = e.target as HTMLElement | null;
       const el = closestGaEl(target);
       if (!el) return;
 
-      // ✅ 제외 옵션
       if (el.dataset.gaIgnore === '1') return;
 
-      const { eventName, uiId, label, text, value, extra } = parseDatasetParams(
-        el.dataset
-      );
+      const { eventName, uiId, label, text, value, extra } = parseDatasetParams(el.dataset);
       if (!uiId) return;
 
       const href = pickHref(el);
       const uiText = text || pickText(el);
 
-      // ✅ 기본은 ui_click, 필요하면 data-ga-event로 커스텀 가능
       if (eventName === 'ui_click') {
         trackClick({
           ui_id: uiId,
@@ -73,7 +130,6 @@ export default function GAEventBridge() {
           extra,
         });
       } else {
-        // 커스텀 이벤트
         track(eventName, {
           ui_id: uiId,
           ui_label: label,
@@ -86,7 +142,6 @@ export default function GAEventBridge() {
       }
     };
 
-    // ✅ 키보드 접근성: Enter/Space도 클릭처럼 트래킹하고 싶으면
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
 
