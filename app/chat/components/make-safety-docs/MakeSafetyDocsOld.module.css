@@ -1,0 +1,1530 @@
+/* =========================================================
+   ChatArea.module.css  (based on your file)
+   - No :global
+   - Web/Desktop first
+   - Mobile overrides at bottom
+   ========================================================= */
+
+/* =========================================================
+   1) 기본 컨테이너 & 테마 변수 (WEB/DESKTOP BASE)
+   ========================================================= */
+.wrap {
+  /* Light tokens */
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --input-bg: #f9fafb;
+
+  --border: #e5e7eb;
+  --border-2: rgba(15, 23, 42, 0.14);
+
+  --text: #111827;
+  --text-2: rgba(17, 24, 39, 0.82);
+  --muted: rgba(17, 24, 39, 0.55);
+  --muted-2: rgba(17, 24, 39, 0.45);
+
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.12);
+
+  --btn-bg: #e5edff;
+  --btn-hover: #dbeafe;
+
+  --chip-bg: #eef2ff;
+  --chip-text: #2563eb;
+  --chip-icon: #2563eb;
+
+  --bubble-user-bg: #2563eb;
+  --bubble-user-text: #f9fafb;
+  --bubble-ai-bg: #f3f4f6;
+  --bubble-ai-text: #111827;
+
+  --shadow-1: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-2: 0 18px 40px rgba(148, 163, 184, 0.35);
+
+  /* quick buttons */
+  --quick-bg: #e5f1ff;
+  --quick-border: #bfdbfe;
+  --quick-text: #0f172a;
+  --quick-shadow: 0 18px 40px rgba(148, 163, 184, 0.4);
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-1);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* =========================================================
+   2) 다크모드 변수 오버라이드
+   - 1) data-theme="dark" 우선
+   - 2) prefers-color-scheme fallback
+   ========================================================= */
+body[data-theme='dark'] .wrap {
+  --bg: #060b16;
+  --surface: #0b1220;
+  --surface-2: #0f172a;
+  --input-bg: #0b1220;
+
+  --border: rgba(148, 163, 184, 0.18);
+  --border-2: rgba(148, 163, 184, 0.26);
+
+  --text: #e5e7eb;
+  --text-2: rgba(229, 231, 235, 0.88);
+  --muted: rgba(229, 231, 235, 0.66);
+  --muted-2: rgba(229, 231, 235, 0.52);
+
+  --accent: #60a5fa;
+  --accent-2: #3b82f6;
+  --accent-soft: rgba(96, 165, 250, 0.14);
+
+  --btn-bg: rgba(148, 163, 184, 0.14);
+  --btn-hover: rgba(148, 163, 184, 0.22);
+
+  --chip-bg: rgba(148, 163, 184, 0.14);
+  --chip-text: #e5e7eb;
+  --chip-icon: #60a5fa;
+
+  --bubble-user-bg: #3b82f6;
+  --bubble-user-text: #0b1220;
+  --bubble-ai-bg: #0f172a;
+  --bubble-ai-text: #e5e7eb;
+
+  --shadow-1: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --shadow-2: 0 18px 50px rgba(0, 0, 0, 0.45);
+
+  --quick-bg: rgba(15, 23, 42, 0.92);
+  --quick-border: rgba(96, 165, 250, 0.35);
+  --quick-text: #e5e7eb;
+  --quick-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+/* fallback: OS dark mode (theme attribute가 없을 때도 보이게) */
+@media (prefers-color-scheme: dark) {
+  .wrap {
+    --bg: #060b16;
+    --surface: #0b1220;
+    --surface-2: #0f172a;
+    --input-bg: #0b1220;
+
+    --border: rgba(148, 163, 184, 0.18);
+    --border-2: rgba(148, 163, 184, 0.26);
+
+    --text: #e5e7eb;
+    --text-2: rgba(229, 231, 235, 0.88);
+    --muted: rgba(229, 231, 235, 0.66);
+    --muted-2: rgba(229, 231, 235, 0.52);
+
+    --accent: #60a5fa;
+    --accent-2: #3b82f6;
+    --accent-soft: rgba(96, 165, 250, 0.14);
+
+    --btn-bg: rgba(148, 163, 184, 0.14);
+    --btn-hover: rgba(148, 163, 184, 0.22);
+
+    --chip-bg: rgba(148, 163, 184, 0.14);
+    --chip-text: #e5e7eb;
+    --chip-icon: #60a5fa;
+
+    --bubble-user-bg: #3b82f6;
+    --bubble-user-text: #0b1220;
+    --bubble-ai-bg: #0f172a;
+    --bubble-ai-text: #e5e7eb;
+
+    --shadow-1: 0 18px 50px rgba(0, 0, 0, 0.45);
+    --shadow-2: 0 18px 50px rgba(0, 0, 0, 0.45);
+
+    --quick-bg: rgba(15, 23, 42, 0.92);
+    --quick-border: rgba(96, 165, 250, 0.35);
+    --quick-text: #e5e7eb;
+    --quick-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* =========================================================
+   3) 헤더 (WEB)
+   ========================================================= */
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.productName {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chatTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settingsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding-inline: 10px;
+
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.iconXs {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+/* =========================================================
+   4) 본문 (WEB)
+   ========================================================= */
+.body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.stream {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+.streamInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.welcome {
+  margin-top: 16px;
+  padding: 16px 14px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+/* =========================================================
+   5) 메시지 (유저/AI)
+   ========================================================= */
+.userRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.userBubble {
+  max-width: min(640px, 100%);
+  padding: 10px 12px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--bubble-user-bg);
+  color: var(--bubble-user-text);
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.userContent p {
+  margin: 0;
+}
+
+.aiRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.aiBubble {
+  max-width: min(720px, 100%);
+  padding: 10px 12px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--bubble-ai-bg);
+  color: var(--bubble-ai-text);
+  font-size: 14px;
+  line-height: 1.75;            /* 1.6 → 1.75 추천 */
+  word-break: keep-all;         /* break-word → keep-all */
+  overflow-wrap: anywhere; 
+  border: 1px solid var(--border);
+}
+
+/* 큰 제목: 1) 답변 */
+/* 큰 제목: 1) 답변 */
+.aiBubble h3[data-ai='title'] {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* (선택) 1. 같은 헤딩 */
+.aiBubble h4[data-ai='heading'] {
+  margin: 10px 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* 들여쓰기 줄 → 가운데점 */
+.aiBubble p[data-ai='dot'] {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.aiBubble span[data-ai='dotmark'] {
+  flex: 0 0 auto;
+  font-weight: 900;
+  opacity: 0.75;
+  line-height: 1.6;
+}
+
+.aiBubble span[data-ai='dottext'] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 소제목: 1. 출입통제: ... (num/head만 bold는 strong으로 처리됨) */
+.aiBubble p[data-ai='subheading'] {
+  margin: 10px 0 6px;
+}
+
+.aiBubble p[data-ai='subheading'] strong {
+  font-weight: 900;
+}
+
+/* 일반 문단 간격 */
+.aiBubble p {
+  margin: 0 0 8px;
+}
+.aiBubble p:last-child {
+  margin-bottom: 0;
+}
+
+/* 리스트 */
+.aiBubble ul {
+  margin: 6px 0 10px;
+  padding-left: 18px;
+}
+.aiBubble li {
+  margin: 4px 0;
+}
+
+/* =========================================================
+   6) 메시지 액션
+   ========================================================= */
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 4px;
+}
+
+.miniActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* width: 26px; */
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  background: var(--surface-2);
+}
+
+.iconAction {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+.evidenceBtn {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.evidenceBtn:hover {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+/* =========================================================
+   7) 로딩 카드
+   ========================================================= */
+.loadingCard {
+  align-self: flex-start;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--bubble-ai-bg);
+  font-size: 14px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+}
+
+.dots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.dots span {
+  animation: blink 1.3s infinite ease-in-out;
+  font-size: 16px;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.bottomSpacer {
+  height: 8px;
+}
+
+/* =========================================================
+   8) 입력 영역
+   ========================================================= */
+.inputRow {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 16px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.inputWrap {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.inputShell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--input-bg);
+}
+
+.plusBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.plusBtn:hover {
+  background: var(--accent-2);
+}
+
+.plusIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.taskChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.taskChipIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--chip-icon);
+  stroke: var(--chip-icon);
+}
+
+.taskChipLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 35vw;
+}
+
+.taskChipClose {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+  color: var(--muted);
+}
+
+.taskChipClose:hover {
+  color: var(--text);
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  padding: 0;
+}
+
+.input::placeholder {
+  color: var(--muted-2);
+}
+
+.inputHasChip {
+  /* optional */
+}
+
+.attachBtn,
+.sendBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  cursor: pointer;
+}
+
+.attachBtn:hover,
+.sendBtn:hover {
+  background: var(--btn-hover);
+}
+
+.iconMd {
+  width: 20px;
+  height: 20px;
+  color: var(--text);
+}
+
+.iconMdAccent {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+/* =========================================================
+   9) 첨부 파일 리스트
+   ========================================================= */
+.attachList {
+  padding: 0 16px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--surface);
+}
+
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.attachIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+.attachName {
+  max-width: 160px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.attachRemove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.attachRemove:hover {
+  color: var(--text);
+}
+
+/* =========================================================
+   10) 토스트
+   ========================================================= */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.96);
+  color: #ffffff;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+}
+
+/* =========================================================
+   11) 작업 선택 모달
+   ========================================================= */
+.typeModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.taskModal {
+  position: relative;
+  width: min(420px, calc(100% - 32px));
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 16px 18px 18px;
+  box-shadow: var(--shadow-2);
+  border: 1px solid var(--border);
+}
+
+.typeTitle {
+  margin: 0;
+  padding-right: 32px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.typeCloseBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+}
+
+.typeCloseBtn:hover {
+  background: var(--surface-2);
+}
+
+.typeCloseIcon {
+  display: inline-block;
+  color: var(--text);
+}
+
+.taskGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.taskCard {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.taskCard:hover {
+  background: var(--accent-soft);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.taskCardIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+  stroke: var(--accent);
+}
+
+.taskLabel {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* =========================================================
+   12) Quick Actions (Landing)
+   ========================================================= */
+.quickWrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 16px 24px;
+  gap: 24px;
+  margin: 0 auto; 
+}
+
+.quickTitle {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--text);
+}
+
+.quickSub {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.quickGrid {
+  display: grid;
+  width: 80%;
+  margin-left: 10%;
+  margin-right: 10%;
+
+  /* ✅ 셀 폭에 맞춰 버튼이 동일하게 늘어나도록 */
+  justify-items: stretch;
+
+  column-gap: 18px;
+  row-gap: 14px;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quickBtn {
+  /* ✅ 고정폭/inline-flex 제거 → 셀 폭 기준으로 통일 */
+  width: 100%;
+  height: 56px; /* height 대신 min-height로 통일감 + 줄바꿈 대응 */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  padding: 0 20px;
+  border-radius: 999px;
+
+  border: 1px solid var(--quick-border);
+  background: var(--quick-bg);
+  color: var(--quick-text);
+
+  font-size: 14px;
+  font-weight: 600;
+
+  /* ✅ 라벨이 길어도 버튼 크기 흔들리지 않게 */
+  box-sizing: border-box;
+
+  box-shadow: var(--quick-shadow);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.quickBtn:hover {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+body[data-theme='dark'] .quickBtn:hover {
+  background: rgba(96, 165, 250, 0.16);
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+.quickIconWrap {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px; /* ✅ 고정 */
+
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(96, 165, 250, 0.55);
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.quickIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+.quickLabel {
+  line-height: 1.2;
+  text-align: left;
+
+  /* ✅ 길면 2줄까지만, 넘치면 ... */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* =========================================================
+   13) 힌트 칩
+   ========================================================= */
+.hintWrap {
+  margin: 0 0;
+  padding: 4px 0 8px;
+  max-width: 780px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.hintChip {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease, color 0.15s ease;
+}
+
+body[data-theme='dark'] .hintChip {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.hintChip:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   14) 섹션 헤더
+   ========================================================= */
+.quickSection {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.quickSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  width: 80%;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+.quickSectionIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.quickSectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.accountLabel {
+  margin-left: 6px;
+  font-size: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+/* =========================================================
+   15) 문서(교육/다운로드) UI
+   ========================================================= */
+.docWrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 12px 24px;
+}
+
+.docTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.docSubtitle {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.docCategoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.docCategoryCard {
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-1);
+}
+
+.docCategoryCardOpen {
+  border-color: rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
+}
+.docCategoryHeader {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  background: transparent !important;
+  border: none;
+  text-align: left;
+}
+
+.docCategoryText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.docCategoryTitle {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);      /* ✅ accent 대신 text로 (안 보임 방지) */
+  margin-bottom: 4px;
+}
+
+.docCategoryDesc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+
+  /* (선택) 2줄까지만 보이게 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+
+.docCategoryArrow {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 3px;
+  transition: transform 0.18s ease;
+  color: var(--muted);
+}
+
+.docCategoryArrowOpen {
+  transform: rotate(180deg);
+}
+
+.docList {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.docChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  color: var(--text);
+
+  max-width: 100%;     /* ✅ 칩이 컨테이너 밖으로 못 나가게 */
+  min-width: 0;        /* ✅ 내부 텍스트 ellipsis 가능하게 */
+}
+
+.docChip:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: var(--accent-soft);
+}
+
+.docChipIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+
+.docChipLabel {
+  white-space: nowrap;        /* 한 줄 유지 */
+  overflow: hidden;           /* ✅ 넘치면 */
+  text-overflow: ellipsis;    /* ✅ ... */
+  min-width: 0;
+  max-width: 52vw;            /* ✅ 모바일에서 너무 길면 잘리게(원하면 조절) */
+}
+
+.docEmpty {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* AI bubble 내부 download chip */
+.aiBubble .safety-doc-download-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  font-size: 12px;
+  line-height: 1;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.aiBubble .safety-doc-download-chip:hover {
+  background: rgba(37, 99, 235, 0.18);
+}
+
+/* 카드형 다운로드 UI */
+.safety-doc-download-box {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.safety-doc-download-title {
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.safety-doc-download-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .safety-doc-download-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.safety-doc-download-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-decoration: none;
+  color: var(--text);
+}
+
+.safety-doc-download-card:hover {
+  border-color: var(--border-2);
+  background: var(--accent-soft);
+}
+
+.safety-doc-download-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.safety-doc-download-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.safety-doc-download-meta {
+  min-width: 0;
+}
+
+.safety-doc-download-name {
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.safety-doc-download-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.75;
+  color: var(--muted);
+}
+
+.safety-doc-download-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.safety-doc-download-badge {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.03);
+  opacity: 0.9;
+  color: var(--text);
+}
+
+body[data-theme='dark'] .safety-doc-download-badge {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.safety-doc-download-arrow {
+  opacity: 0.7;
+  color: var(--muted);
+}
+
+/* =========================================================
+   16) Safety Edu: Search / Pane / Meta
+   (기존 네 스타일을 "라이트/다크 둘 다" 보이게 정리)
+   ========================================================= */
+.eduCount {
+  opacity: 0.75;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.eduSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  margin: 12px 0 16px;
+  color: var(--text);
+}
+
+.eduSearchIcon {
+  opacity: 0.7;
+  color: var(--muted);
+}
+
+.eduSearchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.eduSearchInput::placeholder {
+  color: var(--muted-2);
+}
+
+.eduSearchClear {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 4px;
+  color: var(--muted);
+}
+
+.eduSearchClear:hover {
+  opacity: 1;
+  color: var(--text);
+}
+
+.eduSearchResults {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eduChipMeta {
+  margin-left: 10px;
+  font-size: 12px;
+  opacity: 0.65;
+  color: var(--muted);
+}
+
+.eduCatCount {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-left: 6px;
+  color: var(--muted);
+}
+
+.eduMoreBtn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  opacity: 0.9;
+  color: var(--text);
+}
+
+.eduMoreBtn:hover {
+  opacity: 1;
+  background: var(--surface-2);
+}
+
+.eduLoading {
+  padding: 14px 12px;
+  opacity: 0.8;
+  color: var(--muted);
+}
+
+.eduError {
+  padding: 14px 12px;
+  border: 1px solid rgba(255, 120, 120, 0.25);
+  background: rgba(255, 120, 120, 0.06);
+  border-radius: 12px;
+  color: var(--text);
+}
+
+.eduErrorMsg {
+  margin-top: 6px;
+  opacity: 0.85;
+  font-size: 13px;
+}
+
+.eduPane {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 12px;
+  color: var(--text);
+}
+
+.eduPaneHead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.eduPaneTitle {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.eduMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.eduBadge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  opacity: 0.95;
+  color: var(--text);
+}
+
+.eduMeta {
+  font-size: 12px;
+  opacity: 0.7;
+  color: var(--muted);
+}
+
+.eduIntro {
+  font-size: 13px;
+  opacity: 0.92;
+  margin: 10px 0 10px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.eduBullets {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  opacity: 0.92;
+  color: var(--text-2);
+}
+
+.eduActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.eduDownloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-decoration: none;
+  color: var(--text);
+  cursor: pointer;
+  opacity: 0.98;
+}
+
+.eduDownloadBtn:hover {
+  background: var(--accent-soft);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.eduDownloadBtn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   17) 기타 레이아웃 (WEB)
+   ========================================================= */
+@media (max-width: 1200px) {
+  .docWrap {
+    width: 100%;
+  }
+  .quickGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================
+   18) 모바일 레이아웃 (MOBILE OVERRIDES)
+   ========================================================= */
+@media (max-width: 768px) {
+  .docWrap {
+    width: 100%;
+  }
+  .wrap {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    height: 100vh;
+  }
+
+  .header {
+    padding: 8px 12px;
+  }
+
+  .stream {
+    padding: 12px 12px 90px;
+  }
+
+  .inputRow {
+    padding: 8px 12px max(10px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .productName {
+    font-size: 11px;
+  }
+
+  .chatTitle {
+    font-size: 13px;
+  }
+
+  .userBubble,
+  .aiBubble {
+    font-size: 13px;
+  }
+
+  .taskGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quickWrap {
+    align-items: center;
+    padding-top: 40px;
+  }
+
+  .quickSectionHeader {
+    width: 100%;
+    margin-left: 0%;
+    margin-right: 0%;
+  }
+
+  .quickGrid {
+    width: 100%;
+    margin-left:0%;
+    margin-right:0%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quickBtn {
+    width: 100%;
+    /* justify-content: flex-start; */
+    padding: 0 16px;
+  }
+}
+
+/* 아주 작은 모바일 */
+@media (max-width: 480px) {
+  .quickTitle {
+    font-size: 18px;
+  }
+
+  .quickSectionHeader {
+    width: 100%;
+    margin-left: 0%;
+    margin-right: 0%;
+  }
+
+  .quickBtn {
+    padding: 8px 14px;
+    font-size: 9px;
+    height: 52px;
+  }
+}
