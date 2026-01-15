@@ -1,7 +1,8 @@
 /* components/MakeSafetyEduMaterials.module.css */
 
-/* 기본 토큰: ChatArea 변수를 그대로 쓰고 싶으면 여기서도 동일한 변수 구조를 쓰거나
-   상위에서 내려오는 CSS 변수를 그대로 사용해도 됨. */
+/* =========================
+   Layout
+========================= */
 .wrap {
   max-width: 720px;
   margin: 0 auto;
@@ -28,7 +29,9 @@
   color: var(--muted, rgba(17, 24, 39, 0.55));
 }
 
-/* 검색바 */
+/* =========================
+   Search Bar
+========================= */
 .eduSearchBar {
   display: flex;
   align-items: center;
@@ -77,7 +80,9 @@
   color: var(--text, #111827);
 }
 
-/* 상태 */
+/* =========================
+   Status
+========================= */
 .eduLoading {
   padding: 14px 12px;
   opacity: 0.8;
@@ -98,7 +103,9 @@
   font-size: 13px;
 }
 
-/* 검색 결과 */
+/* =========================
+   Search Results
+========================= */
 .eduSearchResults {
   display: flex;
   flex-direction: column;
@@ -106,7 +113,9 @@
   min-width: 0;
 }
 
-/* 브라우징 리스트 */
+/* =========================
+   Category List
+========================= */
 .categoryList {
   display: flex;
   flex-direction: column;
@@ -122,15 +131,18 @@
   box-shadow: var(--shadow-1, 0 1px 3px rgba(15, 23, 42, 0.08));
 }
 
+/* ✅ Open 상태: 배경은 살짝만, 글씨는 강하게 보이도록 */
 .cardOpen {
-  border-color: rgba(37, 99, 235, 0.25);
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.06);
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.08);
 }
 
+/* ✅ 제목이 2줄이 될 수 있으니, 헤더는 위 정렬 */
 .cardHeader {
   display: flex;
   width: 100%;
-  align-items: center;
+  align-items: flex-start; /* ✅ 핵심 */
   justify-content: space-between;
   gap: 12px;
   padding: 0;
@@ -145,17 +157,30 @@
   min-width: 0;
 }
 
+/* ✅ 제목: 2줄 line-clamp */
 .cardTitle {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  overflow: hidden;
+  white-space: normal;
+  line-height: 1.25;
+
   font-size: 0.95rem;
   font-weight: 800;
   color: var(--accent, #2563eb);
   margin-bottom: 4px;
 }
 
+/* ✅ Open 상태에서 제목 글씨 안 보이는 문제 방지 */
+.cardOpen .cardTitle {
+  color: var(--text, #111827);
+}
+
 .eduCatCount {
   font-size: 12px;
-  opacity: 0.75;
+  opacity: 0.8;
   margin-left: 6px;
   color: var(--muted, rgba(17, 24, 39, 0.55));
   font-weight: 700;
@@ -165,8 +190,14 @@
   display: block;
   font-size: 0.8rem;
   color: var(--muted, rgba(17, 24, 39, 0.55));
+
+  /* ✅ 설명도 너무 길면 줄바꿈 자연스럽게 */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
+/* Chevron */
 .arrow {
   flex: 0 0 auto;
   width: 22px;
@@ -174,8 +205,16 @@
   border-radius: 999px;
   border: 1px solid var(--border, #e5e7eb);
   padding: 3px;
-  transition: transform 0.18s ease;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
   color: var(--muted, rgba(17, 24, 39, 0.55));
+  margin-top: 2px; /* ✅ 2줄 제목일 때 살짝 위로 붙게 */
+  background: var(--surface, #fff);
+}
+
+.cardOpen .arrow {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.10);
+  color: var(--text, #111827);
 }
 
 .arrowOpen {
@@ -190,7 +229,9 @@
   min-width: 0;
 }
 
-/* ✅ row / dropdown */
+/* =========================
+   Row / Dropdown
+========================= */
 .row {
   width: 100%;
   min-width: 0;
@@ -200,10 +241,12 @@
   margin-top: 10px;
 }
 
-/* ✅ 핵심: chip overflow 방지 */
+/* =========================
+   Chip (material)
+========================= */
 .chip {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start; /* ✅ 2줄 제목 대비 */
   gap: 8px;
 
   padding: 8px 12px;
@@ -224,9 +267,11 @@
   background: rgba(37, 99, 235, 0.10);
 }
 
+/* ✅ Active: 배경/보더 뿐 아니라 글씨/아이콘도 강제 */
 .chipActive {
   border-color: rgba(37, 99, 235, 0.55);
   background: rgba(37, 99, 235, 0.12);
+  color: var(--text, #111827);
 }
 
 .chipIcon {
@@ -234,35 +279,52 @@
   height: 14px;
   color: var(--muted, rgba(17, 24, 39, 0.55));
   flex: 0 0 auto;
+  margin-top: 1px;
 }
 
-/* ✅ 핵심: 텍스트 줄임 + ellipsis */
+.chipActive .chipIcon {
+  color: var(--text, #111827);
+}
+
+/* ✅ 제목: 2줄 clamp */
 .chipLabel {
   flex: 1 1 auto;
   min-width: 0;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
 
   /* 모바일에서 특히 길어지는 제목 대응 */
   max-width: 62vw;
 }
 
-/* 검색에서 같이 붙는 메타도 줄어들게 */
+/* 검색 모드에서 붙는 메타도 안전하게 */
 .eduChipMeta {
   flex: 0 1 auto;
   min-width: 0;
   max-width: 26vw;
+
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 
   font-size: 12px;
-  opacity: 0.65;
+  opacity: 0.75;
   color: var(--muted, rgba(17, 24, 39, 0.55));
 }
 
-/* 더보기 */
+.chipActive .eduChipMeta {
+  opacity: 0.9;
+}
+
+/* =========================
+   More / Empty
+========================= */
 .moreBtn {
   margin-top: 10px;
   width: 100%;
@@ -285,7 +347,9 @@
   color: var(--muted, rgba(17, 24, 39, 0.55));
 }
 
-/* 다운로드 pane */
+/* =========================
+   Download Pane
+========================= */
 .eduPane {
   border: 1px solid var(--border, #e5e7eb);
   background: var(--surface, #fff);
@@ -324,7 +388,9 @@
   cursor: not-allowed;
 }
 
-/* 모바일 */
+/* =========================
+   Responsive
+========================= */
 @media (max-width: 768px) {
   .wrap {
     width: 100%;
