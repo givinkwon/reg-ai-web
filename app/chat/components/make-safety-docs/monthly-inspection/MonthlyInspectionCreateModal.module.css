@@ -1,99 +1,106 @@
-/* MonthlyInspectionCreateModal.module.css */
-/* ✅ :global 없이, prefers-color-scheme 기반 라이트/다크 자동 대응
-   ✅ 레이아웃/형태 유지 + 색상만 토큰화 */
+/* MonthlyInspectionCreateModal.module.css
+   ✅ 기존 레이아웃/구조 유지 + 라이트/다크 자동 대응
+   ✅ “태그 안보임 / 입력창 흰색 / 뒷단계 카드 흰색”까지 한 번에 커버
+*/
 
+/* -----------------------
+   Theme Tokens (기본=라이트)
+------------------------ */
 .overlay {
-  /* Theme tokens (기본=라이트) */
   color-scheme: light;
 
   --ov-bg: rgba(0, 0, 0, 0.52);
 
   --modal-bg: #ffffff;
   --topbar-bg: #ffffff;
-  --card-bg: transparent; /* card는 스크롤 컨테이너이므로 배경은 필요 시만 */
+
+  --surface-1: #ffffff;   /* 카드/섹션 배경 */
+  --surface-2: #ffffff;   /* 내부 카드/리스트 */
+  --surface-3: #f7f8fb;   /* 입력/보조영역 */
 
   --text: rgba(0, 0, 0, 0.85);
-  --subtext: rgba(0, 0, 0, 0.58);
-  --label: rgba(0, 0, 0, 0.70);
+  --subtext: rgba(0, 0, 0, 0.70);
+  --muted: rgba(0, 0, 0, 0.58);
 
-  --border: rgba(0, 0, 0, 0.08);
-  --border-soft: rgba(0, 0, 0, 0.06);
+  --line: rgba(0, 0, 0, 0.08);
+  --line-soft: rgba(0, 0, 0, 0.06);
 
-  --pill-text: #0b62ff;
+  --brand: #0b62ff;
+
   --pill-bg: rgba(11, 98, 255, 0.10);
   --pill-border: rgba(11, 98, 255, 0.20);
-  --sub-accent: rgba(11, 98, 255, 0.75);
+  --pill-text: #0b62ff;
 
-  --icon: rgba(0, 0, 0, 0.6);
-  --icon-hover-bg: rgba(0, 0, 0, 0.05);
+  --btn-icon: rgba(0, 0, 0, 0.6);
+  --btn-icon-hover: rgba(0, 0, 0, 0.05);
+
+  --field-bg: #ffffff;
+  --field-border: rgba(0, 0, 0, 0.10);
+  --field-text: rgba(0, 0, 0, 0.85);
+  --placeholder: rgba(0, 0, 0, 0.35);
+
+  --chip-bg: rgba(11, 98, 255, 0.10);
+  --chip-border: rgba(11, 98, 255, 0.20);
+  --chip-text: rgba(0, 0, 0, 0.85);
 
   --primary-bg: #0b62ff;
   --primary-text: #ffffff;
 
+  --secondary-bg: #ffffff;
+  --secondary-text: rgba(0, 0, 0, 0.85);
+  --secondary-border: rgba(0, 0, 0, 0.14);
+
   --danger: #ff6b6b;
-
-  --scroll-thumb: rgba(0, 0, 0, 0.12);
-
-  /* ✅ Tag / Input 공통 (흰색 고정 문제 방지용) */
-  --field-bg: rgba(255, 255, 255, 0.98);
-  --field-border: rgba(0, 0, 0, 0.10);
-  --field-text: rgba(0, 0, 0, 0.85);
-  --placeholder: rgba(0, 0, 0, 0.38);
-
-  --chip-bg: rgba(11, 98, 255, 0.10);
-  --chip-border: rgba(11, 98, 255, 0.18);
-  --chip-text: rgba(0, 0, 0, 0.78);
-  --chip-x: rgba(0, 0, 0, 0.55);
 
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ✅ 다크 모드 토큰 */
 @media (prefers-color-scheme: dark) {
   .overlay {
     color-scheme: dark;
 
-    --ov-bg: rgba(0, 0, 0, 0.68);
+    --ov-bg: rgba(0, 0, 0, 0.65);
 
-    --modal-bg: rgba(15, 23, 42, 0.96); /* slate-900 */
-    --topbar-bg: rgba(15, 23, 42, 0.96);
+    --modal-bg: rgba(2, 6, 23, 0.92);   /* slate-950 */
+    --topbar-bg: rgba(2, 6, 23, 0.92);
+
+    --surface-1: rgba(15, 23, 42, 0.92); /* slate-900 */
+    --surface-2: rgba(15, 23, 42, 0.72);
+    --surface-3: rgba(0, 0, 0, 0.28);
 
     --text: rgba(255, 255, 255, 0.92);
-    --subtext: rgba(255, 255, 255, 0.64);
-    --label: rgba(255, 255, 255, 0.74);
+    --subtext: rgba(255, 255, 255, 0.78);
+    --muted: rgba(255, 255, 255, 0.60);
 
-    --border: rgba(255, 255, 255, 0.14);
-    --border-soft: rgba(255, 255, 255, 0.10);
+    --line: rgba(255, 255, 255, 0.16);
+    --line-soft: rgba(255, 255, 255, 0.10);
 
-    --pill-text: rgba(147, 197, 253, 0.95);
-    --pill-bg: rgba(37, 99, 235, 0.22);
-    --pill-border: rgba(37, 99, 235, 0.30);
-    --sub-accent: rgba(147, 197, 253, 0.85);
+    --pill-bg: rgba(37, 99, 235, 0.18);
+    --pill-border: rgba(37, 99, 235, 0.28);
+    --pill-text: rgba(255, 255, 255, 0.92);
 
-    --icon: rgba(255, 255, 255, 0.70);
-    --icon-hover-bg: rgba(255, 255, 255, 0.08);
+    --btn-icon: rgba(255, 255, 255, 0.72);
+    --btn-icon-hover: rgba(255, 255, 255, 0.08);
 
-    --primary-bg: #2563eb;
-    --primary-text: #ffffff;
-
-    --scroll-thumb: rgba(255, 255, 255, 0.14);
-
-    /* ✅ Tag / Input 다크 */
     --field-bg: rgba(0, 0, 0, 0.28);
     --field-border: rgba(255, 255, 255, 0.14);
     --field-text: rgba(255, 255, 255, 0.92);
-    --placeholder: rgba(255, 255, 255, 0.45);
+    --placeholder: rgba(255, 255, 255, 0.42);
 
     --chip-bg: rgba(255, 255, 255, 0.10);
     --chip-border: rgba(255, 255, 255, 0.14);
-    --chip-text: rgba(255, 255, 255, 0.90);
-    --chip-x: rgba(255, 255, 255, 0.72);
+    --chip-text: rgba(255, 255, 255, 0.92);
+
+    --secondary-bg: rgba(255, 255, 255, 0.08);
+    --secondary-text: rgba(255, 255, 255, 0.92);
+    --secondary-border: rgba(255, 255, 255, 0.14);
   }
 }
 
-/* =========================
-   Overlay / Modal Layout (원형 유지)
-========================= */
-
+/* -----------------------
+   Overlay / Modal (구조 유지)
+------------------------ */
 .overlay {
   position: fixed;
   inset: 0;
@@ -102,13 +109,12 @@
   place-items: center;
   padding: 18px;
   z-index: 50;
+  backdrop-filter: blur(6px);
 }
 
 .modal {
   width: 520px;
   max-width: 92vw;
-
-  /* ✅ 화면보다 길어지면 내부 스크롤 */
   max-height: calc(100vh - 36px);
 
   background: var(--modal-bg);
@@ -116,12 +122,11 @@
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
   overflow: hidden;
 
-  /* ✅ 상단바 고정 + 본문 스크롤을 위해 */
   display: flex;
   flex-direction: column;
 
-  border: 1px solid var(--border-soft);
   color: var(--text);
+  border: 1px solid var(--line-soft);
 }
 
 .topBar {
@@ -129,8 +134,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   padding: 12px 12px;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--line-soft);
   background: var(--topbar-bg);
 }
 
@@ -150,17 +156,16 @@
   cursor: pointer;
   padding: 6px;
   border-radius: 10px;
-  color: var(--icon);
+  color: var(--btn-icon);
 }
-
 .iconBtn:hover {
-  background: var(--icon-hover-bg);
+  background: var(--btn-icon-hover);
 }
 
 /* ✅ card를 스크롤 컨테이너로 */
 .card {
   flex: 1 1 auto;
-  min-height: 0; /* 중요: overflow가 제대로 먹게 */
+  min-height: 0;
   overflow: auto;
 
   padding: 16px;
@@ -168,32 +173,32 @@
   flex-direction: column;
   gap: 12px;
 
-  color: var(--text);
-  background: var(--card-bg);
+  background: transparent;
 }
 
-/* (선택) 스크롤바 미세 스타일 */
+/* (선택) 스크롤바 */
 .card::-webkit-scrollbar {
   width: 10px;
 }
 .card::-webkit-scrollbar-thumb {
-  background: var(--scroll-thumb);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  .card::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+  }
 }
 .card::-webkit-scrollbar-track {
   background: transparent;
 }
-
-/* =========================
-   Header / Text
-========================= */
 
 .header {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 
 .title {
@@ -206,7 +211,7 @@
 .desc {
   margin: 0;
   font-size: 12px;
-  color: var(--subtext);
+  color: var(--muted);
   line-height: 1.35;
 }
 
@@ -214,18 +219,20 @@
   display: inline-block;
   margin-top: 4px;
   font-weight: 800;
-  color: var(--sub-accent);
+  color: rgba(11, 98, 255, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  .subDesc {
+    color: rgba(96, 165, 250, 0.95);
+  }
 }
 
 .label {
   font-size: 12px;
-  color: var(--label);
+  color: var(--subtext);
   font-weight: 800;
 }
-
-/* =========================
-   Primary Button
-========================= */
 
 .primaryBtn {
   margin-top: 6px;
@@ -263,177 +270,120 @@
   color: var(--danger);
 }
 
-/* =========================
-   ✅ Tag / Input (흰색 고정 방지용)
-   - 월순회 점검표의 "세부 작업 검색" 태그/입력 박스가
-     다크에서 흰색으로 남을 때 이 블록이 해결합니다.
-   - 아래 클래스명은 프로젝트에서 쓰는 이름에 맞춰 연결하세요.
-========================= */
+/* -----------------------
+   ✅ 핵심: “태그/입력/뒷단계 흰색” 일괄 수정
+   - 특정 컴포넌트 class명을 몰라도 적용되도록 descendant + 부분일치 셀렉터 사용
+------------------------ */
 
-/* 태그/입력 전체 박스 (예: tagWrap / searchBox 등) */
-.tagWrap,
-.searchBox,
-.inputBox {
+/* 1) 모달 내부 기본 폰트 컬러 상속 보강 */
+.modal * {
+  color: inherit;
+}
+
+/* 2) 입력/textarea가 흰색으로 남는 문제 */
+.modal input,
+.modal textarea,
+.modal select {
   background: var(--field-bg);
   border: 1px solid var(--field-border);
-  border-radius: 16px;
   color: var(--field-text);
 }
 
-/* 실제 입력 */
-.searchInput,
-.input,
-.textarea {
-  width: 100%;
-  background: var(--field-bg);
-  border: 1px solid var(--field-border);
-  border-radius: 14px;
-  padding: 12px 14px;
-  color: var(--field-text);
-  outline: none;
-}
-
-.searchInput::placeholder,
-.input::placeholder,
-.textarea::placeholder {
+.modal input::placeholder,
+.modal textarea::placeholder {
   color: var(--placeholder);
 }
 
-.searchInput:focus-visible,
-.input:focus-visible,
-.textarea:focus-visible,
+/* 3) 태그(칩) 텍스트가 안 보이는 문제
+   - 태그 컴포넌트가 CSS module이면 className에 "tag/chip/pill" 문자열이 남는 경우가 많음 */
+.modal [class*='tag'],
+.modal [class*='chip'],
+.modal [class*='pill'] {
+  color: var(--chip-text);
+}
+
+.modal [class*='tag'][class*='item'],
+.modal [class*='chip'][class*='item'],
+.modal [class*='pill'][class*='item'],
+.modal [class*='tag'][class*='Pill'],
+.modal [class*='chip'][class*='Pill'],
+.modal [class*='pill'][class*='Pill'] {
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+}
+
+/* 태그 내부 텍스트/아이콘 */
+.modal [class*='tag'] *,
+.modal [class*='chip'] *,
+.modal [class*='pill'] * {
+  color: var(--chip-text);
+}
+
+.modal [class*='tag'] svg,
+.modal [class*='chip'] svg,
+.modal [class*='pill'] svg,
+.modal [class*='tag'] button,
+.modal [class*='chip'] button,
+.modal [class*='pill'] button {
+  color: var(--chip-text);
+  fill: currentColor;
+  opacity: 0.9;
+}
+
+/* 4) 뒷단계에서 “카드/섹션 배경이 흰색”으로 남는 문제
+   - 내부 컴포넌트가 자기 배경을 #fff로 박아도 아래가 덮도록 범용 처리 */
+@media (prefers-color-scheme: dark) {
+  .modal [class*='card'],
+  .modal [class*='Card'],
+  .modal [class*='panel'],
+  .modal [class*='Panel'],
+  .modal [class*='section'],
+  .modal [class*='Section'],
+  .modal [class*='box'],
+  .modal [class*='Box'],
+  .modal [class*='item'],
+  .modal [class*='Item'] {
+    background: var(--surface-2);
+    border-color: var(--line-soft);
+    color: var(--text);
+  }
+
+  /* 체크리스트의 textarea/입력 박스도 다크로 강제 */
+  .modal textarea,
+  .modal input,
+  .modal select {
+    background: var(--field-bg);
+    border-color: var(--field-border);
+    color: var(--field-text);
+  }
+}
+
+/* 5) 보조 버튼(예: 이전) 스타일이 필요하면 사용 */
+.secondaryBtn {
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid var(--secondary-border);
+  background: var(--secondary-bg);
+  color: var(--secondary-text);
+  font-weight: 900;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.secondaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 6) 포커스 */
+.modal input:focus-visible,
+.modal textarea:focus-visible,
+.modal select:focus-visible,
 .primaryBtn:focus-visible,
+.secondaryBtn:focus-visible,
 .iconBtn:focus-visible {
   outline: 2px solid rgba(37, 99, 235, 0.45);
   outline-offset: 2px;
-}
-
-/* 태그 pill */
-.chip,
-.tag,
-.pillChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: var(--chip-bg);
-  border: 1px solid var(--chip-border);
-  color: var(--chip-text);
-  font-weight: 800;
-  font-size: 13px;
-}
-
-/* 태그 X */
-.chipX,
-.tagX,
-.pillChip button {
-  color: var(--chip-x);
-}
-
-/* 모바일에서 너무 꽉 차면 */
-@media (max-width: 520px) {
-  .modal {
-    width: 100%;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  /* 태그 입력 영역 래퍼(프로젝트마다 class명이 달라도 잡히게) */
-  .tagWrap,
-  .searchBox,
-  .inputBox,
-  .tagInput,
-  .tagInputWrap,
-  .tagContainer,
-  .tagArea {
-    background: rgba(0, 0, 0, 0.28) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    color: rgba(255, 255, 255, 0.92) !important;
-  }
-
-  /* 2) 실제 입력(input/textarea)이 흰색으로 남는 문제 */
-  .tagWrap input,
-  .tagWrap textarea,
-  .searchBox input,
-  .searchBox textarea,
-  .inputBox input,
-  .inputBox textarea,
-  .tagInput input,
-  .tagInput textarea,
-  .tagInputWrap input,
-  .tagInputWrap textarea,
-  .modal input,
-  .modal textarea {
-    background: rgba(0, 0, 0, 0.28) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    color: rgba(255, 255, 255, 0.92) !important;
-  }
-
-  .tagWrap input::placeholder,
-  .tagWrap textarea::placeholder,
-  .searchBox input::placeholder,
-  .searchBox textarea::placeholder,
-  .inputBox input::placeholder,
-  .inputBox textarea::placeholder,
-  .tagInput input::placeholder,
-  .tagInput textarea::placeholder,
-  .tagInputWrap input::placeholder,
-  .tagInputWrap textarea::placeholder,
-  .modal input::placeholder,
-  .modal textarea::placeholder {
-    color: rgba(255, 255, 255, 0.45) !important;
-  }
-
-  /* 3) 태그 pill(칩) 글씨가 안 보이는 문제 (대부분 color가 투명/어두움으로 박혀있음) */
-  .chip,
-  .tag,
-  .pillChip,
-  .tagItem,
-  .tagPill {
-    background: rgba(255, 255, 255, 0.10) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    color: rgba(255, 255, 255, 0.92) !important;
-  }
-
-  /* tag 내부 텍스트 span/div/p 등 광범위 커버 */
-  .chip *,
-  .tag *,
-  .pillChip *,
-  .tagItem *,
-  .tagPill * {
-    color: rgba(255, 255, 255, 0.92) !important;
-  }
-
-  /* 4) 태그 삭제(X) 아이콘 */
-  .chipX,
-  .tagX,
-  .pillChip button,
-  .tagItem button,
-  .tagPill button,
-  .chip svg,
-  .tag svg,
-  .pillChip svg,
-  .tagItem svg,
-  .tagPill svg {
-    color: rgba(255, 255, 255, 0.72) !important;
-    fill: currentColor !important;
-    opacity: 0.9;
-  }
-
-  /* 5) 자동완성/드롭다운이 있다면 (흰색 팝업 방지) */
-  .suggestList,
-  .autocomplete,
-  .dropdown,
-  .menu {
-    background: rgba(15, 23, 42, 0.96) !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    color: rgba(255, 255, 255, 0.92) !important;
-  }
-  .suggestItem,
-  .autocompleteItem,
-  .dropdownItem,
-  .menuItem {
-    color: rgba(255, 255, 255, 0.90) !important;
-  }
 }
