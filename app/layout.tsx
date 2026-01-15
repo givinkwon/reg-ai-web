@@ -10,7 +10,8 @@ export const metadata: Metadata = {
 };
 
 const GTM_ID = "GTM-MS4RQT3J"; // 필요시 env로 이동
-const ADS_ID = "AW-17610431883"; // ✅ Google Ads tag ID
+const ADS_ID = "AW-17610431883"; // ✅ Google Ads 전환추적 ID
+const ADS_CONVERSION_LABEL = "LxoSCPy-y-UbEIu7p81B"; // ✅ "가입" 전환 라벨
 const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"; // (현재 코드에선 미사용)
 
 export default function RootLayout({
@@ -45,10 +46,7 @@ export default function RootLayout({
 
         {/* iOS 상태바 대비 명시 (선택) */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="default"
-        />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
         {/* ✅ Kakao JS SDK */}
         <Script
@@ -59,17 +57,48 @@ export default function RootLayout({
 
         {/* ✅ Google Ads gtag.js (AW-...) */}
         <Script
+          id="ads-gtag-src"
           src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`}
           strategy="afterInteractive"
         />
+
+        {/* ✅ gtag 초기화 + Ads config */}
         <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
-            // ✅ gtag를 window에 붙여두면 다른 코드에서도 사용할 수 있음
-            function gtag(){dataLayer.push(arguments);}
-            window.gtag = gtag;
-            gtag('js', new Date());
-            gtag('config', '${ADS_ID}');
+            window.gtag = function(){ window.dataLayer.push(arguments); };
+            window.gtag('js', new Date());
+            window.gtag('config', '${ADS_ID}');
+          `}
+        </Script>
+
+        {/* ✅ Event snippet: "가입" 전환 함수 (React에서 window.gtag_report_conversion(...) 호출) */}
+        <Script id="gtag-conversion-snippet" strategy="afterInteractive">
+          {`
+            window.gtag_report_conversion = function(url, value, currency) {
+              var callback = function () {
+                if (typeof url !== 'undefined' && url) {
+                  window.location = url;
+                }
+              };
+
+              try {
+                if (window.gtag) {
+                  window.gtag('event', 'conversion', {
+                    'send_to': '${ADS_ID}/${ADS_CONVERSION_LABEL}',
+                    'value': (typeof value === 'number' ? value : 1.0),
+                    'currency': (typeof currency === 'string' ? currency : 'KRW'),
+                    'event_callback': callback
+                  });
+                } else {
+                  callback();
+                }
+              } catch (e) {
+                callback();
+              }
+
+              return false;
+            };
           `}
         </Script>
 

@@ -90,7 +90,7 @@ function toText(x: any) {
   if (typeof x === 'string') return x;
   if (x && typeof x === 'object') {
     return (
-      x._id ?? // ✅ FIX: Mongo group/distinct 결과 { _id: "..." } 지원
+      x._id ?? // ✅ Mongo group/distinct 결과 { _id: "..." } 지원
       x.title ??
       x.name ??
       x.risk_situation_result ??
@@ -143,33 +143,34 @@ export default function StepHazards({ draft, setDraft }: Props) {
   const completedRef = useRef<Set<string>>(new Set());
   const attemptRef = useRef<Map<string, number>>(new Map());
 
-  // UI 로딩 표시용은 기존대로 `${t.id}:${p.id}` 유지
+  // UI 로딩 표시용은 `${t.id}:${p.id}` 유지
   const [autoLoading, setAutoLoading] = useState<Record<string, boolean>>({});
 
-  const tasks = useMemo(() => draft.tasks, [draft.tasks]);
+  const tasks = useMemo(() => (draft.tasks ?? []), [draft.tasks]);
 
   // ✅ 자동채움 effect deps: 작업/공정 목록 변할 때만 (hazards 변화로는 재시작 X)
   const procSig = useMemo(() => {
     return tasks
-      .map((t) => `${t.id}|${norm(t.title)}|${t.processes.map((p) => `${p.id}:${norm(p.title)}`).join(',')}`)
+      .map(
+        (t) =>
+          `${t.id}|${norm(t.title)}|` +
+          (t.processes ?? []).map((p) => `${p.id}:${norm(p.title)}`).join(','),
+      )
       .join('||');
   }, [tasks]);
 
   // ✅ 캐시 저장 deps: hazards까지 포함 (수동 추가/삭제 반영)
   const hazardsSig = useMemo(() => {
     return tasks
-      .map(
-        (t) =>
-          `${t.id}|${norm(t.title)}|` +
-          t.processes
-            .map((p) => {
-              const hs = (p.hazards ?? [])
-                .map((h: any) => `${norm(h.title)}:${h.likelihood ?? ''}:${h.severity ?? ''}`)
-                .join(',');
-              return `${p.id}:${norm(p.title)}[${hs}]`;
-            })
-            .join(';'),
-      )
+      .map((t) => {
+        const procs = (t.processes ?? []).map((p) => {
+          const hs = (p.hazards ?? [])
+            .map((h: any) => `${norm(h.title)}:${h.likelihood ?? ''}:${h.severity ?? ''}:${norm(h.controls ?? '')}`)
+            .join(',');
+          return `${p.id}:${norm(p.title)}[${hs}]`;
+        });
+        return `${t.id}|${norm(t.title)}|${procs.join(';')}`;
+      })
       .join('||');
   }, [tasks]);
 
@@ -180,7 +181,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
   const targetProc = useMemo(() => {
     if (!targetTask || !target) return null;
-    return targetTask.processes.find((p) => p.id === target.processId) ?? null;
+    return (targetTask.processes ?? []).find((p) => p.id === target.processId) ?? null;
   }, [targetTask, target]);
 
   const openSheet = (taskId: string, processId: string) => {
@@ -194,11 +195,11 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== target.taskId) return t;
         return {
           ...t,
-          processes: t.processes.map((p) => {
+          processes: (t.processes ?? []).map((p) => {
             if (p.id !== target.processId) return p;
 
             const exists = new Set((p.hazards ?? []).map((h: any) => norm(h.title)));
@@ -206,7 +207,10 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
             return {
               ...p,
-              hazards: [...(p.hazards ?? []), { id: uid(), title: v, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' }],
+              hazards: [
+                ...(p.hazards ?? []),
+                { id: uid(), title: v, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' },
+              ],
             };
           }),
         };
@@ -214,7 +218,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
     }));
   };
 
-  // ✅ 캐시/DB에서 가져온 hazard를 "타이틀 중복 방지"로 병합(가능하면 L/S/controls도 복원)
+  // ✅ 캐시/DB에서 가져온 hazard를 "타이틀 중복 방지"로 병합 + L/S/controls 복원
   const addHazardsBulkFromCache = (taskId: string, processId: string, hazards: HazardCacheItem[]) => {
     const items = (hazards ?? [])
       .map((h) => ({
@@ -229,11 +233,11 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== taskId) return t;
         return {
           ...t,
-          processes: t.processes.map((p) => {
+          processes: (t.processes ?? []).map((p) => {
             if (p.id !== processId) return p;
 
             const exists = new Set((p.hazards ?? []).map((hh: any) => norm(hh.title)));
@@ -254,16 +258,16 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
   // ✅ API에서 받은 title 리스트만 넣는 버전
   const addHazardsBulk = (taskId: string, processId: string, titles: string[]) => {
-    const uniq = Array.from(new Set(titles.map(norm))).filter(Boolean);
+    const uniq = Array.from(new Set((titles ?? []).map(norm))).filter(Boolean);
     if (uniq.length === 0) return;
 
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== taskId) return t;
         return {
           ...t,
-          processes: t.processes.map((p) => {
+          processes: (t.processes ?? []).map((p) => {
             if (p.id !== processId) return p;
 
             const exists = new Set((p.hazards ?? []).map((h: any) => norm(h.title)));
@@ -285,11 +289,11 @@ export default function StepHazards({ draft, setDraft }: Props) {
   const removeChip = (taskId: string, processId: string, hazardId: string) => {
     setDraft((prev) => ({
       ...prev,
-      tasks: prev.tasks.map((t) => {
+      tasks: (prev.tasks ?? []).map((t) => {
         if (t.id !== taskId) return t;
         return {
           ...t,
-          processes: t.processes.map((p) => {
+          processes: (t.processes ?? []).map((p) => {
             if (p.id !== processId) return p;
             return { ...p, hazards: (p.hazards ?? []).filter((h: any) => h.id !== hazardId) };
           }),
@@ -299,17 +303,12 @@ export default function StepHazards({ draft, setDraft }: Props) {
   };
 
   // =========================
-  // ✅ 자동 채움: (process_name, sub_process) → risk_situation_result distinct → hazards 자동 추가
-  // 캐시 우선 → 없으면 API 호출
-  //
-  // ✅ FIX:
-  // 1) toText에 _id 추가
-  // 2) AbortError 시 cooldown(attempt) 삭제해서 "첫 공정만 안 채워짐" 방지
-  // 3) res.ok 실패/빈 결과도 attempt 정리(다음 run에서 재시도 가능)
+  // ✅ 자동 채움 (AbortController 제거 버전)
+  // - 캐시 우선 → 없으면 API 호출
+  // - hazards를 다 지우면 completed 마킹 해제해서 재로딩 가능
   // =========================
   useEffect(() => {
     let cancelled = false;
-    const controllers: AbortController[] = [];
 
     const run = async () => {
       for (const t of tasks) {
@@ -318,7 +317,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
         const processName = norm(t.title);
         if (!processName) continue;
 
-        for (const p of t.processes) {
+        for (const p of t.processes ?? []) {
           if (cancelled) return;
 
           const subProcess = norm(p.title);
@@ -326,15 +325,20 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
           const uiKey = `${t.id}:${p.id}`; // 로딩 표시용
           const ck = cacheKey(user?.email ?? null, processName, subProcess);
-          const scopeKey = `${uiKey}|${ck}`; // ✅ 완료/시도는 스코프 포함
+          const scopeKey = `${uiKey}|${ck}`;
 
-          if (completedRef.current.has(scopeKey)) continue;
+          const curHazards = Array.isArray(p.hazards) ? p.hazards : [];
 
-          const last = attemptRef.current.get(scopeKey);
-          if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
+          // ✅ 사용자가 위험요인을 다 지운 경우: 완료 마킹이 남아있으면 풀어줘야 재로딩 가능
+          if (completedRef.current.has(scopeKey) && curHazards.length === 0) {
+            completedRef.current.delete(scopeKey);
+          }
 
-          // ✅ 이미 위험요인이 있으면: 성공 상태로 간주 + 캐시 저장 + completed 처리
-          if ((p.hazards ?? []).length > 0) {
+          // ✅ 이미 완료 + 지금도 hazards 있으면 스킵
+          if (completedRef.current.has(scopeKey) && curHazards.length > 0) continue;
+
+          // ✅ 이미 hazards가 있으면: 완료 처리 + 캐시 저장
+          if (curHazards.length > 0) {
             completedRef.current.add(scopeKey);
 
             safeWriteCache(ck, {
@@ -343,22 +347,35 @@ export default function StepHazards({ draft, setDraft }: Props) {
               user: norm(user?.email) || 'guest',
               processName,
               subProcess,
-              hazards: (p.hazards ?? []).map((h: any) => ({
-                id: h.id,
-                title: norm(h.title),
-                likelihood: (h.likelihood ?? DEFAULT_L) as RiskLevel,
-                severity: (h.severity ?? DEFAULT_S) as RiskLevel,
-                controls: h.controls ?? '',
-              })),
+              hazards: curHazards
+                .map((h: any) => ({
+                  id: h.id,
+                  title: norm(h.title),
+                  likelihood: (h.likelihood ?? DEFAULT_L) as RiskLevel,
+                  severity: (h.severity ?? DEFAULT_S) as RiskLevel,
+                  controls: h.controls ?? '',
+                }))
+                .filter((h: any) => h.title),
             });
 
             continue;
           }
 
-          // ✅ 1) 캐시
-          const cached = safeReadCache(ck);
+          // ✅ 쿨다운
+          const last = attemptRef.current.get(scopeKey);
+          if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
+
+          // ✅ 1) 캐시 (정확키)
+          let cached = safeReadCache(ck);
+
+          // ✅ 2) user 캐시 없으면 guest 폴백(로그인 전 선택 → 로그인 후 복원)
+          if (!cached && user?.email) {
+            const guestCk = cacheKey(null, processName, subProcess);
+            cached = safeReadCache(guestCk);
+          }
+
           if (cached) {
-            addHazardsBulkFromCache(t.id, p.id, cached.hazards);
+            if (!cancelled) addHazardsBulkFromCache(t.id, p.id, cached.hazards);
             completedRef.current.add(scopeKey);
             continue;
           }
@@ -367,73 +384,58 @@ export default function StepHazards({ draft, setDraft }: Props) {
           attemptRef.current.set(scopeKey, Date.now());
           setAutoLoading((prev) => ({ ...prev, [uiKey]: true }));
 
-          const ac = new AbortController();
-          controllers.push(ac);
-
           try {
             const qs = new URLSearchParams();
             qs.set('endpoint', 'risk-situations');
             qs.set('process_name', processName);
             qs.set('sub_process', subProcess);
             qs.set('limit', '80');
-
-            const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
-              cache: 'no-store',
-              signal: ac.signal,
-            });
-
-            if (!res.ok) {
-              // ✅ FIX: 비정상 응답이면 다음 run에서 재시도 가능하게 attempt 삭제
-              attemptRef.current.delete(scopeKey);
-              continue;
-            }
-
-            const raw = await res.json();
-
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('[StepHazards] risk-situations raw:', raw, 'isArray?', Array.isArray(raw));
-            }
-
-            const items = extractItems(raw);
-
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('[StepHazards] extracted items:', items);
-            }
-
-            if (items.length > 0) {
-              addHazardsBulk(t.id, p.id, items);
-
-              safeWriteCache(ck, {
-                v: 2,
-                ts: Date.now(),
-                user: norm(user?.email) || 'guest',
-                processName,
-                subProcess,
-                hazards: items.map((title) => ({
-                  id: uid(),
-                  title,
-                  likelihood: DEFAULT_L,
-                  severity: DEFAULT_S,
-                  controls: '',
-                })),
+            
+            try {
+              // ✅ signal 제거 (AbortError 방지)
+              const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
+                cache: 'no-store',
               });
 
-              completedRef.current.add(scopeKey);
-            } else {
-              // ✅ FIX: 빈 결과면 attempt 남겨두면 "첫 공정만 계속 안채워짐"이 생길 수 있어 정리
-              attemptRef.current.delete(scopeKey);
+              if (!res.ok) {
+                attemptRef.current.delete(scopeKey);
+                continue;
+              }
+
+              const raw = await res.json();
+              const items = extractItems(raw);
+
+              if (items.length > 0) {
+                if (!cancelled) addHazardsBulk(t.id, p.id, items);
+
+                safeWriteCache(ck, {
+                  v: 2,
+                  ts: Date.now(),
+                  user: norm(user?.email) || 'guest',
+                  processName,
+                  subProcess,
+                  hazards: items.map((title) => ({
+                    id: uid(),
+                    title,
+                    likelihood: DEFAULT_L,
+                    severity: DEFAULT_S,
+                    controls: '',
+                  })),
+                });
+
+                completedRef.current.add(scopeKey);
+              } else {
+                // ✅ 빈 결과면 완료 처리 X, 다음 run에서 재시도 가능하게 attempt 삭제
+                attemptRef.current.delete(scopeKey);
+              }
+            } catch (e: any) {
+              console.log('[StepProcesses] fetch rejected', e?.name, e?.message);
+              throw e;
             }
           } catch (e: any) {
-            // ✅ FIX: AbortError는 cooldown을 남기지 않게 해서 다음 run에서 즉시 재시도
-            if (e?.name === 'AbortError') {
-              attemptRef.current.delete(scopeKey);
-              continue;
-            }
-
-            console.error('[StepHazards] fetch failed:', e);
             attemptRef.current.delete(scopeKey);
           } finally {
-            setAutoLoading((prev) => ({ ...prev, [uiKey]: false }));
+            if (!cancelled) setAutoLoading((prev) => ({ ...prev, [uiKey]: false }));
           }
         }
       }
@@ -443,12 +445,11 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
     return () => {
       cancelled = true;
-      controllers.forEach((c) => c.abort());
     };
   }, [procSig, user?.email]);
 
   // =========================
-  // ✅ 사용자가 수동 추가/삭제한 hazards도 캐시에 반영 (빈 캐시 저장 금지)
+  // ✅ 수동 추가/삭제한 hazards도 캐시에 반영 (빈 캐시 저장 금지)
   // =========================
   useEffect(() => {
     const u = user?.email ?? null;
@@ -457,7 +458,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
       const processName = norm(t.title);
       if (!processName) continue;
 
-      for (const p of t.processes) {
+      for (const p of t.processes ?? []) {
         const subProcess = norm(p.title);
         if (!subProcess) continue;
 
@@ -494,11 +495,12 @@ export default function StepHazards({ draft, setDraft }: Props) {
         <div key={t.id} className={s.taskBlock}>
           <div className={s.taskTitle}>{t.title || '(작업명 미입력)'}</div>
 
-          {t.processes.length === 0 ? (
+          {(t.processes ?? []).length === 0 ? (
             <div className={s.empty}>공정이 없어서 위험요인을 추가할 수 없습니다. 이전 단계에서 공정을 먼저 추가해 주세요.</div>
           ) : (
-            t.processes.map((p) => {
+            (t.processes ?? []).map((p) => {
               const uiKey = `${t.id}:${p.id}`;
+              const hazards = Array.isArray(p.hazards) ? p.hazards : [];
 
               return (
                 <div key={p.id} className={s.procBlock}>
@@ -510,12 +512,12 @@ export default function StepHazards({ draft, setDraft }: Props) {
                   </div>
 
                   <div className={s.chips}>
-                    {(p.hazards ?? []).length === 0 ? (
+                    {hazards.length === 0 ? (
                       <div className={s.empty2}>
                         {autoLoading[uiKey] ? '위험요인을 자동으로 불러오는 중…' : '아직 위험요인이 없습니다.'}
                       </div>
                     ) : (
-                      (p.hazards ?? []).map((h: any) => (
+                      hazards.map((h: any) => (
                         <button
                           key={h.id}
                           type="button"
