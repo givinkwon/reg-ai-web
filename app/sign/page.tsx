@@ -7,29 +7,32 @@ import s from './page.module.css';
 type TbmSignData = {
   title: string;
   company: string;
+  siteName?: string;
   dateISO: string;
   workSummary: string;
   hazardSummary: string;
   complianceSummary: string;
   attendeeName?: string;
-  attendeePhone?: string;
+
+  alreadySigned?: boolean;
+  expiresAt?: string;
 };
 
 const DEV_UI = true;
 const DEV_PASSPHRASE = 'dev-open';
 
-function formatPhone(raw?: string) {
-  const v = (raw || '').replace(/\D/g, '');
-  if (v.length === 11) return `${v.slice(0, 3)}-${v.slice(3, 7)}-${v.slice(7)}`;
-  if (v.length === 10) return `${v.slice(0, 3)}-${v.slice(3, 6)}-${v.slice(6)}`;
-  return raw || '';
+function safeShort(s: string, n = 300) {
+  const t = (s || '').replace(/\s+/g, ' ').trim();
+  return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
 /** 간단 서명패드 */
 function SignaturePad({
   onChangeDataUrl,
+  disabled,
 }: {
   onChangeDataUrl?: (dataUrl: string | null) => void;
+  disabled?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -40,7 +43,7 @@ function SignaturePad({
     const c = canvasRef.current;
     if (!c) return;
 
-    const clear = () => {
+    const clearLocal = () => {
       const ctx = c.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, c.width, c.height);
@@ -70,7 +73,7 @@ function SignaturePad({
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#111';
 
-      clear();
+      clearLocal();
     };
 
     resize();
@@ -96,6 +99,7 @@ function SignaturePad({
   };
 
   const clear = () => {
+    if (disabled) return;
     const c = canvasRef.current;
     if (!c) return;
     const ctx = c.getContext('2d');
@@ -110,12 +114,14 @@ function SignaturePad({
     if (!c) return;
 
     const onDown = (e: PointerEvent) => {
+      if (disabled) return;
       drawingRef.current = true;
       lastRef.current = getPoint(e);
       (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     };
 
     const onMove = (e: PointerEvent) => {
+      if (disabled) return;
       if (!drawingRef.current) return;
       const ctx = c.getContext('2d');
       if (!ctx) return;
@@ -137,6 +143,7 @@ function SignaturePad({
     };
 
     const onUp = () => {
+      if (disabled) return;
       drawingRef.current = false;
       lastRef.current = null;
       const url = exportDataUrl();
@@ -156,20 +163,24 @@ function SignaturePad({
       c.removeEventListener('pointercancel', onUp);
       c.removeEventListener('pointerleave', onUp);
     };
-  }, [hasInk, onChangeDataUrl]);
+  }, [hasInk, onChangeDataUrl, disabled]);
 
   return (
-    <div className={s.signBox}>
+    <div className={s.signBox} aria-disabled={disabled}>
       <div className={s.signTop}>
-        <div className={s.signHint}>아래 영역에 서명하세요</div>
-        <button className={s.btnGhost} type="button" onClick={clear}>
+        <div className={s.signHint}>
+          {disabled ? '이미 서명 완료된 건입니다.' : '아래 영역에 서명하세요'}
+        </div>
+        <button className={s.btnGhost} type="button" onClick={clear} disabled={disabled}>
           지우기
         </button>
       </div>
       <div className={s.canvasWrap}>
         <canvas ref={canvasRef} className={s.canvas} />
       </div>
-      <div className={s.signMeta}>{hasInk ? '서명이 입력되었습니다.' : '아직 서명이 없습니다.'}</div>
+      <div className={s.signMeta}>
+        {disabled ? '서명이 잠겨 있습니다.' : hasInk ? '서명이 입력되었습니다.' : '아직 서명이 없습니다.'}
+      </div>
     </div>
   );
 }
@@ -186,9 +197,18 @@ function SignView({
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
+  const [detailErr, setDetailErr] = useState<string | null>(null);
+
+  const locked = !!data.alreadySigned;
 
   async function submit() {
     setSubmitMsg(null);
+    setDetailErr(null);
+
+    if (locked) {
+      setSubmitMsg('이미 서명 완료된 건입니다.');
+      return;
+    }
 
     if (!sigUrl) {
       setSubmitMsg('서명을 먼저 입력해 주세요.');
@@ -207,16 +227,30 @@ function SignView({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          signaturePngDataUrl: sigUrl,
+          signature: sigUrl, // ✅ 백엔드 모델과 일치
+          attendeeName: data.attendeeName || undefined,
         }),
       });
 
-      const text = await res.text();
-      if (!res.ok) throw new Error(text);
+      const raw = await res.text();
+      if (!res.ok) {
+        // 프록시가 JSON(error/detail)을 주므로 파싱 시도
+        try {
+          const j = JSON.parse(raw) as any;
+          const msg = j?.detail ? safeShort(String(j.detail), 240) : safeShort(raw, 240);
+          setSubmitMsg(`❌ 제출 실패: ${msg}`);
+          setDetailErr(String(j?.detail || raw));
+        } catch {
+          setSubmitMsg(`❌ 제출 실패: ${safeShort(raw, 240)}`);
+          setDetailErr(raw);
+        }
+        return;
+      }
 
       setSubmitMsg('✅ 서명이 제출되었습니다.');
     } catch (e: any) {
       setSubmitMsg(`❌ 제출 실패: ${e?.message || 'unknown error'}`);
+      setDetailErr(String(e?.message || 'unknown'));
     } finally {
       setSubmitLoading(false);
     }
@@ -228,15 +262,37 @@ function SignView({
         <div>
           <h1 className={s.h1}>{data.title || 'TBM 서명'}</h1>
           <div className={s.sub}>
-            <span className={s.badge}>{data.company}</span>
+            <span className={s.badge}>{data.company || '—'}</span>
+            {data.siteName ? (
+              <>
+                <span className={s.dot} />
+                <span className={s.badge2}>{data.siteName}</span>
+              </>
+            ) : null}
             <span className={s.dot} />
             <span>{data.dateISO}</span>
+
+            {locked ? (
+              <>
+                <span className={s.dot} />
+                <span className={s.badge2}>이미 서명됨</span>
+              </>
+            ) : null}
+
+            {data.expiresAt ? (
+              <>
+                <span className={s.dot} />
+                <span className={s.mono}>expires: {data.expiresAt}</span>
+              </>
+            ) : null}
+
             {token ? (
               <>
                 <span className={s.dot} />
                 <span className={s.mono}>token: {token}</span>
               </>
             ) : null}
+
             {isMock ? (
               <>
                 <span className={s.dot} />
@@ -267,13 +323,9 @@ function SignView({
           <div className={s.infoKey}>서명자</div>
           <div className={s.infoVal}>{data.attendeeName || '—'}</div>
         </div>
-        <div className={s.infoItem}>
-          <div className={s.infoKey}>연락처</div>
-          <div className={s.infoVal}>{formatPhone(data.attendeePhone) || '—'}</div>
-        </div>
       </div>
 
-      <SignaturePad onChangeDataUrl={setSigUrl} />
+      <SignaturePad onChangeDataUrl={setSigUrl} disabled={locked} />
 
       {sigUrl ? (
         <div className={s.preview}>
@@ -284,46 +336,52 @@ function SignView({
       ) : null}
 
       <div className={s.footer}>
-        <button className={s.btn} type="button" onClick={submit} disabled={submitLoading}>
-          {submitLoading ? '제출 중...' : '서명 제출'}
+        <button className={s.btn} type="button" onClick={submit} disabled={submitLoading || locked}>
+          {locked ? '서명 완료됨' : submitLoading ? '제출 중...' : '서명 제출'}
         </button>
+
         {submitMsg ? <div className={s.msg}>{submitMsg}</div> : null}
+
+        {/* 에러 전문이 길면 접었다 펼치기 */}
+        {detailErr ? (
+          <details className={s.details}>
+            <summary>자세히 보기</summary>
+            <pre className={s.pre}>{detailErr.slice(0, 4000)}</pre>
+          </details>
+        ) : null}
       </div>
     </div>
   );
 }
 
-/**
- * ✅ 핵심:
- * useSearchParams()는 반드시 Suspense 아래에서만 호출되도록 분리
- */
+/** useSearchParams는 Suspense 아래에서만 */
 function SearchParamsGate() {
   const router = useRouter();
   const sp = useSearchParams();
   const token = (sp.get('token') || '').trim();
 
-  // DEV 테스트 해금
   const [pass, setPass] = useState('');
   const [unlocked, setUnlocked] = useState(false);
 
-  // 토큰 수동 입력 (테스트 편의)
   const [manualToken, setManualToken] = useState('');
 
-  // 실제 데이터 로딩(토큰 있을 때)
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [errDetail, setErrDetail] = useState<string | null>(null);
   const [data, setData] = useState<TbmSignData | null>(null);
 
   const mockData: TbmSignData = useMemo(
     () => ({
       title: 'TBM 활동일지 서명(테스트)',
       company: '테스트사업장(DEV)',
+      siteName: '본사 사업장',
       dateISO: '2026-01-11',
       workSummary: '고소작업대 이동 및 점검, 현장 자재 운반 작업을 진행함.',
       hazardSummary: '추락/협착 위험, 이동 동선 충돌 위험이 있음.',
       complianceSummary: '안전모·안전대 착용, 작업 전 점검, 동선 통제 및 신호수 배치.',
       attendeeName: '홍길동',
-      attendeePhone: '01012345678',
+      alreadySigned: false,
+      expiresAt: '',
     }),
     []
   );
@@ -341,15 +399,34 @@ function SearchParamsGate() {
     (async () => {
       setLoading(true);
       setErr(null);
+      setErrDetail(null);
       setData(null);
+
       try {
-        const res = await fetch(`/api/tbm-sign/get?token=${encodeURIComponent(token)}`);
-        const text = await res.text();
-        if (!res.ok) throw new Error(text);
-        const json = JSON.parse(text) as TbmSignData;
+        const res = await fetch(`/api/tbm-sign/get?token=${encodeURIComponent(token)}`, {
+          cache: 'no-store',
+        });
+
+        const raw = await res.text();
+
+        if (!res.ok) {
+          // 프록시가 JSON을 주므로 파싱해서 사용자친화적으로 표시
+          try {
+            const j = JSON.parse(raw) as any;
+            const msg = j?.detail ? safeShort(String(j.detail), 260) : safeShort(raw, 260);
+            throw new Error(msg);
+          } catch {
+            throw new Error(safeShort(raw, 260));
+          }
+        }
+
+        const json = JSON.parse(raw) as TbmSignData;
         if (!cancelled) setData(json);
       } catch (e: any) {
-        if (!cancelled) setErr(e?.message || 'failed');
+        if (!cancelled) {
+          setErr(e?.message || 'failed');
+          setErrDetail(String(e?.message || 'failed'));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -363,22 +440,19 @@ function SearchParamsGate() {
   const goWithManualToken = () => {
     const t = manualToken.trim();
     if (!t) return;
-    // ✅ /sign 라우트 기준
     router.replace(`/sign?token=${encodeURIComponent(t)}`);
-    // 만약 실제 라우트가 /tbm/sign면 위를 아래로 바꿔:
-    // router.replace(`/tbm/sign?token=${encodeURIComponent(t)}`);
   };
 
   const unlock = () => {
     if (pass.trim() === DEV_PASSPHRASE) {
       setUnlocked(true);
       setErr(null);
+      setErrDetail(null);
     } else {
       setErr('테스트 키가 올바르지 않습니다.');
     }
   };
 
-  // ✅ 1) 토큰 기반 실제 화면
   if (viewMode === 'REAL_TOKEN') {
     return (
       <main className={s.wrap}>
@@ -393,6 +467,14 @@ function SearchParamsGate() {
           <div className={s.card}>
             <h1 className={s.h1}>오류</h1>
             <div className={s.err}>{err}</div>
+
+            {errDetail ? (
+              <details className={s.details}>
+                <summary>자세히 보기</summary>
+                <pre className={s.pre}>{errDetail.slice(0, 2000)}</pre>
+              </details>
+            ) : null}
+
             <div className={s.hr} />
             <div className={s.row}>
               <input
@@ -417,7 +499,6 @@ function SearchParamsGate() {
     );
   }
 
-  // ✅ 2) DEV 패스프레이즈로 “실제 화면” (MOCK 데이터로)
   if (viewMode === 'DEV_UNLOCKED') {
     return (
       <main className={s.wrap}>
@@ -426,13 +507,12 @@ function SearchParamsGate() {
     );
   }
 
-  // ✅ 3) 토큰 없을 때: 테스트 패널 포함
   return (
     <main className={s.wrap}>
       <div className={s.card}>
         <h1 className={s.h1}>TBM 서명</h1>
         <div className={s.sub}>
-          보통 문자 링크로 접속하면 <span className={s.mono}>/sign?token=...</span> 형태입니다.
+          문자 링크로 접속하면 <span className={s.mono}>/sign?token=...</span> 형태입니다.
         </div>
 
         <div className={s.section}>
@@ -454,8 +534,7 @@ function SearchParamsGate() {
           <div className={s.section}>
             <div className={s.sectionTitle}>DEV 테스트 화면 해금</div>
             <div className={s.sub2}>
-              특정 키를 입력하면(예: <span className={s.mono}>dev-open</span>) 토큰 없이도 “실제 서명 UI”를
-              MOCK 데이터로 확인할 수 있어요.
+              키(예: <span className={s.mono}>dev-open</span>)를 입력하면 토큰 없이도 MOCK 화면을 볼 수 있어요.
             </div>
 
             <div className={s.row}>
@@ -482,11 +561,6 @@ function SearchParamsGate() {
   );
 }
 
-/**
- * ✅ 파일 1개 유지:
- * default export = SignPage
- * 안에서 Suspense로 SearchParamsGate를 감싸서 빌드 에러 해결
- */
 export default function SignPage() {
   return (
     <Suspense
