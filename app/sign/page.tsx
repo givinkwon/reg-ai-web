@@ -233,9 +233,9 @@ function SignView({ data, token, isMock }: { data: TbmSignData; token: string; i
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          signature: sigUrl,
+          signaturePngDataUrl: sigUrl,   // ✅ 백엔드가 기대하는 이름
           attendeeName: data.attendeeName || undefined,
-        }),
+        }),        
       });
 
       const raw = await res.text();
