@@ -10,7 +10,7 @@ type FrontSubmitBody = {
 };
 
 export async function POST(req: NextRequest) {
-  const base = (process.env.FASTAPI_BASE_URL || '').trim();
+  const base = (process.env.FASTAPI_BASE_URL || "http://35.76.230.177:8008").trim();
   if (!base) {
     return Response.json({ error: 'FASTAPI_BASE_URL is not set' }, { status: 500 });
   }
