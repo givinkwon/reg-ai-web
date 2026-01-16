@@ -113,8 +113,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
 
     // ✅ 디버깅: 지금 네가 찍은 로그를 여기서도 볼 수 있게
     console.log('download mode:', res.headers.get('x-doc-download-mode'));
-    console.log('content-type:', res.headers.get('content-type'));
-    console.log('content-disposition:', res.headers.get('content-disposition'));
+    console.log('debug rid:', res.headers.get('x-debug-rid'));
+    console.log('debug kind:', res.headers.get('x-doc-debug-kind'));
+    console.log('debug tbmId:', res.headers.get('x-doc-debug-tbmId'));
+
+
 
     if (!res.ok) {
       const t = await res.text().catch(() => '');
