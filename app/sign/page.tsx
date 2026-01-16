@@ -319,13 +319,13 @@ function SignView({ data, token, isMock }: { data: TbmSignData; token: string; i
 
       <SignaturePad onChangeDataUrl={setSigUrl} disabled={locked} />
 
-      {sigUrl ? (
+      {/* {sigUrl ? (
         <div className={s.preview}>
           <div className={s.previewTitle}>미리보기</div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className={s.previewImg} src={sigUrl} alt="signature preview" />
-        </div>
-      ) : null}
+          {/* <img className={s.previewImg} src={sigUrl} alt="signature preview" /> */}
+        {/* </div> */}
+      {/* ) : null} */}
 
       <div className={s.footer}>
         <button className={s.btn} type="button" onClick={submit} disabled={submitLoading || locked}>
