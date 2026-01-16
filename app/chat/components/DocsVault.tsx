@@ -10,7 +10,10 @@ type DocItem = {
   name: string;
   createdAt: number; // epoch ms
   size?: number;     // bytes
-  kind?: string;     // 'tbm' | 'riskassessment' | ...
+  kind?: string;
+
+  // ✅ 추가: list에서 내려오면 그대로 보관됨(런타임 필드)
+  meta?: any;
 };
 
 function formatDate(ts: number) {
@@ -43,7 +46,6 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ 문서함 진입 시 로그인 안 되어 있으면 로그인 모달 자동 오픈(한 번만)
   const autoLoginRef = useRef(false);
   useEffect(() => {
     if (!userEmail && !autoLoginRef.current) {
@@ -59,9 +61,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     try {
       const res = await fetch('/api/docs?endpoint=list', {
         method: 'GET',
-        headers: {
-          'x-user-email': userEmail, // ✅ 간단 식별(나중에 세션/JWT로 대체 권장)
-        },
+        headers: { 'x-user-email': userEmail },
         cache: 'no-store',
       });
 
@@ -91,15 +91,30 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
       return;
     }
 
-    const res = await fetch(`/api/docs?endpoint=download&id=${encodeURIComponent(doc.id)}`, {
+    // ✅ 여기서 tbmId/kind를 “이미 가진 doc”에서 뽑아서 query로 같이 보냄
+    const meta = doc.meta || {};
+    const tbmId =
+      (meta?.tbm_id || meta?.tbmId || meta?.tbmID || '').toString().trim();
+    const kind = (doc.kind || meta?.kind || '').toString().trim();
+    const name = (doc.name || '').toString();
+
+    const qs = new URLSearchParams();
+    qs.set('endpoint', 'download');
+    qs.set('id', doc.id);
+    if (kind) qs.set('kind', kind);
+    if (tbmId) qs.set('tbmId', tbmId);
+    if (name) qs.set('name', name); // ✅ kind 없을 때 파일명으로 TBM 추정용
+
+    const res = await fetch(`/api/docs?${qs.toString()}`, {
       method: 'GET',
       headers: { 'x-user-email': userEmail },
+      cache: 'no-store',
     });
 
+    // ✅ 디버깅: 지금 네가 찍은 로그를 여기서도 볼 수 있게
     console.log('download mode:', res.headers.get('x-doc-download-mode'));
     console.log('content-type:', res.headers.get('content-type'));
     console.log('content-disposition:', res.headers.get('content-disposition'));
-
 
     if (!res.ok) {
       const t = await res.text().catch(() => '');
@@ -109,10 +124,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
 
     const blob = await res.blob();
 
-    // filename은 서버의 content-disposition 우선
+    // filename*= 와 filename= 모두 커버
     const cd = res.headers.get('content-disposition') ?? '';
-    const match = cd.match(/filename\*\=UTF-8''(.+)$/);
-    const filename = match ? decodeURIComponent(match[1]) : doc.name;
+    const utf8 = cd.match(/filename\*\=UTF-8''(.+)$/i);
+    const plain = cd.match(/filename=\"?([^\";]+)\"?/i);
+    const filename = utf8 ? decodeURIComponent(utf8[1]) : (plain ? plain[1] : doc.name);
 
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -124,7 +140,6 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     window.URL.revokeObjectURL(url);
   };
 
-  // ✅ 로그인 안 되어 있으면 안내 화면(버튼은 유지)
   if (!userEmail) {
     return (
       <section className={s.wrap}>
@@ -204,25 +219,15 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className={s.row}>
-                      <td className={s.tdName}>
-                        <div className={s.skeletonLine} />
-                      </td>
-                      <td className={s.tdDate}>
-                        <div className={s.skeletonPill} />
-                      </td>
-                      <td className={s.tdMeta}>
-                        <div className={s.skeletonPill} />
-                      </td>
-                      <td className={s.tdDl}>
-                        <div className={s.skeletonBtn} />
-                      </td>
+                      <td className={s.tdName}><div className={s.skeletonLine} /></td>
+                      <td className={s.tdDate}><div className={s.skeletonPill} /></td>
+                      <td className={s.tdMeta}><div className={s.skeletonPill} /></td>
+                      <td className={s.tdDl}><div className={s.skeletonBtn} /></td>
                     </tr>
                   ))
                 ) : docs.length === 0 ? (
                   <tr>
-                    <td className={s.empty} colSpan={4}>
-                      아직 생성된 문서가 없습니다.
-                    </td>
+                    <td className={s.empty} colSpan={4}>아직 생성된 문서가 없습니다.</td>
                   </tr>
                 ) : (
                   docs.map((d) => (
@@ -230,9 +235,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                       <td className={s.tdName}>
                         <div className={s.docName}>
                           <span className={s.docIcon} aria-hidden />
-                          <span className={s.docText} title={d.name}>
-                            {d.name}
-                          </span>
+                          <span className={s.docText} title={d.name}>{d.name}</span>
                           {d.kind ? (
                             <span className={s.kindPill}>
                               <FileText size={14} />
