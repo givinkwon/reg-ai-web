@@ -487,17 +487,17 @@ export default function TbmCreateModal({
       // ✅ 성공 시 모달 닫기
       requestClose();
     } catch (e: any) {
-      const msg =
-        e?.name === 'AbortError'
-          ? '요청 시간이 초과되었습니다. 문서함/이메일을 확인하거나 다시 시도해주세요.'
-          : 'TBM 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      // const msg =
+      //   e?.name === 'AbortError'
+      //     ? '요청 시간이 초과되었습니다. 문서함/이메일을 확인하거나 다시 시도해주세요.'
+      //     : 'TBM 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
 
-      openAlert({
-        title: '오류',
-        lines: [msg],
-        confirmText: '확인',
-        onConfirm: () => closeAlert(),
-      });
+      // openAlert({
+      //   title: '오류',
+      //   lines: [msg],
+      //   confirmText: '확인',
+      //   onConfirm: () => closeAlert(),
+      // });
     } finally {
       setSubmitting(false);
     }
