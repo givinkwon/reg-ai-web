@@ -96,6 +96,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
       headers: { 'x-user-email': userEmail },
     });
 
+    console.log('download mode:', res.headers.get('x-doc-download-mode'));
+    console.log('content-type:', res.headers.get('content-type'));
+    console.log('content-disposition:', res.headers.get('content-disposition'));
+
+
     if (!res.ok) {
       const t = await res.text().catch(() => '');
       alert(`다운로드 실패 (${res.status}) ${t.slice(0, 200)}`);
