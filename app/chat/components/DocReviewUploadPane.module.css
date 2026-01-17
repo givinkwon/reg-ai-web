@@ -5,7 +5,7 @@
   padding: 28px 20px;
   border-radius: 18px;
   border: 1px dashed #d4d4dd;
-  background: #060b16;
+  background: #f9fafb;
   text-align: center;
   cursor: pointer;
   transition:
@@ -17,7 +17,7 @@
 
 .root:hover {
   border-color: #2563eb;
-    background: #060b16;
+  background: #f1f5ff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
   transform: translateY(-1px);
 }
@@ -25,7 +25,7 @@
 /* ✅ 드래그 중일 때(DragOver) 강조 */
 .dragActive {
   border-color: #2563eb;
-  background: #060b16;
+  background: #eef2ff;
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
   transform: translateY(-1px);
 }
@@ -41,17 +41,17 @@
   justify-content: center;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #060b16;
+  background: #e2e8f0;
   font-size: 11px;
   font-weight: 500;
-  color: white;
+  color: #475569;
   margin-bottom: 8px;
 }
 
 .docName {
   font-size: 15px;
   font-weight: 600;
-  color: white;
+  color: #0f172a;
   margin-bottom: 6px;
 }
 

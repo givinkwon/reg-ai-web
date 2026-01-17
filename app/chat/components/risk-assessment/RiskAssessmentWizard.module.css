@@ -134,9 +134,10 @@
 .closeBtn {
   border-radius: 12px;
   border: 1px solid var(--ra-border);
-  color: white;
+  background: var(--ra-surface-2);
+  color: black;
   cursor: pointer;
-  /* font-size: 20px; */
+  font-size: 20px;
   line-height: 0;
 }
 

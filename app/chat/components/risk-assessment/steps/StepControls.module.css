@@ -14,7 +14,7 @@
     border: 1px solid rgba(15, 23, 42, 0.10);
     border-radius: 16px;
     padding: 12px;
-    background: #060b16;
+    background: #fff;
     font-size: 12px;
     color: rgba(15, 23, 42, 0.60);
   }
@@ -23,7 +23,7 @@
     border: 1px solid rgba(15, 23, 42, 0.10);
     border-radius: 16px;
     padding: 12px;
-    background: #060b16;
+    background: #fff;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -47,7 +47,7 @@
   
   .pathStrong{
     font-weight: 900;
-    color: white  ;
+    color: rgba(15, 23, 42, 0.85);
   }
   
   .pathSep{
@@ -67,7 +67,7 @@
   .hazardTitle{
     font-size: 13px;
     font-weight: 900;
-    color: white;
+    color: #0f172a;
   }
   
   .grid{
@@ -85,7 +85,7 @@
   .label{
     font-size: 12px;
     font-weight: 900;
-    color: white;
+    color: rgba(15, 23, 42, 0.75);
   }
   
   .select{
@@ -135,7 +135,7 @@
   border-radius: 10px;
   border: 1px solid rgba(59, 130, 246, 0.28);
   background: rgba(255,255,255,0.04);
-  color:white;
+  color: black;
 }
 .segBtnActive {
   border-color: rgba(90,160,255,0.7);

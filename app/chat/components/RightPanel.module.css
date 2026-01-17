@@ -20,7 +20,7 @@
   right: 0;
   height: 100dvh;
   width: min(440px, 92vw);
-  background: #060b16;
+  background: #fff;
   border-left: 1px solid #EAEDF5;
   box-shadow: 0 10px 30px rgba(18,29,56,.18);
   transform: translateX(100%);
@@ -74,7 +74,7 @@
 
 .title{
   font-weight: 600;
-  color: white;
+  color: #303650;
   font-size: 16px;        /* 패널 제목 조금 크게 */
 }
 
@@ -83,14 +83,13 @@
   flex: 1;
   overflow: auto;
   padding: 14px 16px 18px;
-  background: #060b16;
 }
 
 /* 섹션 제목 */
 .groupTitle{
   margin: 8px 0 10px;
   font-weight: 700;
-  color: white;
+  color: #303650;
   font-size: 14px;
 }
 
@@ -98,8 +97,8 @@
   padding: 14px;
   border: 1px dashed #EAEDF5;
   border-radius: 12px;
-  color: white;
-  background: #060b16;
+  color: #6b7493;
+  background: #fbfcff;
   margin-bottom: 12px;
 }
 
@@ -115,17 +114,17 @@
   border: 1px solid #EAEDF5;
   border-radius: 12px;
   padding: 10px 12px;
-  background: #060b16;
+  background: #fff;
 }
 
 .evTitle{
-  color: white;
+  color: #303650;
   font-size: 14px;
   line-height: 1.45;
 }
 
 .evSnippet{
-  color: white;
+  color: #6b7493;
   font-size: 12px;
   margin-top: 6px;
 }
