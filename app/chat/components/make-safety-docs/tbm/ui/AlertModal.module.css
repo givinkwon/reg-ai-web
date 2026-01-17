@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
 
-  background: rgba(0,0,0,0.55);
+  /* background: rgba(0,0,0,0.55); */
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 
@@ -16,8 +16,8 @@
 
 .modal{
   width: min(520px, 100%);
-  background: #060b16;
-  color: white;
+  background: white;
+  /* color: white; */
   border-radius: 18px;
   box-shadow:
     0 22px 60px rgba(0,0,0,0.25),
@@ -68,7 +68,6 @@
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.2px;
-  color: white;
 }
 
 .closeBtn{
@@ -76,16 +75,13 @@
   height: 34px;
   border-radius: 10px;
   border: 1px solid rgba(17,24,39,0.12);
-  background: #fff;
   cursor: pointer;
 
   display:flex;
   align-items:center;
   justify-content:center;
 }
-.closeBtn:hover{
-  background: rgba(17,24,39,0.04);
-}
+
 
 .body{
   padding: 6px 18px 16px 18px;
@@ -97,7 +93,6 @@
 
   font-size: 14px;
   line-height: 1.55;
-  color: white;
   letter-spacing: -0.1px;
 }
 
@@ -114,7 +109,6 @@
   border: none;
 
   background: #111827;
-  color: #fff;
   font-weight: 800;
   cursor: pointer;
 }

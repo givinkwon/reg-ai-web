@@ -241,7 +241,7 @@
   border: 0;
   cursor: pointer;
   background: var(--primary-bg);
-  color: var(--primary-text);
+  color: white!important;
   font-weight: 900;
   font-size: 13px;
   display: inline-flex;

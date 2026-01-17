@@ -6,11 +6,9 @@
 
 .note {
   font-size: 12px;
-  color: white;
   padding: 10px 12px;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: 12px;
-  background: rgba(0,0,0,0.02);
 }
 
 .tagsRow {
@@ -34,7 +32,6 @@
   border: 1px solid rgba(0,0,0,0.10);
   border-radius: 14px;
   overflow: hidden;
-    background: #060b16;
 }
 
 .accHeader {
@@ -43,8 +40,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: #060b16;
-  color:white;
+  color: white;
   border: 0;
   cursor: pointer;
 }
@@ -52,14 +48,12 @@
 .accTitle {
   font-size: 12px;
   font-weight: 900;
-  color:white;
 }
 
 .accRight {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: rgba(0,0,0,0.55);
 }
 
 .count {
@@ -87,7 +81,6 @@
 
 .empty {
   font-size: 12px;
-  color: rgba(0,0,0,0.45);
 }
 
 .itemChipRow {
@@ -103,13 +96,11 @@
   background: rgba(11, 98, 255, 0.08);
   padding: 8px 10px;
   font-size: 12px;
-  color: rgba(0,0,0,0.78);
 }
 
 .removeBtn {
   border-radius: 12px;
   border: 1px solid grey;
-  background: #060b16;
   cursor: pointer;
   color: white;
   display: grid;
@@ -139,10 +130,9 @@
 .addBtn {
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.12);
-  background: #060b16;
   cursor: pointer;
   display: grid;
-  color: wheat;
+  color: white;
   place-items: center;
 }
 .addBtn:hover { background: rgba(0,0,0,0.03); }
@@ -159,7 +149,6 @@
   color: white;
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,0.12);
-  background: #060b16;
   cursor: pointer;
   font-weight: 900;
 }

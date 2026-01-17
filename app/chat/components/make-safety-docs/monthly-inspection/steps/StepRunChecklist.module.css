@@ -81,14 +81,13 @@
 
 .rateBtn {
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.12);
-  background: #060b16;  
+  border: 1px solid rgba(0,0,0,0.12); 
   padding: 7px 10px;
   font-size: 12px;
+  color:white;
   cursor: pointer;
-  color: white;
 }
-.rateBtn:hover { background: rgba(0,0,0,0.03); color: white; }
+.rateBtn:hover { background: rgba(0,0,0,0.03); color: black; }
 
 .active {
   border-color: rgba(11, 98, 255, 0.5);
@@ -123,7 +122,6 @@
   height: 44px;
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,0.12);
-  background: #060b16;
   color: white;
   cursor: pointer;
   font-weight: 900;
