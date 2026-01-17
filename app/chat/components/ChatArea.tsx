@@ -96,6 +96,7 @@ import LawNoticeArticlesModal from './law-notice/LawNoticeArticlesModal';
 import { formatAssistantHtml } from '../../utils/formatAssistantHtml';
 
 import { track } from '../../lib/ga';
+import CheckSafetyDocs from './check-safety-docs/CheckSafetyDocs';
 
 // 🔹 추가: 쿠키에서 카운트 읽기
 const getGuestMsgCountFromCookie = () => {
@@ -716,7 +717,8 @@ export default function ChatArea() {
     doc: SafetyDoc;
   } | null>(null);
 
-  const isSafetyDocTask = docMode === 'create' || docMode === 'review';
+  const isMakeSafetyDocTask = docMode === 'create'
+  const isCheckSafetyDocTask = docMode === 'review';
   const isEduTask = selectedTask === 'edu_material';
   const isRiskTask = selectedTask === 'risk_assessment';
 
@@ -1146,15 +1148,15 @@ export default function ChatArea() {
                       onSelectMaterial={handleSelectSafetyEduMaterial}
                       selectedMaterialId={selectedEduMaterialId}
                     />
-                  ) : isSafetyDocTask ? (
+                  ) : isMakeSafetyDocTask ? (
                     <MakeSafetyDocs
-                      mode={docMode === 'review' ? 'review' : 'create'}
+                      mode={docMode}
                       onSelectDoc={(category, doc) => {
                         ensureRoomExists();
 
                         const today = formatToday();
                         const label = (doc.label || doc.id || '문서').replace(/\s+/g, '');
-                        const prefix = docMode === 'review' ? '[문서검토]' : '[문서생성]';
+                        const prefix = '[문서생성]';
                         queueMicrotask(() => setSidebarTitle(`${prefix}${label}_${today}`));
 
                         if (docMode === 'create') {
@@ -1162,6 +1164,77 @@ export default function ChatArea() {
                         } else if (docMode === 'review') {
                           setReviewDoc({ category, doc });
                         }
+                      }}
+                      // ✅ 어떤 문서가 선택됐는지 (검토 모드에서만)
+                      // selectedDocId={
+                      //   docMode === 'review' && reviewDoc ? reviewDoc.doc.id : null
+                      // }
+                      // ✅ 선택된 문서 아래에 표시할 업로드 영역 (드롭다운)
+                      // renderSelectedDocPane={(category, doc) =>
+                      //   docMode === 'review' ? (
+                      //     <DocReviewUploadPane
+                      //       category={category}
+                      //       doc={doc}
+                      //       onUploadAndAsk={async ({ category, doc, files }) => {
+                      //         // 1) 유저 메시지
+                      //         addMessage({
+                      //           role: 'user',
+                      //           content: `[문서 검토 요청] "${doc.label}" 문서를 업로드했습니다. 검토 결과를 알려주세요.`,
+                      //         });
+
+                      //         // 2) 진행상황 표시용 assistant 버블 "하나" 생성
+                      //         addMessage({
+                      //           role: 'assistant',
+                      //           content: '📂 업로드된 문서 확인 및 검토 프롬프트 생성 중',
+                      //         });
+
+                      //         // 3) FormData 구성
+                      //         const form = new FormData();
+                      //         files.forEach((f) => form.append('files', f));
+                      //         form.append('task_type', 'safety_doc_review');
+                      //         form.append('safety_doc_id', doc.id);
+                      //         form.append('safety_doc_label', doc.label);
+                      //         form.append('category_id', category.id);
+                      //         form.append('category_title', category.title);
+
+                      //         // 4) 백엔드에 job 생성 요청
+                      //         const res = await fetch('/api/start-doc-review', {
+                      //           method: 'POST',
+                      //           body: form,
+                      //         });
+
+                      //         if (!res.ok) {
+                      //           updateLastAssistant(
+                      //             '문서 검토 요청 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+                      //           );
+                      //           return;
+                      //         }
+
+                      //         const { job_id, thread_id } = await res.json();
+
+                      //         // 5) 폴링하면서 "같은 말풍선"만 내용 업데이트
+                      //         await pollDocReviewJob(
+                      //           job_id,
+                      //           thread_id ?? job_id,
+                      //           updateLastAssistant,
+                      //           addMessage, // 최종 답변용
+                      //         );
+                      //       }}
+                      //     />
+                      //   ) : null
+                      // }
+                    />
+                  ) : isCheckSafetyDocTask ? (
+                    <CheckSafetyDocs
+                      mode={docMode}
+                      onSelectDoc={(category, doc) => {
+                        ensureRoomExists();
+
+                        const today = formatToday();
+                        const label = (doc.label || doc.id || '문서').replace(/\s+/g, '');
+                        const prefix = '[문서생성]';
+                        queueMicrotask(() => setSidebarTitle(`${prefix}${label}_${today}`));
+                        setReviewDoc({ category, doc });
                       }}
                       // ✅ 어떤 문서가 선택됐는지 (검토 모드에서만)
                       selectedDocId={

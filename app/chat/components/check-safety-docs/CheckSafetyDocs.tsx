@@ -2,15 +2,15 @@
 
 import { useState, ReactNode } from 'react';
 import { ChevronDown, FileText } from 'lucide-react';
-import s from './MakeSafetyDocs.module.css';
+import s from './CheckSafetyDocs.module.css';
 
 // ✅ TBM
-import TbmCreateModal, { TbmCreatePayload } from './tbm/TbmCreateModal';
+import TbmCreateModal, { TbmCreatePayload } from '../make-safety-docs/tbm/TbmCreateModal';
 
 // ✅ 월 작업장 순회 점검표 (새 모달)
 import MonthlyInspectionCreateModal, {
   MonthlyInspectionPayload,
-} from './monthly-inspection/MonthlyInspectionCreateModal';
+} from '../make-safety-docs/monthly-inspection/MonthlyInspectionCreateModal';
 
 // ======================
 // 타입 정의
@@ -109,7 +109,7 @@ export const SAFETY_DOC_CATEGORIES: SafetyDocCategory[] = [
 // ======================
 // 컴포넌트 Props
 // ======================
-export type MakeSafetyDocsProps = {
+export type CheckSafetyDocsProps = {
   mode: 'create' | 'review';
 
   onSelectDoc?: (category: SafetyDocCategory, doc: SafetyDoc) => void;
@@ -135,14 +135,14 @@ export type MakeSafetyDocsProps = {
 // ======================
 // 메인 컴포넌트
 // ======================
-export default function MakeSafetyDocs({
+export default function CheckSafetyDocs({
   mode,
   onSelectDoc,
   selectedDocId,
   renderSelectedDocPane,
   onCreateTbm,
   onCreateMonthlyInspection,
-}: MakeSafetyDocsProps) {
+}: CheckSafetyDocsProps) {
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(
     SAFETY_DOC_CATEGORIES[0]?.id ?? null,
   );
