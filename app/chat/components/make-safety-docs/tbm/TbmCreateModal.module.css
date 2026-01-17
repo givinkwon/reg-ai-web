@@ -10,7 +10,7 @@
 
   --ov-bg: rgba(0, 0, 0, 0.45);
 
-  --modal-bg: #f6f7f9; /* 기존 */
+  --modal-bg: #060b16; /* 기존 */
   --pill-bg: #ffffff;
   --icon-btn-bg: #ffffff;
 
@@ -82,7 +82,7 @@
   justify-content: center;
   padding: 16px;
 
-  background: var(--ov-bg);
+  background: #060b16;
   backdrop-filter: blur(6px);
 }
 
@@ -98,8 +98,8 @@
   padding: 12px;
 
   /* ✅ 색상만 토큰으로 */
-  background: var(--modal-bg);
-  color: var(--text);
+  background: #060b16;
+  color: white;
 }
 
 /* -----------------------
@@ -335,7 +335,7 @@
 }
 
 .tagBox {
-  background: var(--input-bg);
+  background: #060b16;
   border: 1px solid var(--border);
   color: var(--text);
 }

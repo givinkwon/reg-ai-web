@@ -8,7 +8,7 @@
   display:flex; flex-direction:column;
   gap:16px;
 
-  background: var(--sidebar-bg);
+  background: #0b1120;
   border-right: none;
   box-shadow: none;
   overflow:hidden;              /* ✅ sidebar 자체는 고정, 내부(listArea)만 스크롤 */
@@ -112,7 +112,7 @@
 
 /* ✅ 텍스트는 항상 1줄 */
 .navText{
-  color:var(--text-neutral);
+  color: white;
   font-size:12px;
   white-space:nowrap;
   overflow:hidden;
@@ -154,19 +154,37 @@
   padding:0 8px;
   display:flex;
   align-items:center;
-  gap:8px;
   border-radius:8px;
   cursor:pointer;
 }
 
-.chatItem:hover{ background:#EFF4FF; }
-.chatActive{ background:#E9F2FF; }
+.chatItem:hover {
+  background: #EFF4FF;
+}
+
+.chatItem:hover span,
+.chatItem:hover p,
+.chatItem:hover .title,
+.chatItem:hover .desc {
+  color: #1F2A37; 
+}
+.chatActive{  
+  background: #EFF4FF;
+}
+.chatActive span,
+.chatActive p,
+.chatActive .title,
+.chatActive .desc {
+  color: #1F2A37;
+}
 
 .iconSmAccent{ width:16px; height:16px; color:var(--accent); }
 .iconSmMuted{ width:16px; height:16px; color:var(--text-neutral); }
 
 .chatText{
-  color:var(--text-dark);
+  gap:8px;
+  margin-left: 1vw;
+  color: white;
   font-size:13px;
   flex:1;
   overflow:hidden;

@@ -10,7 +10,7 @@
 
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #fbfbfc;
+  background: #060b16;
   padding: 10px 12px;
 }
 
@@ -20,8 +20,9 @@
   gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #eef3ff;
-  color: rgba(0, 0, 0, 0.82);
+  border-color: grey;
+  border-width: 1px;
+  color: white;
   font-size: 12px;
   font-weight: 700;
 }
@@ -33,17 +34,20 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  color: rgba(0, 0, 0, 0.65);
+  color: white;
 }
 
 .input {
   flex: 1;
   min-width: 140px;
   border: none;
+  margin-top: 1vh;
+  margin-bottom: 1vh;
   outline: none;
-  background: transparent;
+  border: 1px solid grey;
+  color: white;
   font-size: 13px;
-  padding: 6px 4px;
+  padding: 8px;
 }
 
 .hintRow {
@@ -52,7 +56,7 @@
 
 .hint {
   font-size: 11px;
-  color: rgba(0, 0, 0, 0.55);
+  color:white;
 }
 
 .dropdown {
@@ -64,7 +68,7 @@
 
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #ffffff;
+  background: #060b16;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
 }
@@ -73,7 +77,7 @@
   width: 100%;
   text-align: left;
   border: none;
-  color: black;
+  color: white;
   background: transparent;
   padding: 10px 12px;
   font-size: 13px;
@@ -81,5 +85,6 @@
 
 .option:hover,
 .optionActive {
-  background: #f3f6ff;
+  background: white;
+  color: black;
 }

@@ -17,19 +17,20 @@
 .metaTitle {
   font-size: 13px;
   font-weight: 900;
-  color: rgba(0,0,0,0.82);
+  color: white;
 }
 
 .metaSub {
-  margin-top: 4px;
+  margin-top: 1vh;
   font-size: 12px;
-  color: rgba(0,0,0,0.55);
+  color: white;
 }
 
 .tagsRow {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 1vh;
 }
 
 .tagChip {
@@ -68,7 +69,7 @@
 .question {
   font-size: 12px;
   font-weight: 900;
-  color: rgba(0,0,0,0.78);
+  color: white;
   line-height: 1.35;
 }
 
@@ -81,18 +82,18 @@
 .rateBtn {
   border-radius: 999px;
   border: 1px solid rgba(0,0,0,0.12);
-  background: #fff;
+  background: #060b16;  
   padding: 7px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: rgba(0,0,0,0.72);
+  color: white;
 }
-.rateBtn:hover { background: rgba(0,0,0,0.03); }
+.rateBtn:hover { background: rgba(0,0,0,0.03); color: white; }
 
 .active {
   border-color: rgba(11, 98, 255, 0.5);
   background: rgba(11, 98, 255, 0.10);
-  color: rgba(0,0,0,0.82);
+  color: white;
   font-weight: 900;
 }
 
@@ -122,8 +123,8 @@
   height: 44px;
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,0.12);
-  background: #fff;
-  color: black;
+  background: #060b16;
+  color: white;
   cursor: pointer;
   font-weight: 900;
 }

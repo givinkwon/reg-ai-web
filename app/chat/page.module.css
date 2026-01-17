@@ -15,6 +15,7 @@
   padding-right: 0;
   position: relative;
   gap: 0;
+  background-color: #0b1120;
 
   /* ✅ 가로/세로 넘침 방지 */
   overflow: hidden;
