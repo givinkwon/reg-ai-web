@@ -6,6 +6,10 @@
   margin: 0 auto;
   padding: clamp(14px, 3vw, 22px);
   box-sizing: border-box;
+
+  /* ✅ 스크롤이 막히는 레이아웃(상위 overflow hidden / 고정높이)에서도 대응 */
+  height: 100%;
+  min-height: 0;
 }
 
 .shell {
@@ -13,6 +17,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  /* ✅ 남은 공간을 card가 먹고, 내부 스크롤이 되도록 */
+  height: 100%;
+  min-height: 0;
 }
 
 .card {
@@ -22,6 +30,21 @@
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
+
+  /* ✅ 내부에 cardBody(overflow:auto)를 쓰기 위한 flex 세팅 */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0; /* ★ 중요: overflow 자식이 스크롤 되려면 부모가 min-height:0 필요 */
+}
+
+/* ✅ 스크롤 담당 영역 (핵심) */
+.cardBody {
+  flex: 1 1 auto;
+  min-height: 0; /* ★ 중요 */
+  overflow: auto; /* ★ 여기에서 스크롤 */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .header {
@@ -262,6 +285,9 @@
 .mobileList {
   display: flex;
   flex-direction: column;
+
+  /* ✅ iOS 하단 홈바/안전영역에 가리지 않게 */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
 }
 
 .mobileRow {
@@ -348,7 +374,7 @@
 @media (max-width: 720px) {
   .menuBtn {
     display: inline-flex;
-    color:black;
+    /* 기존 코드에 color:black이 있었는데, 다크 배경이면 안 보일 수 있어 기본값 유지 */
     cursor: pointer;
   }
 

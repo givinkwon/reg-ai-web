@@ -46,6 +46,13 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
 
   const fetchAbortRef = useRef<AbortController | null>(null);
 
+  // ✅ 언마운트 시 fetch abort
+  useEffect(() => {
+    return () => {
+      fetchAbortRef.current?.abort();
+    };
+  }, []);
+
   const fetchDocs = async () => {
     if (!userEmail) return;
 
@@ -241,119 +248,122 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
         <div className={s.card}>
           {error && <div className={s.errorBox}>{error}</div>}
 
-          {/* ✅ Desktop: table */}
-          <div className={s.desktopOnly}>
-            <div className={s.tableWrap}>
-              <table className={s.table}>
-                <thead>
-                  <tr>
-                    <th className={s.thName}>문서명</th>
-                    <th className={s.thDate}>작성일</th>
-                    <th className={s.thDl}>다운로드</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {loading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={i} className={s.row}>
-                        <td className={s.tdName}>
-                          <div className={s.skeletonLine} />
-                        </td>
-                        <td className={s.tdDate}>
-                          <div className={s.skeletonPill} />
-                        </td>
-                        <td className={s.tdDl}>
-                          <div className={s.skeletonBtn} />
-                        </td>
-                      </tr>
-                    ))
-                  ) : docs.length === 0 ? (
+          {/* ✅ 스크롤 담당 영역 (모바일 스크롤 문제 해결 핵심) */}
+          <div className={s.cardBody}>
+            {/* ✅ Desktop: table */}
+            <div className={s.desktopOnly}>
+              <div className={s.tableWrap}>
+                <table className={s.table}>
+                  <thead>
                     <tr>
-                      <td className={s.empty} colSpan={3}>
-                        아직 생성된 문서가 없습니다.
-                      </td>
+                      <th className={s.thName}>문서명</th>
+                      <th className={s.thDate}>작성일</th>
+                      <th className={s.thDl}>다운로드</th>
                     </tr>
-                  ) : (
-                    docs.map((d) => (
-                      <tr key={d.id} className={s.row}>
-                        <td className={s.tdName}>
-                          <div className={s.docName}>
-                            <span className={s.docIcon} aria-hidden />
-                            <span className={s.docText} title={d.name}>
-                              {d.name}
-                            </span>
-                          </div>
-                        </td>
+                  </thead>
 
-                        <td className={s.tdDate}>
-                          <span className={s.datePill}>{formatDate(d.createdAt)}</span>
-                        </td>
-
-                        <td className={s.tdDl}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={s.dlBtn}
-                            onClick={() => handleDownload(d)}
-                          >
-                            <Download size={16} />
-                            <span className={s.dlText}>다운로드</span>
-                          </Button>
+                  <tbody>
+                    {loading ? (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <tr key={i} className={s.row}>
+                          <td className={s.tdName}>
+                            <div className={s.skeletonLine} />
+                          </td>
+                          <td className={s.tdDate}>
+                            <div className={s.skeletonPill} />
+                          </td>
+                          <td className={s.tdDl}>
+                            <div className={s.skeletonBtn} />
+                          </td>
+                        </tr>
+                      ))
+                    ) : docs.length === 0 ? (
+                      <tr>
+                        <td className={s.empty} colSpan={3}>
+                          아직 생성된 문서가 없습니다.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      docs.map((d) => (
+                        <tr key={d.id} className={s.row}>
+                          <td className={s.tdName}>
+                            <div className={s.docName}>
+                              <span className={s.docIcon} aria-hidden />
+                              <span className={s.docText} title={d.name}>
+                                {d.name}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className={s.tdDate}>
+                            <span className={s.datePill}>{formatDate(d.createdAt)}</span>
+                          </td>
+
+                          <td className={s.tdDl}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={s.dlBtn}
+                              onClick={() => handleDownload(d)}
+                            >
+                              <Download size={16} />
+                              <span className={s.dlText}>다운로드</span>
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          {/* ✅ Mobile: list */}
-          <div className={s.mobileOnly}>
-            <div className={s.mobileList}>
-              {loading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className={s.mobileRow}>
-                    <div className={s.mobileLeft}>
-                      <div className={s.skeletonLine} />
-                      <div className={s.skeletonPill} />
+            {/* ✅ Mobile: list */}
+            <div className={s.mobileOnly}>
+              <div className={s.mobileList}>
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className={s.mobileRow}>
+                      <div className={s.mobileLeft}>
+                        <div className={s.skeletonLine} />
+                        <div className={s.skeletonPill} />
+                      </div>
+                      <div className={s.skeletonBtn} />
                     </div>
-                    <div className={s.skeletonBtn} />
-                  </div>
-                ))
-              ) : docs.length === 0 ? (
-                <div className={s.empty}>아직 생성된 문서가 없습니다.</div>
-              ) : (
-                docs.map((d) => (
-                  <div key={d.id} className={s.mobileRow}>
-                    <div className={s.mobileLeft}>
-                      <div className={s.docName}>
-                        <span className={s.docIcon} aria-hidden />
-                        <span className={s.docText} title={d.name}>
-                          {d.name}
-                        </span>
+                  ))
+                ) : docs.length === 0 ? (
+                  <div className={s.empty}>아직 생성된 문서가 없습니다.</div>
+                ) : (
+                  docs.map((d) => (
+                    <div key={d.id} className={s.mobileRow}>
+                      <div className={s.mobileLeft}>
+                        <div className={s.docName}>
+                          <span className={s.docIcon} aria-hidden />
+                          <span className={s.docText} title={d.name}>
+                            {d.name}
+                          </span>
+                        </div>
+
+                        <div className={s.mobileMeta}>
+                          <span className={s.datePill}>{formatDate(d.createdAt)}</span>
+                        </div>
                       </div>
 
-                      <div className={s.mobileMeta}>
-                        <span className={s.datePill}>{formatDate(d.createdAt)}</span>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={s.dlBtn}
+                        onClick={() => handleDownload(d)}
+                        aria-label="다운로드"
+                        title="다운로드"
+                      >
+                        <Download size={16} />
+                        <span className={s.dlText}>다운로드</span>
+                      </Button>
                     </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={s.dlBtn}
-                      onClick={() => handleDownload(d)}
-                      aria-label="다운로드"
-                      title="다운로드"
-                    >
-                      <Download size={16} />
-                      <span className={s.dlText}>다운로드</span>
-                    </Button>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
