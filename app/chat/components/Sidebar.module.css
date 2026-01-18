@@ -42,7 +42,7 @@
   transition:width .2s ease, padding .2s ease, background .2s;
 
   /* ✅ 다크/라이트 모두에서 배경 토큰 적용 가능하게 */
-  background: var(--sidebar-bg, transparent);
+  background: var(--sidebar-bg);
 }
 
 /* ======================================================
