@@ -2,35 +2,92 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  /* LIGHT 기본 */
+  color-scheme: light;
+
+  --text: rgba(15, 23, 42, 0.92);
+  --muted: rgba(15, 23, 42, 0.68);
+
+  --border: rgba(15, 23, 42, 0.10);
+  --border-soft: rgba(15, 23, 42, 0.06);
+
+  --surface: rgba(15, 23, 42, 0.03);
+  --surface-2: rgba(15, 23, 42, 0.05);
+  --card: #ffffff;
+
+  --chip-bg: rgba(11, 98, 255, 0.08);
+  --chip-border: rgba(11, 98, 255, 0.25);
+  --chip-text: rgba(15, 23, 42, 0.82);
+
+  --primary: #0b62ff;
+  --primary-text: #fff;
+
+  --btn-border: rgba(15, 23, 42, 0.12);
+  --btn-hover: rgba(15, 23, 42, 0.04);
+
+  --note-bg: #fff;
+  --note-text: rgba(15, 23, 42, 0.92);
+  --note-ph: rgba(15, 23, 42, 0.50);
 }
 
+@media (prefers-color-scheme: dark) {
+  .wrap {
+    color-scheme: dark;
+
+    --text: rgba(238, 242, 255, 0.92);
+    --muted: rgba(238, 242, 255, 0.68);
+
+    --border: rgba(255, 255, 255, 0.10);
+    --border-soft: rgba(255, 255, 255, 0.08);
+
+    --surface: rgba(255, 255, 255, 0.03);
+    --surface-2: rgba(255, 255, 255, 0.05);
+    --card: rgba(255, 255, 255, 0.04);
+
+    --chip-bg: rgba(59, 130, 246, 0.12);
+    --chip-border: rgba(59, 130, 246, 0.28);
+    --chip-text: rgba(238, 242, 255, 0.88);
+
+    --btn-border: rgba(255, 255, 255, 0.12);
+    --btn-hover: rgba(255, 255, 255, 0.06);
+
+    --note-bg: rgba(0, 0, 0, 0.22);
+    --note-text: rgba(238, 242, 255, 0.92);
+    --note-ph: rgba(238, 242, 255, 0.55);
+  }
+}
+
+/* ===== Meta ===== */
 .meta {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   padding: 10px 12px;
-  border: 1px solid rgba(0,0,0,0.08);
+
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(0,0,0,0.02);
+  background: var(--surface);
 }
 
 .metaTitle {
   font-size: 13px;
   font-weight: 900;
-  color: white;
+  color: var(--text);
 }
 
 .metaSub {
-  margin-top: 1vh;
+  margin-top: 6px; /* ✅ 기존 1vh는 화면에 따라 들쭉날쭉해서 px 권장 */
   font-size: 12px;
-  color: white;
+  color: var(--muted);
 }
 
+/* ===== Tags ===== */
 .tagsRow {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 1vh;
+  margin-bottom: 10px;
 }
 
 .tagChip {
@@ -39,11 +96,13 @@
   border-radius: 999px;
   padding: 6px 10px;
   font-size: 12px;
-  background: rgba(11, 98, 255, 0.08);
-  border: 1px solid rgba(11, 98, 255, 0.25);
-  color: rgba(0,0,0,0.78);
+
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--chip-text);
 }
 
+/* ===== Groups ===== */
 .group {
   display: flex;
   flex-direction: column;
@@ -53,14 +112,16 @@
 .groupTitle {
   font-size: 12px;
   font-weight: 900;
-  color: rgba(11, 98, 255, 0.9);
+  color: rgba(11, 98, 255, 0.92);
 }
 
+/* ===== Cards ===== */
 .card {
-  border: 1px solid rgba(0,0,0,0.10);
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--card);
   padding: 12px;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -69,10 +130,11 @@
 .question {
   font-size: 12px;
   font-weight: 900;
-  color: white;
+  color: var(--text);
   line-height: 1.35;
 }
 
+/* ===== Ratings ===== */
 .ratingRow {
   display: flex;
   flex-wrap: wrap;
@@ -81,36 +143,54 @@
 
 .rateBtn {
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.12); 
+  border: 1px solid var(--btn-border);
+  background: transparent;
+
   padding: 7px 10px;
   font-size: 12px;
-  color:white;
+  color: var(--text);
   cursor: pointer;
+
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
-.rateBtn:hover { background: rgba(0,0,0,0.03); color: black; }
+
+.rateBtn:hover {
+  background: var(--btn-hover);
+}
 
 .active {
-  border-color: rgba(11, 98, 255, 0.5);
-  background: rgba(11, 98, 255, 0.10);
-  color: white;
+  border-color: rgba(11, 98, 255, 0.55);
+  background: rgba(11, 98, 255, 0.12);
+  color: var(--text);
   font-weight: 900;
 }
 
+/* ===== Note ===== */
 .note {
   width: 100%;
   min-height: 64px;
   resize: vertical;
+
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.12);
+  border: 1px solid var(--btn-border);
   padding: 10px;
   font-size: 12px;
   outline: none;
-}
-.note:focus {
-  border-color: rgba(11, 98, 255, 0.55);
-  box-shadow: 0 0 0 3px rgba(11, 98, 255, 0.12);
+
+  background: var(--note-bg);
+  color: var(--note-text);
 }
 
+.note::placeholder {
+  color: var(--note-ph);
+}
+
+.note:focus {
+  border-color: rgba(11, 98, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(11, 98, 255, 0.16);
+}
+
+/* ===== Footer ===== */
 .footer {
   display: flex;
   gap: 10px;
@@ -120,23 +200,33 @@
 .ghost {
   flex: 1;
   height: 44px;
+
   border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.12);
-  color: white;
+  border: 1px solid var(--btn-border);
+  background: transparent;
+  color: var(--text);
+
   cursor: pointer;
   font-weight: 900;
+}
+
+.ghost:hover {
+  background: var(--btn-hover);
 }
 
 .primary {
   flex: 1.4;
   height: 44px;
+
   border-radius: 14px;
   border: 0;
-  background: #0b62ff;
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-text);
+
   cursor: pointer;
   font-weight: 900;
 }
+
 .primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;

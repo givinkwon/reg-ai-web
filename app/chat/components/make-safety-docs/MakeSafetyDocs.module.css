@@ -173,10 +173,10 @@
 }
 
 /* ✅ 반응형: 태블릿/모바일에서는 1열 + 가운데정렬 해제 */
-@media (max-width: 860px) {
+@media (max-width: 768px) {
   .docWrap {
     min-height: auto;
-    place-content: start;
+    place-content: center;
     padding: 16px 12px 22px;
   }
 

@@ -1,19 +1,17 @@
 'use client';
 
-import { Download, RefreshCw, FileText } from 'lucide-react';
+import { Download, RefreshCw, Menu } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
+import { useChatStore } from '../../store/chat';
 import s from './DocsVault.module.css';
 
 type DocItem = {
   id: string;
   name: string;
   createdAt: number; // epoch ms
-  size?: number;     // bytes
-  kind?: string;
-
-  // ✅ 추가: list에서 내려오면 그대로 보관됨(런타임 필드)
   meta?: any;
+  kind?: string;
 };
 
 function formatDate(ts: number) {
@@ -24,27 +22,19 @@ function formatDate(ts: number) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function formatBytes(n?: number) {
-  if (!n || n <= 0) return '-';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let v = n;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
 type Props = {
   userEmail: string | null;
   onRequireLogin: () => void;
 };
 
 export default function DocsVault({ userEmail, onRequireLogin }: Props) {
+  // ✅ ChatArea와 동일: 모바일 사이드바 열기
+  const setSidebarMobileOpen = useChatStore((st) => st.setSidebarMobileOpen);
+
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
 
   const autoLoginRef = useRef(false);
   useEffect(() => {
@@ -54,15 +44,24 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     }
   }, [userEmail, onRequireLogin]);
 
+  const fetchAbortRef = useRef<AbortController | null>(null);
+
   const fetchDocs = async () => {
     if (!userEmail) return;
+
+    fetchAbortRef.current?.abort();
+    const ac = new AbortController();
+    fetchAbortRef.current = ac;
+
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch('/api/docs?endpoint=list', {
         method: 'GET',
         headers: { 'x-user-email': userEmail },
         cache: 'no-store',
+        signal: ac.signal,
       });
 
       if (!res.ok) {
@@ -71,8 +70,13 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
       }
 
       const data = (await res.json()) as { items: DocItem[] };
-      setDocs(Array.isArray(data.items) ? data.items : []);
+      const items = Array.isArray(data.items) ? data.items : [];
+
+      setDocs(items);
+      setLastFetchedAt(Date.now());
+      console.log('[DocsVault] fetched items:', items.length);
     } catch (e: any) {
+      if (e?.name === 'AbortError') return;
       setError(e?.message ?? '문서 목록을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
@@ -91,10 +95,8 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
       return;
     }
 
-    // ✅ 여기서 tbmId/kind를 “이미 가진 doc”에서 뽑아서 query로 같이 보냄
     const meta = doc.meta || {};
-    const tbmId =
-      (meta?.tbm_id || meta?.tbmId || meta?.tbmID || '').toString().trim();
+    const tbmId = (meta?.tbm_id || meta?.tbmId || meta?.tbmID || '').toString().trim();
     const kind = (doc.kind || meta?.kind || '').toString().trim();
     const name = (doc.name || '').toString();
 
@@ -103,7 +105,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     qs.set('id', doc.id);
     if (kind) qs.set('kind', kind);
     if (tbmId) qs.set('tbmId', tbmId);
-    if (name) qs.set('name', name); // ✅ kind 없을 때 파일명으로 TBM 추정용
+    if (name) qs.set('name', name);
 
     const res = await fetch(`/api/docs?${qs.toString()}`, {
       method: 'GET',
@@ -111,13 +113,10 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
       cache: 'no-store',
     });
 
-    // ✅ 디버깅: 지금 네가 찍은 로그를 여기서도 볼 수 있게
     console.log('download mode:', res.headers.get('x-doc-download-mode'));
     console.log('debug rid:', res.headers.get('x-debug-rid'));
     console.log('debug kind:', res.headers.get('x-doc-debug-kind'));
     console.log('debug tbmId:', res.headers.get('x-doc-debug-tbmId'));
-
-
 
     if (!res.ok) {
       const t = await res.text().catch(() => '');
@@ -127,11 +126,10 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
 
     const blob = await res.blob();
 
-    // filename*= 와 filename= 모두 커버
     const cd = res.headers.get('content-disposition') ?? '';
     const utf8 = cd.match(/filename\*\=UTF-8''(.+)$/i);
     const plain = cd.match(/filename=\"?([^\";]+)\"?/i);
-    const filename = utf8 ? decodeURIComponent(utf8[1]) : (plain ? plain[1] : doc.name);
+    const filename = utf8 ? decodeURIComponent(utf8[1]) : plain ? plain[1] : doc.name;
 
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -143,14 +141,41 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     window.URL.revokeObjectURL(url);
   };
 
+  const countText = useMemo(() => {
+    if (loading) return '불러오는 중…';
+    return `총 ${docs.length}개`;
+  }, [docs.length, loading]);
+
+  const lastFetchedLabel = useMemo(() => {
+    if (!lastFetchedAt) return '';
+    const d = new Date(lastFetchedAt);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm} 업데이트`;
+  }, [lastFetchedAt]);
+
+  // ✅ 로그인 안 된 상태
   if (!userEmail) {
     return (
       <section className={s.wrap}>
         <div className={s.shell}>
           <header className={s.header}>
             <div className={s.headerLeft}>
-              <h2 className={s.title}>문서함</h2>
-              <p className={s.desc}>내 문서함을 보려면 로그인이 필요합니다.</p>
+              {/* ✅ 모바일에서만 보이는 햄버거 */}
+              <button
+                type="button"
+                className={s.menuBtn}
+                onClick={() => setSidebarMobileOpen(true)}
+                aria-label="사이드바 열기"
+                title="메뉴"
+              >
+                <Menu className={s.menuIcon} />
+              </button>
+
+              <div className={s.headerTitles}>
+                <h2 className={s.title}>문서함</h2>
+                <p className={s.desc}>내 문서함을 보려면 로그인이 필요합니다.</p>
+              </div>
             </div>
           </header>
 
@@ -170,22 +195,31 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     );
   }
 
-  const countText = useMemo(() => {
-    if (loading) return '불러오는 중…';
-    return `총 ${docs.length}개`;
-  }, [docs.length, loading]);
-
+  // ✅ 로그인 된 상태
   return (
     <section className={s.wrap}>
       <div className={s.shell}>
         <header className={s.header}>
           <div className={s.headerLeft}>
-            <h2 className={s.title}>문서함</h2>
-            <p className={s.desc}>생성된 문서를 확인하고 다운로드할 수 있습니다.</p>
+            {/* ✅ 모바일에서만 보이는 햄버거 */}
+            <button
+              type="button"
+              className={s.menuBtn}
+              onClick={() => setSidebarMobileOpen(true)}
+              aria-label="사이드바 열기"
+              title="메뉴"
+            >
+              <Menu className={s.menuIcon} />
+            </button>
+
+            <div className={s.headerTitles}>
+              <h2 className={s.title}>문서함</h2>
+              <p className={s.desc}>생성된 문서를 확인하고 다운로드할 수 있습니다.</p>
+            </div>
           </div>
 
           <div className={s.headerRight}>
-            <div className={s.badge}>
+            <div className={s.badge} title={lastFetchedLabel}>
               <span className={s.badgeDot} />
               <span className={s.badgeText}>{countText}</span>
             </div>
@@ -207,71 +241,120 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
         <div className={s.card}>
           {error && <div className={s.errorBox}>{error}</div>}
 
-          <div className={s.tableWrap}>
-            <table className={s.table}>
-              <thead>
-                <tr>
-                  <th className={s.thName}>문서명</th>
-                  <th className={s.thDate}>작성일</th>
-                  <th className={s.thMeta}>크기</th>
-                  <th className={s.thDl}>다운로드</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} className={s.row}>
-                      <td className={s.tdName}><div className={s.skeletonLine} /></td>
-                      <td className={s.tdDate}><div className={s.skeletonPill} /></td>
-                      <td className={s.tdMeta}><div className={s.skeletonPill} /></td>
-                      <td className={s.tdDl}><div className={s.skeletonBtn} /></td>
-                    </tr>
-                  ))
-                ) : docs.length === 0 ? (
+          {/* ✅ Desktop: table */}
+          <div className={s.desktopOnly}>
+            <div className={s.tableWrap}>
+              <table className={s.table}>
+                <thead>
                   <tr>
-                    <td className={s.empty} colSpan={4}>아직 생성된 문서가 없습니다.</td>
+                    <th className={s.thName}>문서명</th>
+                    <th className={s.thDate}>작성일</th>
+                    <th className={s.thDl}>다운로드</th>
                   </tr>
-                ) : (
-                  docs.map((d) => (
-                    <tr key={d.id} className={s.row}>
-                      <td className={s.tdName}>
-                        <div className={s.docName}>
-                          <span className={s.docIcon} aria-hidden />
-                          <span className={s.docText} title={d.name}>{d.name}</span>
-                          {d.kind ? (
-                            <span className={s.kindPill}>
-                              <FileText size={14} />
-                              {d.kind}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
+                </thead>
 
-                      <td className={s.tdDate}>
-                        <span className={s.datePill}>{formatDate(d.createdAt)}</span>
-                      </td>
-
-                      <td className={s.tdMeta}>
-                        <span className={s.metaPill}>{formatBytes(d.size)}</span>
-                      </td>
-
-                      <td className={s.tdDl}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={s.dlBtn}
-                          onClick={() => handleDownload(d)}
-                        >
-                          <Download size={16} />
-                          <span className={s.dlText}>다운로드</span>
-                        </Button>
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i} className={s.row}>
+                        <td className={s.tdName}>
+                          <div className={s.skeletonLine} />
+                        </td>
+                        <td className={s.tdDate}>
+                          <div className={s.skeletonPill} />
+                        </td>
+                        <td className={s.tdDl}>
+                          <div className={s.skeletonBtn} />
+                        </td>
+                      </tr>
+                    ))
+                  ) : docs.length === 0 ? (
+                    <tr>
+                      <td className={s.empty} colSpan={3}>
+                        아직 생성된 문서가 없습니다.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    docs.map((d) => (
+                      <tr key={d.id} className={s.row}>
+                        <td className={s.tdName}>
+                          <div className={s.docName}>
+                            <span className={s.docIcon} aria-hidden />
+                            <span className={s.docText} title={d.name}>
+                              {d.name}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className={s.tdDate}>
+                          <span className={s.datePill}>{formatDate(d.createdAt)}</span>
+                        </td>
+
+                        <td className={s.tdDl}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={s.dlBtn}
+                            onClick={() => handleDownload(d)}
+                          >
+                            <Download size={16} />
+                            <span className={s.dlText}>다운로드</span>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ✅ Mobile: list */}
+          <div className={s.mobileOnly}>
+            <div className={s.mobileList}>
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className={s.mobileRow}>
+                    <div className={s.mobileLeft}>
+                      <div className={s.skeletonLine} />
+                      <div className={s.skeletonPill} />
+                    </div>
+                    <div className={s.skeletonBtn} />
+                  </div>
+                ))
+              ) : docs.length === 0 ? (
+                <div className={s.empty}>아직 생성된 문서가 없습니다.</div>
+              ) : (
+                docs.map((d) => (
+                  <div key={d.id} className={s.mobileRow}>
+                    <div className={s.mobileLeft}>
+                      <div className={s.docName}>
+                        <span className={s.docIcon} aria-hidden />
+                        <span className={s.docText} title={d.name}>
+                          {d.name}
+                        </span>
+                      </div>
+
+                      <div className={s.mobileMeta}>
+                        <span className={s.datePill}>{formatDate(d.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={s.dlBtn}
+                      onClick={() => handleDownload(d)}
+                      aria-label="다운로드"
+                      title="다운로드"
+                    >
+                      <Download size={16} />
+                      <span className={s.dlText}>다운로드</span>
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 

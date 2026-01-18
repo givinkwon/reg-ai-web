@@ -4,7 +4,7 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  z-index: 2400;
+  z-index: 1500;
 
   display: flex;
   align-items: center;
@@ -220,13 +220,9 @@
 /* Mobile bottom sheet */
 @media (max-width: 768px) {
   .overlay {
-    margin-left: 5vw;
-    margin-right: 5vw;
-    margin-bottom: 5vh;
+    padding: 5vw;
     border-radius: 12px 12px 12px 12px;
-    align-items: flex-end;
     justify-content: center;
-    padding: 0;
   }
 
   .modal {

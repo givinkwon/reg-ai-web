@@ -1,34 +1,27 @@
+/* DocsVault.module.css */
+
 .wrap {
-  height: 90vh;
-  margin-top: 5vh;
-  margin-bottom: 5vh;
-  width: 90vw;
-  margin-left: 5vw;
-  margin-right: 5vw;
-  padding: 18px;
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: clamp(14px, 3vw, 22px);
+  box-sizing: border-box;
 }
 
-/* 가운데 정렬된 “카드 영역” */
 .shell {
-  margin: 0 auto; /* ✅ 가운데 정렬 */
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* ChatArea 느낌: 선명한 다크 + 글래스 카드 */
 .card {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.06),
-    rgba(255, 255, 255, 0.03)
-  );
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   backdrop-filter: blur(10px);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
 }
 
 .header {
@@ -49,6 +42,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .title {
@@ -64,7 +59,6 @@
   opacity: 0.78;
 }
 
-/* 작은 배지(차가운 느낌) */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -88,22 +82,35 @@
   opacity: 0.9;
 }
 
-/* 테이블 래퍼: 카드 내부에서 정갈하게 */
-.tableWrap {
-  width: 100%;
-  overflow: auto;
-  border-radius: 16px;
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* “가운데 정렬된 테이블처럼” 보이게: 카드 폭 안에서 깔끔하게 */
+.errorBox {
+  margin: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 0, 0, 0.06);
+  border: 1px solid rgba(255, 0, 0, 0.18);
+  color: rgba(255, 0, 0, 0.85);
+  font-size: 13px;
+}
+
+/* ✅ Desktop table */
+.tableWrap {
+  width: 100%;
+  overflow: hidden;
+}
+
 .table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 720px;
+  table-layout: fixed;
 }
 
-/* 헤더 */
 .table thead th {
   text-align: left;
   font-size: 12px;
@@ -114,34 +121,25 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* 첫/마지막 th 라운딩 */
-.table thead th:first-child {
-  border-top-left-radius: 16px;
-}
-.table thead th:last-child {
-  border-top-right-radius: 16px;
-}
-
-/* 바디 */
 .table tbody td {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 13px;
+  vertical-align: middle;
 }
 
-/* row hover: ChatArea 같은 “차가운” 하이라이트 */
 .row:hover td {
   background: rgba(255, 255, 255, 0.03);
 }
 
 .thName {
-  width: 62%;
+  width: auto;
 }
 .thDate {
-  width: 18%;
+  width: 140px;
 }
 .thDl {
-  width: 20%;
+  width: 140px;
 }
 
 .tdName {
@@ -212,99 +210,152 @@
   text-align: center;
 }
 
-/* 로그인 박스 */
+/* ✅ Skeleton */
+.skeletonLine {
+  height: 14px;
+  width: 80%;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+.skeletonPill {
+  height: 26px;
+  width: 86px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+.skeletonBtn {
+  height: 32px;
+  width: 110px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* ✅ Login */
 .loginBox {
   padding: 18px;
 }
-
 .loginTitle {
   font-size: 14px;
   font-weight: 800;
   margin-bottom: 6px;
 }
-
 .loginDesc {
   font-size: 13px;
   opacity: 0.75;
   line-height: 1.5;
 }
-
 .loginActions {
   margin-top: 14px;
 }
 
-/* 하단 안내 */
 .footNote {
   font-size: 12px;
   opacity: 0.6;
   padding: 2px 2px 0 2px;
 }
 
-/* 추가 */
-.refreshBtn{
-  display:flex; align-items:center; gap:8px;
+/* ✅ Mobile list */
+.mobileOnly {
+  display: none;
 }
 
-.errorBox{
-  margin: 12px;
-  padding: 12px 14px;
+.mobileList {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mobileLeft {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.mobileMeta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ✅ Responsive switch */
+@media (max-width: 720px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .desktopOnly {
+    display: none;
+  }
+
+  .mobileOnly {
+    display: block;
+  }
+
+  /* 모바일에서 다운로드 버튼 텍스트는 숨겨도 됨(너무 좁으면) */
+  .dlText {
+    display: none;
+  }
+}
+
+/* ✅ DocsVault 헤더 햄버거 버튼 */
+.menuBtn {
+  display: none; /* 기본: 데스크탑 숨김 */
   border-radius: 12px;
-  background: rgba(255, 0, 0, 0.06);
-  border: 1px solid rgba(255, 0, 0, 0.18);
-  color: rgba(255, 0, 0, 0.85);
-  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
 }
 
-/* 스켈레톤 */
-.skeletonLine{
-  height: 14px;
-  width: 80%;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.08);
-}
-.skeletonPill{
-  height: 26px;
-  width: 86px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.08);
-}
-.skeletonBtn{
-  height: 32px;
-  width: 110px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.08);
+.menuBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-.thMeta{ width: 120px; }
-.tdMeta{ text-align:center; }
-.metaPill{
-  display:inline-flex; align-items:center; justify-content:center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: rgba(0,0,0,0.06);
-  border: 1px solid rgba(0,0,0,0.10);
+.menuIcon {
+  width: 18px;
+  height: 18px;
 }
 
-.kindPill{
-  margin-left: 10px;
-  display:inline-flex; align-items:center; gap:6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: rgba(59, 130, 246, 0.10);
-  border: 1px solid rgba(59, 130, 246, 0.18);
+/* ✅ 제목/설명 묶음 */
+.headerTitles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* 모바일 */
-@media (max-width: 640px) {
-  .wrap {
-    padding: 14px;
+/* ✅ 모바일에서 햄버거 표시 + 헤더 좌측 정렬 */
+@media (max-width: 720px) {
+  .menuBtn {
+    display: inline-flex;
+    color:black;
+    cursor: pointer;
   }
-  .shell {
-    max-width: 100%;
-  }
-  .table {
-    min-width: 640px; /* 가로 스크롤로 테이블 형태 유지 */
+
+  .headerLeft {
+    width: 100%;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
   }
 }

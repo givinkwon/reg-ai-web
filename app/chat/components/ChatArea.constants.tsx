@@ -1079,10 +1079,10 @@ export const QUICK_ACTIONS_MAP: Record<string, QuickAction> = QUICK_ACTIONS.redu
 );
 
 // 🔹 추가: 게스트 제한 상수 + 쿠키 키
-const GUEST_LIMIT = 3;
-const GUEST_LIMIT_COOKIE_KEY = 'regai_guest_msg_count';
+export const GUEST_LIMIT = 3;
+export const GUEST_LIMIT_COOKIE_KEY = 'regai_guest_msg_count';
 
-  type HintTask =
+  export type HintTask =
   | 'law_interpret'
   | 'guideline_interpret'
   | 'doc_create'
@@ -1090,19 +1090,19 @@ const GUEST_LIMIT_COOKIE_KEY = 'regai_guest_msg_count';
   | 'accident_search';
 
 
-  const DOC_REVIEW_INTRO_TEXT =
-    '법령 근거를 검토하여 보완사항을 확인할 안전문서를 업로드해주세요.';
-
-  const LAW_INTRO_TEXT =
+  export const LAW_INTRO_TEXT =
     '법령과 규제사항을 학습한 REA AI가 내 사업장에 딱 맞는 실무지침을 안내해드려요! 무엇을 도와드릴까요?';
 
-  const GUIDELINE_INTRO_TEXT =
+  export const GUIDELINE_INTRO_TEXT =
     '현장의 작업절차, 점검표, 교육·훈련 등 실무지침을 REA AI가 법령에 맞게 정리해드려요! 무엇을 도와드릴까요?';
 
-  const DOC_CREATE_INTRO_TEXT =
+  export const DOC_CREATE_INTRO_TEXT =
     '법정 서식과 KOSHA 가이드를 참고해서 필요한 안전 문서를 템플릿으로 만들어드릴게요. 어떤 문서를 생성할까요?';
 
-  const LAW_INTERPRET_HINTS: string[] = [
+  export const DOC_REVIEW_INTRO_TEXT =
+    '법정 서식과 KOSHA 가이드를 참고해서 필요한 안전 문서를 검토해드릴게요. 어떤 문서를 생성할까요?';
+
+  export const LAW_INTERPRET_HINTS: string[] = [
     '우리 사업장의 업종, 인원, 주요 공정을 알려줄테니 기본적으로 지켜야 할 안전보건 의무를 정리해줘.',
     '지게차·크레인 작업에 대해 법령 기준 필수 안전수칙과 보호구 착용 기준을 알려줘.',
     '화학물질을 취급하는 공정에서 필요한 교육, 문서, 보호구 의무사항을 법령 기준으로 정리해줘.',
@@ -1115,7 +1115,7 @@ const GUEST_LIMIT_COOKIE_KEY = 'regai_guest_msg_count';
     '산업재해가 발생했을 때 신고, 조사, 재발방지 대책 수립까지 법에서 요구하는 절차를 정리해줘.',
   ];
 
-  const GUIDELINE_HINTS: string[] = [
+  export const GUIDELINE_HINTS: string[] = [
     '우리 사업장의 작업 공정별로 기본 안전보건 실무지침(작업 전·중·후 점검 사항)을 만들어줘.',
     '지게차·크레인 장비 점검 및 작업 전 TBM에서 안내할 체크리스트를 실무지침 형식으로 정리해줘.',
     '신규 입사자 안전보건 오리엔테이션 때 사용하기 좋은 교육 진행 순서와 실무지침을 만들어줘.',
@@ -1128,13 +1128,13 @@ const GUEST_LIMIT_COOKIE_KEY = 'regai_guest_msg_count';
     '산업재해 발생 시 응급조치, 보고, 재발방지 대책 수립까지 단계별 실무지침을 정리해줘.',
   ];
 
-  const EDU_INTRO_TEXT =
+  export const EDU_INTRO_TEXT =
     '신입·정기 교육에 쓸 수 있는 산업안전/보건 교육자료 개요를 REA AI가 만들어드려요. 어떤 교육이 필요하신가요?';
 
-  const ACCIDENT_INTRO_TEXT =
+  export const ACCIDENT_INTRO_TEXT =
   'KOSHA 사고사례 DB에서 원하는 설비·공정과 관련된 사고사례를 찾아 개요와 재발방지대책까지 정리해드려요. 어떤 사고사례를 찾고 싶으신가요?';
 
-  const ACCIDENT_HINTS: string[] = [
+  export const ACCIDENT_HINTS: string[] = [
     '지게차 작업 중 전도·끼임 사고사례를 찾아주고 사고개요와 재발방지대책을 정리해줘.',
     '타워크레인 설치·해체 작업에서 발생한 사고사례를 찾아주고 주요 원인과 예방대책을 정리해줘.',
     '밀폐공간(맨홀, 탱크 내부 등) 질식 사고사례를 찾아주고 작업 전·중·후 안전대책을 정리해줘.',

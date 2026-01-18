@@ -11,7 +11,7 @@ import type {
   SafetyEduMaterial,
   SafetyEduCategory,
   SafetyEduGuide,
-} from './ChatArea.constans';
+} from './ChatArea.constants';
 
 import {
   TASK_META,
@@ -41,7 +41,7 @@ import {
 
   // (HintTask 타입을 ChatArea에서 쓰면)
   HintTask,
-} from './ChatArea.constans';
+} from './ChatArea.constants';
 
 import { useEffect, useRef, useState } from 'react';
 import {

@@ -259,16 +259,11 @@
 /* Mobile bottom sheet */
 @media (max-width: 768px) {
   .wrap {
-    align-items: flex-end;
     justify-content: center;
-    padding: 0;
+    padding: 5vw;
   }
 
   .modal {
-    margin-left: 5vw;
-    margin-right: 5vw;
-    margin-bottom: 5vh;
-    margin-top: 5vh;
     border-radius: 12px;
     border-left: 0;
     border-right: 0;
