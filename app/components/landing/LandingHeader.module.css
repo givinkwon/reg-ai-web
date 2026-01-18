@@ -1,10 +1,20 @@
+/* components/landing/LandingHeader.module.css */
+
 .wrap {
   position: sticky;
   top: 0;
   z-index: 50;
+
+  /* ✅ iOS Safari sticky+blur 안정성 */
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  background: rgba(11,16,32,0.65);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+
+  /* ✅ dim: 배경이 밝은 컨텐츠 위에서도 헤더가 안 떠보이게 */
+  background: rgba(11, 16, 32, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  /* ✅ sticky 위로 살짝 그림자 */
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
 }
 
 .inner {
@@ -12,73 +22,138 @@
   margin: 0 auto;
   height: 64px;
   padding: 0 20px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+
+  display: flex;
   align-items: center;
   gap: 14px;
+
+  /* ✅ 좌/중/우 레이아웃 */
+  justify-content: space-between;
 }
 
 .logoArea {
   display: inline-flex;
   align-items: baseline;
   gap: 10px;
+
   text-decoration: none;
-  color: inherit;
+  color: rgba(238, 242, 255, 0.92);
+
+  /* ✅ 긴 텍스트/번역 들어와도 줄바꿈 방지 */
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .logo {
   font-weight: 900;
   letter-spacing: 0.08em;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .logoSub {
   font-size: 12px;
-  color: rgba(238,242,255,0.68);
+  color: rgba(238, 242, 255, 0.68);
+  line-height: 1;
 }
 
 .nav {
   display: inline-flex;
   gap: 14px;
   justify-content: center;
+
+  /* ✅ 가운데 정렬 느낌을 위해 flex-grow */
+  flex: 1;
+  justify-content: center;
 }
 
 .navLink {
   text-decoration: none;
-  color: rgba(238,242,255,0.78);
+  color: rgba(238, 242, 255, 0.78);
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 10px;
+
+  transition: background 120ms ease, color 120ms ease;
 }
 .navLink:hover {
-  background: rgba(255,255,255,0.06);
-  color: rgba(238,242,255,0.92);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(238, 242, 255, 0.92);
+}
+.navLink:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
 }
 
 .actions {
   display: inline-flex;
   gap: 10px;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: flex-end;
+
+  /* ✅ 오른쪽 영역이 줄어들 때 버튼이 잘리지 않게 */
+  flex-shrink: 0;
 }
 
-.loginBtn, .primaryBtn {
+.loginBtn,
+.primaryBtn {
   height: 38px;
   padding: 0 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-  color: rgba(238,242,255,0.9);
-  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(238, 242, 255, 0.92);
+
+  font-weight: 800;
+  font-size: 13px;
   cursor: pointer;
+
+  /* ✅ 모바일에서 텍스트 줄바꿈 방지 */
+  white-space: nowrap;
+
+  transition: filter 120ms ease, transform 60ms ease, background 120ms ease;
+}
+
+.loginBtn:hover {
+  filter: brightness(1.05);
 }
 
 .primaryBtn {
-  background: rgba(99,102,241,0.95);
-  border-color: rgba(255,255,255,0.12);
+  background: rgba(99, 102, 241, 0.95);
+  border-color: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
+.primaryBtn:hover {
+  filter: brightness(1.05);
+}
+
+.loginBtn:active,
+.primaryBtn:active {
+  transform: translateY(1px);
+}
+
+.loginBtn:focus-visible,
+.primaryBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+}
+
 @media (max-width: 820px) {
-  .inner { grid-template-columns: 1fr 1fr; }
-  .nav { display: none; }
+  .inner {
+    padding: 0 14px;
+  }
+  .nav {
+    display: none;
+  }
+}
+
+/* ✅ 아주 작은 화면에서 버튼 padding 살짝 줄여 overflow 방지 */
+@media (max-width: 380px) {
+  .loginBtn,
+  .primaryBtn {
+    padding: 0 12px;
+    height: 36px;
+    border-radius: 11px;
+  }
 }

@@ -135,7 +135,7 @@
   border-radius: 12px;
   border: 1px solid var(--ra-border);
   background: var(--ra-surface-2);
-  color: black;
+  /* color: black; */
   cursor: pointer;
   font-size: 20px;
   line-height: 0;

@@ -1,76 +1,159 @@
 /* components/risk-assessment/steps/StepProcesses.module.css */
-.wrap{
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+
+/* =========================
+   Base (Light) tokens
+   ========================= */
+.wrap {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #fbfcff;
+
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.70);
+  --muted-2: rgba(15, 23, 42, 0.55);
+
+  --border: rgba(15, 23, 42, 0.10);
+
+  --primary: #1d4ed8;
+  --primary-border: rgba(37, 99, 235, 0.25);
+  --primary-bg: rgba(37, 99, 235, 0.10);
+
+  --chip-border: rgba(59, 130, 246, 0.28);
+  --chip-bg: rgba(59, 130, 246, 0.10);
+  --chip-x: rgba(29, 78, 216, 0.75);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* =========================
+   Manual dark theme (priority)
+   ========================= */
+body[data-theme='dark'] .wrap {
+  --bg: #0b1220;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.06);
+
+  --text: rgba(229, 231, 235, 0.92);
+  --muted: rgba(229, 231, 235, 0.65);
+  --muted-2: rgba(229, 231, 235, 0.50);
+
+  --border: rgba(148, 163, 184, 0.18);
+
+  --primary: rgba(229, 231, 235, 0.92);
+  --primary-border: rgba(96, 165, 250, 0.35);
+  --primary-bg: rgba(96, 165, 250, 0.12);
+
+  --chip-border: rgba(96, 165, 250, 0.32);
+  --chip-bg: rgba(96, 165, 250, 0.12);
+  --chip-x: rgba(229, 231, 235, 0.70);
+}
+
+/* =========================
+   OS dark fallback (only if no data-theme)
+   ========================= */
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme]) .wrap {
+    --bg: #0b1220;
+    --surface: rgba(255, 255, 255, 0.04);
+    --surface-2: rgba(255, 255, 255, 0.06);
+
+    --text: rgba(229, 231, 235, 0.92);
+    --muted: rgba(229, 231, 235, 0.65);
+    --muted-2: rgba(229, 231, 235, 0.50);
+
+    --border: rgba(148, 163, 184, 0.18);
+
+    --primary: rgba(229, 231, 235, 0.92);
+    --primary-border: rgba(96, 165, 250, 0.35);
+    --primary-bg: rgba(96, 165, 250, 0.12);
+
+    --chip-border: rgba(96, 165, 250, 0.32);
+    --chip-bg: rgba(96, 165, 250, 0.12);
+    --chip-x: rgba(229, 231, 235, 0.70);
   }
-  
-  .topNote{
-    font-size: 12px;
-    color: rgba(15, 23, 42, 0.70);
-  }
-  
-  .block{
-    border: 1px solid rgba(15, 23, 42, 0.10);
-    border-radius: 16px;
-    padding: 12px;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .blockHead{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  
-  .blockTitle{
-    font-size: 13px;
-    font-weight: 900;
-    color: #0f172a;
-  }
-  
-  .addBtn{
-    border: 1px solid rgba(37, 99, 235, 0.25);
-    background: rgba(37, 99, 235, 0.10);
-    color: #1d4ed8;
-    padding: 8px 12px;
-    border-radius: 12px;
-    font-weight: 900;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  
-  .chips{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .chip{
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid rgba(59, 130, 246, 0.28);
-    background: rgba(59, 130, 246, 0.10);
-    color: #1d4ed8;
-    border-radius: 999px;
-    padding: 7px 10px;
-    font-size: 12px;
-    font-weight: 900;
-    cursor: pointer;
-  }
-  
-  .chipX{
-    color: rgba(29, 78, 216, 0.75);
-    font-weight: 900;
-  }
-  
-  .empty{
-    font-size: 12px;
-    color: rgba(15, 23, 42, 0.55);
-  }
-  
+}
+
+/* =========================
+   Styles
+   ========================= */
+.topNote {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.block {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.blockHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.blockTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+/* 버튼 */
+.addBtn {
+  border: 1px solid var(--primary-border);
+  background: var(--primary-bg);
+  color: var(--primary);
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  transition: filter 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.addBtn:hover {
+  filter: brightness(0.96);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: filter 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.chip:hover {
+  filter: brightness(0.96);
+}
+
+.chipX {
+  color: var(--chip-x);
+  font-weight: 900;
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--muted-2);
+}

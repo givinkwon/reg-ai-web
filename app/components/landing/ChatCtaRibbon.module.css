@@ -1,17 +1,43 @@
 .wrap {
   width: 100%;
   padding: 18px 16px;
-  margin-top: 18px;
 
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 18px;
+  color-scheme: light;
+
+  /* LIGHT tokens */
+  --bn-border: rgba(15, 23, 42, 0.10);
+  --bn-title: rgba(15, 23, 42, 0.92);
+  --bn-desc: rgba(15, 23, 42, 0.68);
+
+  --bn-bg1: rgba(37, 99, 235, 0.14);
+  --bn-bg2: rgba(37, 99, 235, 0.06);
+
+  --bn-secondary-bg: rgba(15, 23, 42, 0.04);
+  --bn-secondary-border: rgba(15, 23, 42, 0.10);
+  --bn-secondary-text: rgba(15, 23, 42, 0.82);
+
+  border: 1px solid var(--bn-border);
 
   /* 띠 배너 느낌 */
-  background: linear-gradient(
-    90deg,
-    rgba(37, 99, 235, 0.20),
-    rgba(37, 99, 235, 0.08)
-  );
+  background: linear-gradient(90deg, var(--bn-bg1), var(--bn-bg2));
+}
+
+@media (prefers-color-scheme: dark) {
+  .wrap {
+    color-scheme: dark;
+    background: #0f172a !important;
+
+    --bn-border: rgba(255, 255, 255, 0.10);
+    --bn-title: rgba(238, 242, 255, 0.92);
+    --bn-desc: rgba(238, 242, 255, 0.70);
+
+    --bn-bg1: rgba(37, 99, 235, 0.20);
+    --bn-bg2: rgba(37, 99, 235, 0.08);
+
+    --bn-secondary-bg: rgba(255, 255, 255, 0.06);
+    --bn-secondary-border: rgba(255, 255, 255, 0.12);
+    --bn-secondary-text: rgba(238, 242, 255, 0.88);
+  }
 }
 
 .inner {
@@ -32,14 +58,14 @@
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--bn-title);
 }
 
 .desc {
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.35;
-  color: rgba(255, 255, 255, 0.70);
+  color: var(--bn-desc);
 
   /* 모바일에서 길어져도 예쁘게 */
   display: -webkit-box;
@@ -64,7 +90,7 @@
 
   border-radius: 12px;
   background: rgba(37, 99, 235, 0.95);
-  color: white;
+  color: #fff;
   font-weight: 700;
   font-size: 14px;
   text-decoration: none;
@@ -84,16 +110,16 @@
   padding: 0 12px;
 
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.88);
+  background: var(--bn-secondary-bg);
+  border: 1px solid var(--bn-secondary-border);
+  color: var(--bn-secondary-text);
   font-weight: 600;
   font-size: 13px;
   text-decoration: none;
 }
 
 .secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
+  filter: brightness(1.04);
 }
 
 /* 모바일: 버튼이 아래로 내려가도록 */

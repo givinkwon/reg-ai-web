@@ -1,74 +1,176 @@
-.wrap { padding: 60px 20px; }
-.inner { max-width: 1120px; margin: 0 auto; }
+/* components/landing/ProductBanners.module.css */
+/* ✅ Light 기본 + Dark 자동 호환 (prefers-color-scheme) */
 
-.head { margin-bottom: 22px; }
-.h2 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
-.p { margin: 10px 0 0; color: rgba(238,242,255,0.78); line-height: 1.6; }
+.wrap {
+  padding: 60px 20px;
+  color-scheme: light;
 
-.list { display: flex; flex-direction: column; gap: 16px; }
+  /* LIGHT tokens */
+  --pb-text: rgba(15, 23, 42, 0.92);
+  --pb-subtext: rgba(15, 23, 42, 0.72);
+  --pb-muted: rgba(15, 23, 42, 0.62);
+
+  --pb-surface: rgba(15, 23, 42, 0.02);
+  --pb-card: #ffffff;
+  --pb-card2: rgba(15, 23, 42, 0.02);
+
+  --pb-border: rgba(15, 23, 42, 0.10);
+  --pb-border-soft: rgba(15, 23, 42, 0.08);
+
+  --pb-kicker-bg: rgba(37, 99, 235, 0.08);
+  --pb-kicker-border: rgba(37, 99, 235, 0.16);
+  --pb-kicker-text: rgba(30, 64, 175, 0.92);
+
+  --pb-media-bg: rgba(15, 23, 42, 0.02);
+
+  background: var(--pb-surface);
+  color: var(--pb-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  .wrap {
+    color-scheme: dark;
+    background: #0f172a !important;
+
+    --pb-text: rgba(238, 242, 255, 0.92);
+    --pb-subtext: rgba(238, 242, 255, 0.78);
+    --pb-muted: rgba(238, 242, 255, 0.66);
+
+    --pb-surface: rgba(255, 255, 255, 0.02);
+    --pb-card: rgba(255, 255, 255, 0.05);
+    --pb-card2: rgba(255, 255, 255, 0.04);
+
+    --pb-border: rgba(255, 255, 255, 0.10);
+    --pb-border-soft: rgba(255, 255, 255, 0.08);
+
+    --pb-kicker-bg: rgba(15, 23, 42, 0.50);
+    --pb-kicker-border: rgba(255, 255, 255, 0.10);
+    --pb-kicker-text: rgba(238, 242, 255, 0.78);
+
+    --pb-media-bg: rgba(15, 23, 42, 0.45);
+  }
+}
+
+.inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.head {
+  margin-bottom: 22px;
+}
+
+.h2 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: var(--pb-text);
+}
+
+.p {
+  margin: 10px 0 0;
+  color: var(--pb-subtext);
+  line-height: 1.6;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 .card {
   display: grid;
   grid-template-columns: 1fr 1.15fr;
   gap: 18px;
   padding: 18px;
+
   border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--pb-border);
+  background: var(--pb-card);
+
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.06);
 }
 
-.reverse { grid-template-columns: 1.15fr 1fr; }
-.reverse .text { order: 2; }
-.reverse .media { order: 1; }
+@media (prefers-color-scheme: dark) {
+  .card {
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+  }
+}
+
+.reverse {
+  grid-template-columns: 1.15fr 1fr;
+}
+.reverse .text {
+  order: 2;
+}
+.reverse .media {
+  order: 1;
+}
 
 .kicker {
   display: inline-flex;
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 12px;
-  color: rgba(238,242,255,0.78);
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(15,23,42,0.5);
+
+  color: var(--pb-kicker-text);
+  border: 1px solid var(--pb-kicker-border);
+  background: var(--pb-kicker-bg);
 }
 
-/* ✅ 기존 title은 “카테고리” 느낌으로 살짝 작게 */
+/* ✅ 기존 title은 “카테고리” 느낌 */
 .title {
   margin-top: 10px;
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: var(--pb-text);
 }
 
-/* ✅ 새로 추가: headline을 메인 헤드라인처럼 크게 */
+/* ✅ 메인 헤드라인 */
 .headline {
   margin-top: 8px;
   font-size: 24px;
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 1.25;
+  color: var(--pb-text);
 }
 
-/* ✅ desc는 headline 아래에서 서브 설명 */
+/* ✅ desc는 서브 설명 */
 .desc {
   margin-top: 10px;
-  color: rgba(238,242,255,0.82);
+  color: var(--pb-subtext);
   line-height: 1.6;
 }
 
-.bullets { margin: 12px 0 0; padding-left: 18px; color: rgba(238,242,255,0.78); }
-.bullets li { margin: 6px 0; }
+.bullets {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--pb-subtext);
+}
+.bullets li {
+  margin: 6px 0;
+}
 
 .media {
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(15,23,42,0.45);
+
+  border: 1px solid var(--pb-border);
+  background: var(--pb-media-bg);
+
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.img { width: 100%; height: auto; object-fit: cover; }
+.img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
 
 .placeholder {
   width: 100%;
@@ -77,16 +179,19 @@
   place-content: center;
   padding: 20px;
   text-align: center;
-  color: rgba(238,242,255,0.70);
+  color: var(--pb-muted);
 }
-.placeholderTitle { font-weight: 800; }
-.placeholderSub { margin-top: 6px; font-size: 12px; opacity: 0.8; }
+.placeholderTitle {
+  font-weight: 800;
+  color: var(--pb-text);
+}
+.placeholderSub {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.85;
+}
 
-@media (max-width: 980px) {
-  .card { grid-template-columns: 1fr; }
-  .reverse .text, .reverse .media { order: initial; }
-  .headline { font-size: 22px; }
-}
+/* ===== Video ===== */
 
 .videoWrap {
   position: relative;
@@ -94,16 +199,6 @@
   aspect-ratio: 920 / 560;
   overflow: hidden;
   border-radius: 16px;
-}
-
-.posterImg {
-  object-fit: cover;
-}
-
-.posterFallback {
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.04);
 }
 
 .video {
@@ -120,4 +215,23 @@
   height: 100%;
   object-fit: cover;
 }
-.videoWrap { position: relative; }
+
+/* 라이트/다크에 맞게 폴백도 조정 */
+.posterFallback {
+  width: 100%;
+  height: 100%;
+  background: var(--pb-card2);
+}
+
+@media (max-width: 980px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+  .reverse .text,
+  .reverse .media {
+    order: initial;
+  }
+  .headline {
+    font-size: 22px;
+  }
+}

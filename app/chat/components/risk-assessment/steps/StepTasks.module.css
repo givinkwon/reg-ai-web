@@ -1,10 +1,119 @@
 /* components/risk-assessment/steps/StepTasks.module.css */
+
+/* =========================
+   Base (Light) tokens
+   ========================= */
 .wrap {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #fbfcff;
+
+  --text: #111827;
+  --muted: #6b7280;
+
+  --border: #e5e7eb;
+  --border-2: #d1d5db;
+
+  --danger: #b91c1c;
+
+  --chip-border: rgba(59, 130, 246, 0.45);
+  --chip-bg: rgba(59, 130, 246, 0.06);
+  --chip-bg-hover: rgba(59, 130, 246, 0.1);
+  --chip-fg: #1d4ed8;
+
+  --sel-border: rgba(59, 130, 246, 0.95);
+  --sel-text: #1d4ed8;
+
+  --badge-bg: #f3f4f6;
+  --badge-fg: #111827;
+
+  --btn-bg: #ffffff;
+  --btn-border: #d1d5db;
+  --btn-fg: #111827;
+  --btn-bg-hover: #f9fafb;
+
+  --scroll-thumb: rgba(0, 0, 0, 0.12);
+
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+/* =========================
+   Manual dark theme (priority)
+   ========================= */
+body[data-theme='dark'] .wrap {
+  --bg: #0b1220;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.06);
+
+  --text: rgba(229, 231, 235, 0.92);
+  --muted: rgba(229, 231, 235, 0.65);
+
+  --border: rgba(148, 163, 184, 0.18);
+  --border-2: rgba(148, 163, 184, 0.22);
+
+  --danger: #f87171;
+
+  --chip-border: rgba(96, 165, 250, 0.35);
+  --chip-bg: rgba(96, 165, 250, 0.10);
+  --chip-bg-hover: rgba(96, 165, 250, 0.14);
+  --chip-fg: rgba(229, 231, 235, 0.92);
+
+  --sel-border: rgba(96, 165, 250, 0.75);
+  --sel-text: rgba(229, 231, 235, 0.92);
+
+  --badge-bg: rgba(255, 255, 255, 0.08);
+  --badge-fg: rgba(229, 231, 235, 0.92);
+
+  --btn-bg: rgba(255, 255, 255, 0.06);
+  --btn-border: rgba(148, 163, 184, 0.22);
+  --btn-fg: rgba(229, 231, 235, 0.92);
+  --btn-bg-hover: rgba(255, 255, 255, 0.10);
+
+  --scroll-thumb: rgba(255, 255, 255, 0.18);
+}
+
+/* =========================
+   OS dark fallback (only if no data-theme)
+   ========================= */
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme]) .wrap {
+    --bg: #0b1220;
+    --surface: rgba(255, 255, 255, 0.04);
+    --surface-2: rgba(255, 255, 255, 0.06);
+
+    --text: rgba(229, 231, 235, 0.92);
+    --muted: rgba(229, 231, 235, 0.65);
+
+    --border: rgba(148, 163, 184, 0.18);
+    --border-2: rgba(148, 163, 184, 0.22);
+
+    --danger: #f87171;
+
+    --chip-border: rgba(96, 165, 250, 0.35);
+    --chip-bg: rgba(96, 165, 250, 0.10);
+    --chip-bg-hover: rgba(96, 165, 250, 0.14);
+    --chip-fg: rgba(229, 231, 235, 0.92);
+
+    --sel-border: rgba(96, 165, 250, 0.75);
+    --sel-text: rgba(229, 231, 235, 0.92);
+
+    --badge-bg: rgba(255, 255, 255, 0.08);
+    --badge-fg: rgba(229, 231, 235, 0.92);
+
+    --btn-bg: rgba(255, 255, 255, 0.06);
+    --btn-border: rgba(148, 163, 184, 0.22);
+    --btn-fg: rgba(229, 231, 235, 0.92);
+    --btn-bg-hover: rgba(255, 255, 255, 0.10);
+
+    --scroll-thumb: rgba(255, 255, 255, 0.18);
+  }
+}
+
+/* =========================
+   Layout / Typography
+   ========================= */
 .sectionHead {
   display: flex;
   align-items: flex-start;
@@ -15,13 +124,13 @@
 .sectionTitle {
   font-size: 14px;
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .sectionDesc {
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--muted);
   line-height: 1.4;
 }
 
@@ -29,15 +138,16 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
   font-weight: 600;
 }
 
+/* Button */
 .addBtn {
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
   border-radius: 10px;
   padding: 8px 12px;
   font-size: 12px;
@@ -46,14 +156,15 @@
 }
 
 .addBtn:hover {
-  background: #f9fafb;
+  background: var(--btn-bg-hover);
 }
 
+/* Card */
 .card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .listHead {
@@ -66,23 +177,23 @@
 .listTitle {
   font-size: 12px;
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .count {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .hint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--muted);
   padding: 8px 0;
 }
 
 .error {
   font-size: 12px;
-  color: #b91c1c;
+  color: var(--danger);
   padding: 8px 0;
 }
 
@@ -93,34 +204,52 @@
   padding-right: 2px;
 }
 
+/* 스크롤바(선택) */
+.taskList::-webkit-scrollbar {
+  width: 8px;
+}
+.taskList::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 10px;
+}
+.taskList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* ✅ 리스트 아이템 */
 .taskItem {
   width: 100%;
   text-align: left;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
   border-radius: 12px;
   padding: 10px 12px;
+  margin-bottom: 1vh;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.taskItem:hover {
+  background: var(--btn-bg-hover);
 }
 
 .taskText {
   font-size: 13px;
-  color: #111827;
+  color: var(--text);
   font-weight: 500;
 }
 
-/* ✅ 선택 표현: “테두리 + 글씨 파란색”만 */
+/* ✅ 선택 표현: “테두리 + 글씨 강조” */
 .taskItemSelected {
-  border-color: rgba(59, 130, 246, 0.95);
+  border-color: var(--sel-border);
 }
 
 .taskItemSelected .taskText {
-  color: #1d4ed8;
+  color: var(--sel-text);
   font-weight: 700;
 }
 
@@ -131,7 +260,7 @@
   gap: 10px;
   padding: 10px 0 14px;
   margin-bottom: 12px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .selectedChip {
@@ -140,16 +269,16 @@
   gap: 8px;
   padding: 10px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(59, 130, 246, 0.45);
-  background: rgba(59, 130, 246, 0.06);
-  color: #1d4ed8;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--chip-fg);
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .selectedChip:hover {
-  border-color: rgba(59, 130, 246, 0.75);
-  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--sel-border);
+  background: var(--chip-bg-hover);
 }
 
 .selectedChip:focus-visible {
@@ -159,7 +288,7 @@
 
 .selectedText {
   white-space: nowrap;
-  color: inherit; /* ✅ 파란색 상속 */
+  color: inherit;
 }
 
 .selectedX {
@@ -169,9 +298,9 @@
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(59, 130, 246, 0.45);
-  color: #1d4ed8;
-  background: #fff;
+  border: 1px solid var(--chip-border);
+  color: var(--chip-fg);
+  background: var(--btn-bg);
   line-height: 1;
   font-size: 14px;
 }

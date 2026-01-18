@@ -13,9 +13,6 @@ const DEFAULT_LOGOS: LogoItem[] = [
 ];
 
 export default function LogoMarquee() {
-  // 마키가 끊김 없이 흐르도록 2번 반복
-  const items = [...DEFAULT_LOGOS, ...DEFAULT_LOGOS];
-
   return (
     <section className={s.wrap}>
       <div className={s.inner}>
@@ -25,23 +22,46 @@ export default function LogoMarquee() {
 
         <div className={s.marquee} aria-label="고객사 로고 흐름 배너">
           <div className={s.track}>
-            {items.map((it, idx) => (
-              <div key={`${it.name}-${idx}`} className={s.logoBox}>
-                {it.src ? (
-                  <Image
-                    src={it.src}
-                    alt={it.name}
-                    width={140}
-                    height={44}
-                    className={s.logoImg}
-                  />
-                ) : (
-                  <div className={s.logoPill}>{it.name}</div>
-                )}
-              </div>
-            ))}
+            {/* ✅ 동일 세트 2개: -50% 이동이 정확히 “첫 세트 길이”가 됨 */}
+            <div className={s.set}>
+              {DEFAULT_LOGOS.map((it) => (
+                <div key={`a-${it.name}`} className={s.logoBox}>
+                  {it.src ? (
+                    <Image
+                      src={it.src}
+                      alt={it.name}
+                      width={140}
+                      height={44}
+                      className={s.logoImg}
+                    />
+                  ) : (
+                    <div className={s.logoPill}>{it.name}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className={s.set} aria-hidden="true">
+              {DEFAULT_LOGOS.map((it) => (
+                <div key={`b-${it.name}`} className={s.logoBox}>
+                  {it.src ? (
+                    <Image
+                      src={it.src}
+                      alt=""
+                      width={140}
+                      height={44}
+                      className={s.logoImg}
+                    />
+                  ) : (
+                    <div className={s.logoPill}>{it.name}</div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* <div className={s.sub}>* 표기된 기업명/로고는 데모 예시입니다.</div> */}
       </div>
     </section>
   );

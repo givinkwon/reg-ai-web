@@ -1103,47 +1103,43 @@ export default function ChatArea() {
             <div className={s.streamInner}>
               {messages.length === 0 && (
                 <>
-                  {isRiskTask ? (
-                    <div className={s.docWrap}>
-                      <RiskAssessmentWizard
-                        open={isRiskTask}
-                        onClose={() => setSelectedTask(null)}
-                        onSubmit={async (draft) => {
-                          // 기존 로직 그대로 둬도 동작함
-                          // (권장) setSelectedTask(null)은 Wizard가 이미 처리하므로 제거 가능
-                          if (!user?.email) throw new Error('로그인해주세요');
+                  <div className={s.docWrap}>
+                    <RiskAssessmentWizard
+                      open={isRiskTask}
+                      onClose={() => setSelectedTask(null)}
+                      onSubmit={async (draft) => {
+                        if (!user?.email) throw new Error('로그인해주세요');
 
-                          const payload = buildExcelPayload(draft, user.email);
-                          const res = await fetch('/api/risk-assessment?endpoint=export-excel', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload),
-                          });
+                        const payload = buildExcelPayload(draft, user.email);
+                        const res = await fetch('/api/risk-assessment?endpoint=export-excel', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload),
+                        });
 
-                          if (!res.ok) {
-                            const t = await res.text();
-                            throw new Error(t || '엑셀 생성 실패');
-                          }
+                        if (!res.ok) {
+                          const t = await res.text();
+                          throw new Error(t || '엑셀 생성 실패');
+                        }
 
-                          const blob = await res.blob();
-                          const url = window.URL.createObjectURL(blob);
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
 
-                          const a = document.createElement('a');
-                          a.href = url;
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const cd = res.headers.get('content-disposition');
+                        const filename =
+                          getFilenameFromDisposition(cd) || `위험성평가_${draft.meta.dateISO || 'today'}.xlsx`;
 
-                          const cd = res.headers.get('content-disposition');
-                          const filename =
-                            getFilenameFromDisposition(cd) || `위험성평가_${draft.meta.dateISO || 'today'}.xlsx`;
-
-                          a.download = filename;
-                          document.body.appendChild(a);
-                          a.click();
-                          a.remove();
-                          window.URL.revokeObjectURL(url);
-                        }}
-                      />
-                    </div>
-                  ) : isEduTask ? (
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                      }}
+                    />
+                  </div>
+                  {isEduTask ? (
                     <MakeSafetyEduMaterials
                       onSelectMaterial={handleSelectSafetyEduMaterial}
                       selectedMaterialId={selectedEduMaterialId}
@@ -1295,7 +1291,7 @@ export default function ChatArea() {
                         ) : null
                       }
                     />
-                  ) : (
+                  ) : (!isRiskTask &&
                     // 그 외 작업들은 기존 "무엇을 도와드릴까요?" 퀵 액션 노출
                     <div className={s.quickWrap}>
                       <div className={s.quickTitle}>무엇을 도와드릴까요?</div>
