@@ -1,6 +1,7 @@
+// components/news/WeeklySafetyNewsModal.tsx
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import s from './WeeklySafetyNewsModal.module.css';
 import { useChatStore } from '@/app/store/chat';
 import {
@@ -11,6 +12,12 @@ import {
 
 // ✅ 입법예고에서 쓰던 PRETTY 유틸
 import { formatAssistantHtml } from '../../../utils/formatAssistantHtml'; // 경로는 프로젝트에 맞게 조정
+
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+const GA_CTX = { page: 'Chat', section: 'News', area: 'WeeklySafetyNewsModal' } as const;
 
 type SafetyNewsResponse = {
   period?: string;
@@ -152,6 +159,25 @@ export default function WeeklySafetyNewsModal() {
   const [err, setErr] = useState<string>('');
   const [data, setData] = useState<SafetyNewsResponse | null>(null);
 
+  // ✅ GA: open/close (중복 방지)
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    const prev = prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    if (!prev && open) {
+      track(gaEvent(GA_CTX, 'Open'), {
+        ui_id: gaUiId(GA_CTX, 'Open'),
+        category: category ?? null,
+      });
+    }
+    if (prev && !open) {
+      track(gaEvent(GA_CTX, 'Close'), {
+        ui_id: gaUiId(GA_CTX, 'Close'),
+      });
+    }
+  }, [open, category]);
+
   // ✅ fetch
   useEffect(() => {
     if (!open) return;
@@ -161,6 +187,12 @@ export default function WeeklySafetyNewsModal() {
       setLoading(true);
       setErr('');
       setData(null);
+
+      // ✅ GA: fetch 시작
+      track(gaEvent(GA_CTX, 'FetchStart'), {
+        ui_id: gaUiId(GA_CTX, 'FetchStart'),
+        category: category ?? null,
+      });
 
       try {
         const params = new URLSearchParams();
@@ -173,10 +205,28 @@ export default function WeeklySafetyNewsModal() {
 
         const json = (await res.json()) as SafetyNewsResponse;
         if (!mounted) return;
+
         setData(json);
-      } catch {
+
+        // ✅ GA: fetch 성공
+        track(gaEvent(GA_CTX, 'FetchSuccess'), {
+          ui_id: gaUiId(GA_CTX, 'FetchSuccess'),
+          category: json.category ?? category ?? null,
+          source_count: typeof json.source_count === 'number' ? json.source_count : null,
+          period: json.period ?? null,
+          batch_date: json.batch_date ?? null,
+          digest_len: json.digest?.length ?? 0,
+        });
+      } catch (e: any) {
         if (!mounted) return;
         setErr('금주의 안전 뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+
+        // ✅ GA: fetch 실패
+        track(gaEvent(GA_CTX, 'FetchError'), {
+          ui_id: gaUiId(GA_CTX, 'FetchError'),
+          category: category ?? null,
+          message: String(e?.message ?? e),
+        });
       } finally {
         if (!mounted) return;
         setLoading(false);
@@ -198,42 +248,101 @@ export default function WeeklySafetyNewsModal() {
     return periodText ? `${periodText} 금주의 안전 뉴스` : '금주의 안전 뉴스';
   }, [data]);
 
-  // ✅ 훅 순서 고정 (open 여부와 상관없이 훅은 항상 호출)
+  // ✅ 훅 순서 고정
   const rawHtml = useMemo(() => (data ? buildNewsHtml(data) : ''), [data]);
   const rawSummaryHtml = useMemo(() => (rawHtml ? extractSafetySummaryHtml(rawHtml) : ''), [rawHtml]);
-  const rawArticlesHtml = useMemo(
-    () => (rawHtml ? extractSafetyArticlesHtml(rawHtml) : ''),
-    [rawHtml],
-  );
+  const rawArticlesHtml = useMemo(() => (rawHtml ? extractSafetyArticlesHtml(rawHtml) : ''), [rawHtml]);
 
-  // ✅ PRETTY TEXT 적용 (formatAssistantHtml) + li의 "텍스트:"만 bold
+  // ✅ PRETTY TEXT 적용 + li의 "텍스트:"만 bold
   const prettySummaryHtml = useMemo(() => {
     if (!rawSummaryHtml) return '';
-    if (typeof window === 'undefined') return rawSummaryHtml; // SSR 가드
+    if (typeof window === 'undefined') return rawSummaryHtml;
     const pretty = formatAssistantHtml(rawSummaryHtml);
     return boldColonHeadInListHtml(pretty);
   }, [rawSummaryHtml]);
 
   const prettyArticlesHtml = useMemo(() => {
     if (!rawArticlesHtml) return '';
-    if (typeof window === 'undefined') return rawArticlesHtml; // SSR 가드
+    if (typeof window === 'undefined') return rawArticlesHtml;
     const pretty = formatAssistantHtml(rawArticlesHtml);
     return boldColonHeadInListHtml(pretty);
   }, [rawArticlesHtml]);
 
+  // ✅ GA: content 렌더 완료(요약/기사 HTML 준비)
+  const prevReadyRef = useRef(false);
+  useEffect(() => {
+    if (!open) return;
+    const ready = !!data && !loading && !err;
+    const prev = prevReadyRef.current;
+    prevReadyRef.current = ready;
+
+    if (!prev && ready) {
+      track(gaEvent(GA_CTX, 'RenderReady'), {
+        ui_id: gaUiId(GA_CTX, 'RenderReady'),
+        title: titleText,
+        category: data?.category ?? category ?? null,
+        source_count: typeof data?.source_count === 'number' ? data?.source_count : null,
+        has_summary: !!prettySummaryHtml,
+        has_articles: !!prettyArticlesHtml,
+      });
+    }
+  }, [open, data, loading, err, titleText, prettySummaryHtml, prettyArticlesHtml, category]);
+
   const onOpenArticles = () => {
     if (!prettyArticlesHtml) return;
+
+    // ✅ GA: 참고 기사 목록 보기 클릭
+    track(gaEvent(GA_CTX, 'OpenArticlesList'), {
+      ui_id: gaUiId(GA_CTX, 'OpenArticlesList'),
+      title: titleText,
+      category: data?.category ?? category ?? null,
+      source_count: typeof data?.source_count === 'number' ? data?.source_count : null,
+      articles_html_len: prettyArticlesHtml.length,
+    });
+
     openNewsArticlesModal(prettyArticlesHtml, `${titleText} · 참고 기사`);
   };
 
   if (!open) return null;
 
   return (
-    <div className={s.overlay} onClick={closeWeeklyNewsModal}>
-      <div className={s.modal} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={s.overlay}
+      onClick={() => {
+        // ✅ GA: dim 클릭 닫기
+        track(gaEvent(GA_CTX, 'CloseDim'), {
+          ui_id: gaUiId(GA_CTX, 'CloseDim'),
+          is_loading: loading,
+          has_data: !!data,
+        });
+        closeWeeklyNewsModal();
+      }}
+      data-ga-event={gaEvent(GA_CTX, 'Overlay')}
+      data-ga-id={gaUiId(GA_CTX, 'Overlay')}
+    >
+      <div
+        className={s.modal}
+        onClick={(e) => e.stopPropagation()}
+        data-ga-event={gaEvent(GA_CTX, 'View')}
+        data-ga-id={gaUiId(GA_CTX, 'View')}
+      >
         <div className={s.head}>
           <div className={s.title}>🔔 {titleText}</div>
-          <button className={s.close} onClick={closeWeeklyNewsModal} aria-label="닫기" type="button">
+          <button
+            className={s.close}
+            onClick={() => {
+              track(gaEvent(GA_CTX, 'CloseBtn'), {
+                ui_id: gaUiId(GA_CTX, 'CloseBtn'),
+                is_loading: loading,
+                has_data: !!data,
+              });
+              closeWeeklyNewsModal();
+            }}
+            aria-label="닫기"
+            type="button"
+            data-ga-event={gaEvent(GA_CTX, 'CloseBtn')}
+            data-ga-id={gaUiId(GA_CTX, 'CloseBtn')}
+          >
             ✕
           </button>
         </div>
@@ -247,19 +356,35 @@ export default function WeeklySafetyNewsModal() {
 
         <div className={s.body}>
           {loading ? (
-            <div className={s.loading}>불러오는 중…</div>
+            <div className={s.loading} data-ga-event={gaEvent(GA_CTX, 'Loading')} data-ga-id={gaUiId(GA_CTX, 'Loading')}>
+              불러오는 중…
+            </div>
           ) : err ? (
-            <div className={s.error}>
+            <div className={s.error} data-ga-event={gaEvent(GA_CTX, 'Error')} data-ga-id={gaUiId(GA_CTX, 'Error')}>
               <div>{err}</div>
-              <button className={s.retry} onClick={() => location.reload()} type="button">
+              <button
+                className={s.retry}
+                onClick={() => {
+                  track(gaEvent(GA_CTX, 'RetryReload'), {
+                    ui_id: gaUiId(GA_CTX, 'RetryReload'),
+                    category: category ?? null,
+                  });
+                  location.reload();
+                }}
+                type="button"
+                data-ga-event={gaEvent(GA_CTX, 'RetryReload')}
+                data-ga-id={gaUiId(GA_CTX, 'RetryReload')}
+              >
                 새로고침
               </button>
             </div>
           ) : !data ? (
-            <div className={s.empty}>표시할 내용이 없습니다.</div>
+            <div className={s.empty} data-ga-event={gaEvent(GA_CTX, 'Empty')} data-ga-id={gaUiId(GA_CTX, 'Empty')}>
+              표시할 내용이 없습니다.
+            </div>
           ) : (
             <>
-              <section className={s.section}>
+              <section className={s.section} data-ga-event={gaEvent(GA_CTX, 'Summary')} data-ga-id={gaUiId(GA_CTX, 'Summary')}>
                 <div className={s.sectionTitle}>요약</div>
                 <div
                   className={s.html}
@@ -276,6 +401,8 @@ export default function WeeklySafetyNewsModal() {
                   disabled={!prettyArticlesHtml}
                   aria-disabled={!prettyArticlesHtml}
                   type="button"
+                  data-ga-event={gaEvent(GA_CTX, 'OpenArticlesList')}
+                  data-ga-id={gaUiId(GA_CTX, 'OpenArticlesList')}
                 >
                   참고 기사 목록 보기
                 </button>

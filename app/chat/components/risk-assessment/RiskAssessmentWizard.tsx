@@ -12,6 +12,12 @@ import StepControls from './steps/StepControls';
 import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessment' } as const;
+
 export type RiskLevel = 1 | 2 | 3 | 4 | 5;
 export type Judgement = '상' | '중' | '하';
 
@@ -114,6 +120,20 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
   const alertOnConfirmRef = useRef<null | (() => void)>(null);
   const alertOnCloseRef = useRef<null | (() => void)>(null);
 
+  // ✅ 로그인 유저(아이디=email)
+  const user = useUserStore((st) => st.user);
+  const userEmail = (user?.email || '').trim();
+
+  const countMeta = useMemo(() => {
+    const tasks = draft.tasks.length;
+    const processes = draft.tasks.reduce((acc, t) => acc + (t.processes?.length ?? 0), 0);
+    const hazards = draft.tasks.reduce(
+      (acc, t) => acc + (t.processes ?? []).reduce((a, p) => a + (p.hazards?.length ?? 0), 0),
+      0,
+    );
+    return { tasks, processes, hazards };
+  }, [draft.tasks]);
+
   const openAlert = (opts: {
     title?: string;
     lines: string[];
@@ -122,7 +142,17 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     onConfirm?: () => void;
     onClose?: () => void;
   }) => {
-    setAlertTitle(opts.title ?? '안내');
+    const title = opts.title ?? '안내';
+
+    // ✅ GA: AlertOpen
+    track(gaEvent(GA_CTX, 'AlertOpen'), {
+      ui_id: gaUiId(GA_CTX, 'AlertOpen'),
+      title,
+      step,
+      has_user: !!userEmail,
+    });
+
+    setAlertTitle(title);
     setAlertLines(opts.lines);
     setAlertConfirmText(opts.confirmText ?? '확인');
     setAlertShowClose(!!opts.showClose);
@@ -132,13 +162,16 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
   };
 
   const closeAlert = () => {
+    // ✅ GA: AlertClose
+    track(gaEvent(GA_CTX, 'AlertClose'), {
+      ui_id: gaUiId(GA_CTX, 'AlertClose'),
+      step,
+    });
+
     setAlertOpen(false);
     alertOnConfirmRef.current = null;
     alertOnCloseRef.current = null;
   };
-
-  // ✅ 로그인 유저(아이디=email)
-  const user = useUserStore((st) => st.user);
 
   useEffect(() => {
     setDraft((prev) => {
@@ -152,6 +185,41 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     } catch {}
   }, []);
 
+  // ✅ GA: open/close (초기 오픈 포함)
+  const didTrackInitialOpenRef = useRef(false);
+  const prevOpenRef = useRef<boolean>(open);
+  useEffect(() => {
+    const prev = prevOpenRef.current;
+
+    if (!didTrackInitialOpenRef.current && open) {
+      didTrackInitialOpenRef.current = true;
+      track(gaEvent(GA_CTX, 'Open'), {
+        ui_id: gaUiId(GA_CTX, 'Open'),
+        step,
+        has_user: !!userEmail,
+        minor: minor || null,
+      });
+    } else {
+      if (!prev && open) {
+        track(gaEvent(GA_CTX, 'Open'), {
+          ui_id: gaUiId(GA_CTX, 'Open'),
+          step,
+          has_user: !!userEmail,
+          minor: minor || null,
+        });
+      }
+      if (prev && !open) {
+        track(gaEvent(GA_CTX, 'Close'), {
+          ui_id: gaUiId(GA_CTX, 'Close'),
+          step,
+        });
+      }
+    }
+
+    prevOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step, userEmail, minor]);
+
   // ✅ Escape 닫기(요청 중엔 방지)
   useEffect(() => {
     if (!onClose) return;
@@ -159,12 +227,18 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (submitting) return;
+
+      track(gaEvent(GA_CTX, 'CloseEsc'), {
+        ui_id: gaUiId(GA_CTX, 'CloseEsc'),
+        step,
+      });
+
       onClose();
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, submitting]);
+  }, [onClose, submitting, step]);
 
   // ✅ body scroll lock: open 또는 alertOpen이면 잠금
   useEffect(() => {
@@ -186,18 +260,42 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
   const goNext = () => {
     const idx = TAB_LABELS.findIndex((t) => t.id === step);
     const next = TAB_LABELS[idx + 1]?.id;
-    if (next) setStep(next);
+    if (!next) return;
+
+    track(gaEvent(GA_CTX, 'Next'), {
+      ui_id: gaUiId(GA_CTX, 'Next'),
+      from: step,
+      to: next,
+      ...countMeta,
+    });
+
+    setStep(next);
   };
 
   const goPrev = () => {
     const idx = TAB_LABELS.findIndex((t) => t.id === step);
     const prev = TAB_LABELS[idx - 1]?.id;
-    if (prev) setStep(prev);
+    if (!prev) return;
+
+    track(gaEvent(GA_CTX, 'Prev'), {
+      ui_id: gaUiId(GA_CTX, 'Prev'),
+      from: step,
+      to: prev,
+      ...countMeta,
+    });
+
+    setStep(prev);
   };
 
   const closeOnly = () => {
     if (!onClose) return;
     if (submitting) return;
+
+    track(gaEvent(GA_CTX, 'CloseBtn'), {
+      ui_id: gaUiId(GA_CTX, 'CloseBtn'),
+      step,
+    });
+
     onClose();
   };
 
@@ -211,8 +309,20 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
   const handleSubmit = async () => {
     if (submitting) return;
 
-    const userEmail = (user?.email || '').trim();
+    track(gaEvent(GA_CTX, 'SubmitClick'), {
+      ui_id: gaUiId(GA_CTX, 'SubmitClick'),
+      step,
+      ...countMeta,
+      has_user: !!userEmail,
+      minor: minor || null,
+    });
+
     if (!userEmail) {
+      track(gaEvent(GA_CTX, 'SubmitBlockedNoLogin'), {
+        ui_id: gaUiId(GA_CTX, 'SubmitBlockedNoLogin'),
+        step,
+      });
+
       openAlert({
         title: '로그인이 필요합니다',
         lines: ['위험성 평가 보고서를 생성하려면 로그인이 필요합니다.', '로그인 후 다시 시도해주세요.'],
@@ -231,6 +341,14 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
       confirmText: '확인',
     });
 
+    // ✅ GA: RequestAccepted
+    track(gaEvent(GA_CTX, 'RequestAccepted'), {
+      ui_id: gaUiId(GA_CTX, 'RequestAccepted'),
+      step,
+      ...countMeta,
+      userEmail,
+    });
+
     // ✅ 2) Alert가 먼저 그려지도록 프레임 양보 + 버튼 잠금
     setSubmitting(true);
     await nextFrame();
@@ -245,11 +363,23 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
 
     try {
       await onSubmit(draft, { signal: ac.signal, userEmail });
-      // 완료 Alert는 선택사항: 현재 패턴(요청 접수 안내 + 파일함/메일 안내) 기준으로 기본 미노출
+
+      track(gaEvent(GA_CTX, 'SubmitSuccess'), {
+        ui_id: gaUiId(GA_CTX, 'SubmitSuccess'),
+        ...countMeta,
+        minor: minor || null,
+      });
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
 
       console.error(e);
+
+      track(gaEvent(GA_CTX, 'SubmitError'), {
+        ui_id: gaUiId(GA_CTX, 'SubmitError'),
+        message: String(e?.message ?? e),
+        ...countMeta,
+      });
+
       openAlert({
         title: '생성 실패',
         lines: [
@@ -271,7 +401,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
     <>
       {/* ✅ 본체는 open일 때만 표시 */}
       {open && (
-        <div className={s.wrap}>
+        <div className={s.wrap} data-ga-event={gaEvent(GA_CTX, 'View')} data-ga-id={gaUiId(GA_CTX, 'View')}>
           <div className={s.header}>
             <div className={s.headerText}>
               <div className={s.title}>REG AI가 위험성 평가를 도와드려요.</div>
@@ -279,47 +409,99 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
             </div>
 
             {onClose ? (
-              <button className={s.closeBtn} onClick={closeOnly} aria-label="닫기" disabled={submitting}>
+              <button
+                className={s.closeBtn}
+                onClick={closeOnly}
+                aria-label="닫기"
+                disabled={submitting}
+                data-ga-event={gaEvent(GA_CTX, 'CloseBtn')}
+                data-ga-id={gaUiId(GA_CTX, 'CloseBtn')}
+              >
                 ×
               </button>
             ) : null}
           </div>
 
-          <div className={s.tabs}>
+          <div className={s.tabs} data-ga-event={gaEvent(GA_CTX, 'Tabs')} data-ga-id={gaUiId(GA_CTX, 'Tabs')}>
             {TAB_LABELS.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 className={`${s.tab} ${step === t.id ? s.tabActive : ''}`}
-                onClick={() => setStep(t.id)}
+                onClick={() => {
+                  if (submitting) return;
+                  if (t.id === step) return;
+
+                  track(gaEvent(GA_CTX, 'TabChange'), {
+                    ui_id: gaUiId(GA_CTX, 'TabChange'),
+                    from: step,
+                    to: t.id,
+                    ...countMeta,
+                  });
+
+                  setStep(t.id);
+                }}
                 disabled={submitting}
+                data-ga-event={gaEvent(GA_CTX, `Tab${t.id}`)}
+                data-ga-id={gaUiId(GA_CTX, `Tab${t.id}`)}
               >
                 {t.label}
               </button>
             ))}
           </div>
 
-          <div className={s.helper}>{TAB_LABELS.find((t) => t.id === step)?.helper}</div>
+          <div className={s.helper} data-ga-event={gaEvent(GA_CTX, 'Helper')} data-ga-id={gaUiId(GA_CTX, 'Helper')}>
+            {TAB_LABELS.find((t) => t.id === step)?.helper}
+          </div>
 
           <div className={s.footer}>
             <div className={s.navRow}>
-              <button className={s.navBtn} onClick={goPrev} disabled={step === 'tasks' || submitting}>
+              <button
+                className={s.navBtn}
+                onClick={goPrev}
+                disabled={step === 'tasks' || submitting}
+                data-ga-event={gaEvent(GA_CTX, 'Prev')}
+                data-ga-id={gaUiId(GA_CTX, 'Prev')}
+              >
                 이전
               </button>
 
               {step !== 'controls' ? (
-                <button className={s.navBtnPrimary} onClick={goNext} disabled={!canGoNext || submitting}>
+                <button
+                  className={s.navBtnPrimary}
+                  onClick={() => {
+                    if (!canGoNext || submitting) return;
+
+                    // ✅ GA: Next (goNext 내부에서도 트랙하지만, 버튼 클릭 맥락도 남기고 싶으면 유지)
+                    track(gaEvent(GA_CTX, 'NextClick'), {
+                      ui_id: gaUiId(GA_CTX, 'NextClick'),
+                      step,
+                      ...countMeta,
+                    });
+
+                    goNext();
+                  }}
+                  disabled={!canGoNext || submitting}
+                  data-ga-event={gaEvent(GA_CTX, 'Next')}
+                  data-ga-id={gaUiId(GA_CTX, 'Next')}
+                >
                   다음
                 </button>
               ) : (
-                <button className={s.navBtnPrimary} onClick={handleSubmit} disabled={submitting}>
+                <button
+                  className={s.navBtnPrimary}
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  data-ga-event={gaEvent(GA_CTX, 'Submit')}
+                  data-ga-id={gaUiId(GA_CTX, 'Submit')}
+                >
                   {submitting ? '요청 중…' : '위험성 평가 보고서 생성'}
                 </button>
               )}
             </div>
           </div>
 
-          <div className={s.content}>
+          <div className={s.content} data-ga-event={gaEvent(GA_CTX, 'Content')} data-ga-id={gaUiId(GA_CTX, 'Content')}>
             {step === 'tasks' && <StepTasks draft={draft} setDraft={setDraft} minor={minor} />}
             {step === 'processes' && <StepProcesses draft={draft} setDraft={setDraft} />}
             {step === 'hazards' && <StepHazards draft={draft} setDraft={setDraft} />}
@@ -335,12 +517,26 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit }:
         lines={alertLines}
         confirmText={alertConfirmText}
         onConfirm={() => {
+          // ✅ GA: AlertConfirm
+          track(gaEvent(GA_CTX, 'AlertConfirm'), {
+            ui_id: gaUiId(GA_CTX, 'AlertConfirm'),
+            title: alertTitle,
+            step,
+          });
+
           const fn = alertOnConfirmRef.current;
           closeAlert();
           fn?.();
         }}
         showClose={alertShowClose}
         onClose={() => {
+          // ✅ GA: AlertCloseBtn
+          track(gaEvent(GA_CTX, 'AlertCloseBtn'), {
+            ui_id: gaUiId(GA_CTX, 'AlertCloseBtn'),
+            title: alertTitle,
+            step,
+          });
+
           const fn = alertOnCloseRef.current;
           closeAlert();
           fn?.();

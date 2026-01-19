@@ -1,8 +1,15 @@
+// components/monthly-inspection/MonthlyInspectionDetailTaskAutocompleteInput.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEventHandler } from 'react';
 import { X, Search, Loader2 } from 'lucide-react';
 import cs from './MonthlyInspectionDetailTaskAutocompleteInput.module.css';
+
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'MonthlyInspection' } as const;
 
 const norm = (v?: string | null) => (v ?? '').trim();
 const isString = (v: unknown): v is string => typeof v === 'string';
@@ -83,7 +90,10 @@ function safeLoadSelected(): SelectedCache | null {
 function safeSaveSelected(items: string[]) {
   try {
     const cleaned = Array.from(new Set(items.map(norm).filter(Boolean)));
-    localStorage.setItem(SELECTED_KEY, JSON.stringify({ t: Date.now(), items: cleaned } satisfies SelectedCache));
+    localStorage.setItem(
+      SELECTED_KEY,
+      JSON.stringify({ t: Date.now(), items: cleaned } satisfies SelectedCache),
+    );
   } catch {
     // ignore
   }
@@ -127,13 +137,25 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     if (current.length > 0) {
       // 이미 부모가 내려준 값이 있으면 그걸 저장해두기(서버/기본값 우선)
       safeSaveSelected(current);
+      track(gaEvent(GA_CTX, 'DetailTaskHydrateSkipHasValue'), {
+        ui_id: gaUiId(GA_CTX, 'DetailTaskHydrateSkipHasValue'),
+        selected_count: current.length,
+      });
       return;
     }
 
     const cached = safeLoadSelected();
     const cachedItems = (cached?.items ?? []).map(norm).filter(Boolean);
     if (cachedItems.length > 0) {
+      track(gaEvent(GA_CTX, 'DetailTaskHydrateFromCache'), {
+        ui_id: gaUiId(GA_CTX, 'DetailTaskHydrateFromCache'),
+        selected_count: cachedItems.length,
+      });
       onChange(cachedItems);
+    } else {
+      track(gaEvent(GA_CTX, 'DetailTaskHydrateEmpty'), {
+        ui_id: gaUiId(GA_CTX, 'DetailTaskHydrateEmpty'),
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // onChange를 deps로 넣으면 부모 리렌더에 따라 반복될 수 있어 1회만
@@ -207,6 +229,7 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     if (openList) setOpen(true);
   };
 
+  // ✅ 너무 잦은 “타이핑” 이벤트는 피하고, 실제 fetch/cached hit 시점만 로깅
   const runFetch = (query: string) => {
     const now = Date.now();
     if (now < ignoreFetchUntilRef.current) return;
@@ -224,6 +247,12 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     // 1) 자동완성 캐시 hit면 네트워크 안 탐
     const cached = autoCacheRef.current[qq];
     if (cached && now - cached.t <= AUTO_CACHE_TTL_MS && Array.isArray(cached.items)) {
+      track(gaEvent(GA_CTX, 'DetailTaskAutocompleteCacheHit'), {
+        ui_id: gaUiId(GA_CTX, 'DetailTaskAutocompleteCacheHit'),
+        q_len: qq.length,
+        items_count: cached.items.length,
+        selected_count: selectedSetRef.current.size,
+      });
       applyItems(cached.items, true);
       return;
     }
@@ -242,6 +271,12 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
       setState('loading');
       setOpen(true);
 
+      track(gaEvent(GA_CTX, 'DetailTaskAutocompleteRequest'), {
+        ui_id: gaUiId(GA_CTX, 'DetailTaskAutocompleteRequest'),
+        q_len: qq.length,
+        selected_count: selectedSetRef.current.size,
+      });
+
       try {
         const raw = await fetcherRef.current(qq, ac.signal);
 
@@ -251,11 +286,23 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
         autoCacheRef.current[qq] = { t: Date.now(), items: deduped };
         scheduleSaveAutoCache();
 
+        track(gaEvent(GA_CTX, 'DetailTaskAutocompleteSuccess'), {
+          ui_id: gaUiId(GA_CTX, 'DetailTaskAutocompleteSuccess'),
+          q_len: qq.length,
+          items_count: deduped.length,
+        });
+
         applyItems(deduped, true);
       } catch (e) {
         if ((e as any)?.name === 'AbortError') return;
         setItems([]);
         setState('error');
+
+        track(gaEvent(GA_CTX, 'DetailTaskAutocompleteError'), {
+          ui_id: gaUiId(GA_CTX, 'DetailTaskAutocompleteError'),
+          q_len: qq.length,
+          err: (e as Error)?.message || 'unknown',
+        });
       }
     }, 180);
   };
@@ -273,7 +320,7 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addTag = (tag: string) => {
+  const addTag = (tag: string, source: 'suggestion' | 'custom') => {
     const t = norm(tag);
     if (!t) return;
 
@@ -294,8 +341,14 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     }
 
     const next = [...selected, t];
-    onChange(next);         // 부모 상태 갱신
+    onChange(next); // 부모 상태 갱신
     safeSaveSelected(next); // ✅ 즉시 로컬에도 저장(부모 저장 로직 없어도 유지)
+
+    track(gaEvent(GA_CTX, source === 'suggestion' ? 'DetailTaskSelectSuggestion' : 'DetailTaskAddCustom'), {
+      ui_id: gaUiId(GA_CTX, source === 'suggestion' ? 'DetailTaskSelectSuggestion' : 'DetailTaskAddCustom'),
+      selected_count: next.length,
+      tag_len: t.length,
+    });
 
     setQ('');
     setItems([]);
@@ -311,17 +364,31 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     const next = selected.filter((x) => x !== t);
     onChange(next);
     safeSaveSelected(next); // ✅ 삭제도 즉시 반영
+
+    track(gaEvent(GA_CTX, 'DetailTaskRemoveTag'), {
+      ui_id: gaUiId(GA_CTX, 'DetailTaskRemoveTag'),
+      selected_count: next.length,
+      tag_len: t.length,
+    });
+
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const removeLastTag = () => {
     if (!selected.length) return;
+    const removed = selected[selected.length - 1];
     const next = selected.slice(0, -1);
     onChange(next);
     safeSaveSelected(next);
+
+    track(gaEvent(GA_CTX, 'DetailTaskRemoveLastTag'), {
+      ui_id: gaUiId(GA_CTX, 'DetailTaskRemoveLastTag'),
+      selected_count: next.length,
+      tag_len: norm(removed).length,
+    });
   };
 
-  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+  const handleKeyDown: KeyboardEventHandler<HTMLInputElement> = (e) => {
     if (e.key === 'Backspace' && q.length === 0) {
       e.preventDefault();
       removeLastTag();
@@ -331,7 +398,7 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     if (!open) {
       if (e.key === 'Enter') {
         const raw = norm(q);
-        if (raw) addTag(raw);
+        if (raw) addTag(raw, 'custom');
       }
       return;
     }
@@ -351,15 +418,20 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
     if (e.key === 'Escape') {
       e.preventDefault();
       setOpen(false);
+
+      track(gaEvent(GA_CTX, 'DetailTaskCloseListEscape'), {
+        ui_id: gaUiId(GA_CTX, 'DetailTaskCloseListEscape'),
+      });
+
       return;
     }
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (items.length > 0) addTag(items[Math.max(0, Math.min(activeIdx, items.length - 1))]);
+      if (items.length > 0) addTag(items[Math.max(0, Math.min(activeIdx, items.length - 1))], 'suggestion');
       else {
         const raw = norm(q);
-        if (raw) addTag(raw);
+        if (raw) addTag(raw, 'custom');
       }
     }
   };
@@ -372,7 +444,14 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
         {selected.map((t) => (
           <span key={t} className={cs.chip}>
             {t}
-            <button type="button" className={cs.chipX} onClick={() => removeTag(t)} aria-label="태그 삭제">
+            <button
+              type="button"
+              className={cs.chipX}
+              onClick={() => removeTag(t)}
+              aria-label="태그 삭제"
+              data-ga-event={gaEvent(GA_CTX, 'DetailTaskRemoveTag')}
+              data-ga-id={gaUiId(GA_CTX, 'DetailTaskRemoveTag')}
+            >
               <X size={14} />
             </button>
           </span>
@@ -391,8 +470,21 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
             setQ(v);
             setOpen(true);
             setActiveIdx(0);
+
+            // ✅ 타이핑은 너무 잦아서 최소한만(길이 기준) 기록
+            if (norm(v).length === minQueryLength) {
+              track(gaEvent(GA_CTX, 'DetailTaskQueryStart'), {
+                ui_id: gaUiId(GA_CTX, 'DetailTaskQueryStart'),
+                q_len: norm(v).length,
+              });
+            }
           }}
           onFocus={() => {
+            track(gaEvent(GA_CTX, 'DetailTaskInputFocus'), {
+              ui_id: gaUiId(GA_CTX, 'DetailTaskInputFocus'),
+              selected_count: selected.length,
+            });
+
             if (norm(q).length >= minQueryLength) setOpen(true);
           }}
           onBlur={() => {
@@ -400,6 +492,8 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
           }}
           onKeyDown={handleKeyDown}
           autoComplete="off"
+          data-ga-event={gaEvent(GA_CTX, 'DetailTaskInput')}
+          data-ga-id={gaUiId(GA_CTX, 'DetailTaskInput')}
         />
         {state === 'loading' && <Loader2 size={16} className={cs.loader} />}
       </div>
@@ -419,8 +513,10 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    addTag(it);
+                    addTag(it, 'suggestion');
                   }}
+                  data-ga-event={gaEvent(GA_CTX, 'DetailTaskSelectSuggestion')}
+                  data-ga-id={gaUiId(GA_CTX, 'DetailTaskSelectSuggestion')}
                 >
                   {it}
                 </button>

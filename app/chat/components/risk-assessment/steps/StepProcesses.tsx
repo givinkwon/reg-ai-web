@@ -7,6 +7,12 @@ import AddItemSheet from '../ui/AddItemSheet';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessmentProcesses' } as const;
+
 type Props = {
   draft: RiskAssessmentDraft;
   setDraft: React.Dispatch<React.SetStateAction<RiskAssessmentDraft>>;
@@ -97,16 +103,7 @@ function findLatestCacheForUserAndProcess(userEmail: string | null | undefined, 
 function toText(x: any) {
   if (typeof x === 'string') return x;
   if (x && typeof x === 'object') {
-    return (
-      x._id ??
-      x.title ??
-      x.name ??
-      x.sub_process ??
-      x.subProcess ??
-      x.process ??
-      x.value ??
-      ''
-    );
+    return x._id ?? x.title ?? x.name ?? x.sub_process ?? x.subProcess ?? x.process ?? x.value ?? '';
   }
   return '';
 }
@@ -144,6 +141,8 @@ function extractItems(payload: any): string[] {
 
 export default function StepProcesses({ draft, setDraft, minorCategory }: Props) {
   const user = useUserStore((st) => st.user);
+  const userEmail = (user?.email ?? '').trim();
+  const mc = minorScope(minorCategory);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [targetTaskId, setTargetTaskId] = useState<string | null>(null);
@@ -168,14 +167,44 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
   const targetTask = useMemo(() => tasks.find((t) => t.id === targetTaskId) ?? null, [tasks, targetTaskId]);
 
+  // ✅ GA: 화면 진입
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      minor: mc,
+      has_user: !!userEmail,
+      tasks_len: tasks.length,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openSheet = (taskId: string) => {
     setTargetTaskId(taskId);
     setSheetOpen(true);
+
+    const t = tasks.find((x) => x.id === taskId);
+    track(gaEvent(GA_CTX, 'OpenAddSheet'), {
+      ui_id: gaUiId(GA_CTX, 'OpenAddSheet'),
+      task_id: taskId,
+      task_title: norm(t?.title),
+      minor: mc,
+    });
   };
 
   const addProcess = (title: string) => {
     const v = norm(title);
     if (!v || !targetTaskId) return;
+
+    track(gaEvent(GA_CTX, 'ProcessAdd'), {
+      ui_id: gaUiId(GA_CTX, 'ProcessAdd'),
+      task_id: targetTaskId,
+      process_title: v,
+      minor: mc,
+      source: 'sheet_manual',
+    });
 
     setDraft((prev) => ({
       ...prev,
@@ -191,9 +220,17 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
     }));
   };
 
-  const addProcessesBulk = (taskId: string, titles: string[]) => {
+  const addProcessesBulk = (taskId: string, titles: string[], source: 'cache' | 'api' | 'sheet_search' = 'api') => {
     const uniq = Array.from(new Set((titles ?? []).map(norm))).filter(Boolean);
     if (uniq.length === 0) return;
+
+    track(gaEvent(GA_CTX, 'ProcessBulkAdd'), {
+      ui_id: gaUiId(GA_CTX, 'ProcessBulkAdd'),
+      task_id: taskId,
+      count: uniq.length,
+      minor: mc,
+      source,
+    });
 
     setDraft((prev) => ({
       ...prev,
@@ -218,12 +255,24 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   };
 
   const removeChip = (taskId: string, processId: string) => {
+    const t = tasks.find((x) => x.id === taskId);
+    const p = (t?.processes ?? []).find((x) => x.id === processId);
+
+    track(gaEvent(GA_CTX, 'ProcessRemove'), {
+      ui_id: gaUiId(GA_CTX, 'ProcessRemove'),
+      task_id: taskId,
+      process_id: processId,
+      process_title: norm(p?.title),
+      minor: mc,
+      source: 'chip',
+    });
+
     setDraft((prev) => ({
       ...prev,
-      tasks: (prev.tasks ?? []).map((t) => {
-        if (t.id !== taskId) return t;
-        const cur = Array.isArray(t.processes) ? t.processes : [];
-        return { ...t, processes: cur.filter((p) => p.id !== processId) };
+      tasks: (prev.tasks ?? []).map((t2) => {
+        if (t2.id !== taskId) return t2;
+        const cur = Array.isArray(t2.processes) ? t2.processes : [];
+        return { ...t2, processes: cur.filter((p2) => p2.id !== processId) };
       }),
     }));
   };
@@ -242,7 +291,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         if (!processName) continue;
 
         const uiKey = t.id;
-        const mc = minorScope(minorCategory);
         const ck = cacheKey(user?.email ?? null, processName, mc);
         const scopeKey = `${t.id}|${ck}`;
 
@@ -298,8 +346,17 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         }
 
         if (cached) {
-          if (!cancelled) addProcessesBulk(t.id, cached.subProcesses);
+          if (!cancelled) addProcessesBulk(t.id, cached.subProcesses, 'cache');
           completedRef.current.add(scopeKey);
+
+          track(gaEvent(GA_CTX, 'AutoFillFromCache'), {
+            ui_id: gaUiId(GA_CTX, 'AutoFillFromCache'),
+            task_id: t.id,
+            task_title: processName,
+            count: cached.subProcesses.length,
+            minor: mc,
+          });
+
           continue;
         }
 
@@ -307,18 +364,33 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         attemptRef.current.set(scopeKey, Date.now());
         setAutoLoadingIds((prev) => ({ ...prev, [uiKey]: true }));
 
+        track(gaEvent(GA_CTX, 'AutoFillFetchStart'), {
+          ui_id: gaUiId(GA_CTX, 'AutoFillFetchStart'),
+          task_id: t.id,
+          task_title: processName,
+          minor: mc,
+        });
+
         try {
           const qs = new URLSearchParams();
           qs.set('endpoint', 'sub-processes');
           qs.set('process_name', processName);
           qs.set('limit', '50');
-          if (norm(minorCategory)) qs.set('minor', norm(minorCategory)) 
+          if (norm(minorCategory)) qs.set('minor', norm(minorCategory));
+
           try {
             const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
               cache: 'no-store',
             });
             if (!res.ok) {
-              attemptRef.current.delete(scopeKey); // ✅ 실패면 바로 재시도 가능하게
+              attemptRef.current.delete(scopeKey);
+              track(gaEvent(GA_CTX, 'AutoFillFetchError'), {
+                ui_id: gaUiId(GA_CTX, 'AutoFillFetchError'),
+                task_id: t.id,
+                task_title: processName,
+                minor: mc,
+                status: res.status,
+              });
               continue;
             }
 
@@ -326,7 +398,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
             const items = extractItems(raw);
 
             if (items.length > 0) {
-              if (!cancelled) addProcessesBulk(t.id, items);
+              if (!cancelled) addProcessesBulk(t.id, items, 'api');
 
               safeWriteCache(ck, {
                 v: 2,
@@ -338,16 +410,35 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
               });
 
               completedRef.current.add(scopeKey);
+
+              track(gaEvent(GA_CTX, 'AutoFillFetchSuccess'), {
+                ui_id: gaUiId(GA_CTX, 'AutoFillFetchSuccess'),
+                task_id: t.id,
+                task_title: processName,
+                minor: mc,
+                count: items.length,
+              });
             } else {
-              // ✅ 빈 응답이면 완료 처리 X (쿨다운 후 재시도)
+              track(gaEvent(GA_CTX, 'AutoFillFetchEmpty'), {
+                ui_id: gaUiId(GA_CTX, 'AutoFillFetchEmpty'),
+                task_id: t.id,
+                task_title: processName,
+                minor: mc,
+              });
             }
           } catch (e: any) {
             console.log('[StepProcesses] fetch rejected', e?.name, e?.message);
             throw e;
           }
-
         } catch (e: any) {
-          attemptRef.current.delete(scopeKey); // ✅ 네트워크 오류도 바로 재시도 가능
+          attemptRef.current.delete(scopeKey);
+          track(gaEvent(GA_CTX, 'AutoFillFetchError'), {
+            ui_id: gaUiId(GA_CTX, 'AutoFillFetchError'),
+            task_id: t.id,
+            task_title: processName,
+            minor: mc,
+            message: String(e?.message ?? e),
+          });
         } finally {
           if (!cancelled) setAutoLoadingIds((prev) => ({ ...prev, [uiKey]: false }));
         }
@@ -359,14 +450,12 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
     return () => {
       cancelled = true;
     };
-  }, [tasksSig, user?.email, minorCategory]);
+  }, [tasksSig, user?.email, minorCategory, mc]);
 
   // =========================
   // ✅ processes가 생기면 캐시에 저장
   // =========================
   useEffect(() => {
-    const mc = minorScope(minorCategory);
-
     for (const t of tasks) {
       const processName = norm(t.title);
       if (!processName) continue;
@@ -384,11 +473,22 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         minorCategory: mc,
         subProcesses,
       });
+
+      // ✅ 너무 과도하면 제거 가능 (그래도 한번만 남기도록 가드)
+      // 여기선 "해당 task에 processes가 생겼다는 사실"을 가볍게 남김
+      track(gaEvent(GA_CTX, 'CacheWrite'), {
+        ui_id: gaUiId(GA_CTX, 'CacheWrite'),
+        task_id: t.id,
+        task_title: processName,
+        minor: mc,
+        count: subProcesses.length,
+      });
     }
-  }, [processesSig, user?.email, minorCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processesSig, user?.email, minorCategory, mc]);
 
   return (
-    <div className={s.wrap}>
+    <div className={s.wrap} data-ga-event={gaEvent(GA_CTX, 'View')} data-ga-id={gaUiId(GA_CTX, 'View')}>
       <div className={s.topNote}>작업별로 공정을 추가해 주세요. (DB/캐시에 있으면 자동으로 채워집니다)</div>
 
       {tasks.map((t) => {
@@ -398,7 +498,14 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
           <div key={t.id} className={s.block}>
             <div className={s.blockHead}>
               <div className={s.blockTitle}>{t.title || '(작업명 미입력)'}</div>
-              <button className={s.addBtn} onClick={() => openSheet(t.id)}>
+              <button
+                className={s.addBtn}
+                onClick={() => openSheet(t.id)}
+                type="button"
+                data-ga-event={gaEvent(GA_CTX, 'OpenAddSheet')}
+                data-ga-id={gaUiId(GA_CTX, 'OpenAddSheet')}
+                data-ga-text={t.title}
+              >
                 공정 추가
               </button>
             </div>
@@ -416,6 +523,9 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
                     className={s.chip}
                     onClick={() => removeChip(t.id, p.id)}
                     title="클릭하면 제거됩니다"
+                    data-ga-event={gaEvent(GA_CTX, 'ProcessRemove')}
+                    data-ga-id={gaUiId(GA_CTX, 'ProcessRemove')}
+                    data-ga-text={p.title}
                   >
                     {p.title} <span className={s.chipX}>×</span>
                   </button>
@@ -431,7 +541,10 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         title="공정 추가"
         placeholder="추가할 공정을 입력하세요"
         suggestions={SUGGEST_PROCESSES}
-        onClose={() => setSheetOpen(false)}
+        onClose={() => {
+          track(gaEvent(GA_CTX, 'CloseAddSheet'), { ui_id: gaUiId(GA_CTX, 'CloseAddSheet'), minor: mc });
+          setSheetOpen(false);
+        }}
         onAdd={(v) => addProcess(v)}
         searchEndpoint="sub-processes"
         searchParams={{
@@ -441,6 +554,8 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         minChars={1}
         debounceMs={180}
         searchLimit={50}
+        // ✅ AddItemSheet 내부에서 검색/클릭 추적하고 싶으면
+        // onSearchStart/onSearchSuccess/onPickSuggestion 같은 콜백을 AddItemSheet에 추가하는 걸 추천
       />
     </div>
   );
