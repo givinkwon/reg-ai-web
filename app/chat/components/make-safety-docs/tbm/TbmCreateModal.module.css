@@ -8,7 +8,7 @@
 .overlay {
   color-scheme: light;
 
-  --ov-bg: rgba(0, 0, 0, 0.45);
+  --ov-bg: rgba(0, 0, 0, 1);
 
   --modal-bg: #060b16; /* 기존 */
   --pill-bg: #ffffff;
@@ -34,6 +34,7 @@
 
   --primary-bg: #1b5cff;
   --primary-text: #ffffff;
+
 }
 
 /* ✅ 다크 모드: 색상만 반전/조정 (레이아웃 건드리지 않음) */
