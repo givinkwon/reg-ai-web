@@ -752,7 +752,7 @@ body[data-theme='dark'] .wrap {
 }
 
 /* =========================================================
-   12) Quick actions landing
+   12) Quick Actions (Landing) - 카드형(1번 이미지 톤)
    ========================================================= */
 .quickWrap {
   width: 100%;
@@ -761,32 +761,32 @@ body[data-theme='dark'] .wrap {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 32px 16px 24px;
-  gap: 24px;
+
+  padding: 28px 16px 24px;
+  gap: 18px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .quickTitle {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: -0.02em;
   text-align: center;
   color: var(--text);
 }
 
 .quickSection {
-  margin-top: 16px;
   width: 100%;
+  max-width: 980px;
 }
 
 .quickSectionHeader {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  width: 80%;
-  margin-left: 10%;
-  margin-right: 10%;
+  gap: 8px;
+  margin: 10px 0 10px;
+  padding: 0 2px;
 }
 
 .quickSectionIcon {
@@ -797,77 +797,186 @@ body[data-theme='dark'] .wrap {
 
 .quickSectionTitle {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--accent);
 }
 
+/* ✅ 카드 그리드: 넓으면 3열, 줄면 2열/1열로 자연스럽게 */
 .quickGrid {
+  width: 100%;
   display: grid;
-  width: 80%;
-  margin-left: 10%;
-  margin-right: 10%;
-  justify-items: stretch;
-  column-gap: 18px;
-  row-gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+
+  /* auto-fit + minmax로 “카드형” 유지하면서 반응형 */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
-.quickBtn {
+/* ✅ 퀵 카드 = MakeSafetyDocs.panel 톤 */
+.quickCard {
   width: 100%;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 0 20px;
-  border-radius: 999px;
-  border: 1px solid var(--quick-border);
-  background: var(--quick-bg);
-  color: var(--quick-text);
-  font-size: 14px;
-  font-weight: 600;
   box-sizing: border-box;
-  box-shadow: var(--quick-shadow);
+
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 16px 16px;
+
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  text-align: left;
+  color: var(--text);
+
+  box-shadow: var(--shadow-1);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  column-gap: 14px;
+  align-items: center;
 }
-.quickBtn:hover {
-  background: rgba(37, 99, 235, 0.16);
-  border-color: rgba(37, 99, 235, 0.35);
+
+.quickCard:hover {
+  background: var(--surface-2);
+  border-color: var(--border-2);
   transform: translateY(-1px);
 }
-body[data-theme='dark'] .quickBtn:hover {
-  background: rgba(96, 165, 250, 0.16);
-  border-color: rgba(96, 165, 250, 0.45);
+
+.quickCard:active {
+  transform: translateY(0);
 }
 
+.quickCard:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.9);
+  outline-offset: 2px;
+}
+
+/* 좌측 아이콘 원 */
 .quickIconWrap {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
+  width: 54px;
+  height: 54px;
   border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(96, 165, 250, 0.55);
-  background: rgba(96, 165, 250, 0.12);
+
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+
+  display: grid;
+  place-items: center;
 }
 
 .quickIcon {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   color: var(--accent);
 }
 
+/* 가운데 텍스트 */
+.quickText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .quickLabel {
-  line-height: 1.2;
-  text-align: left;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  color: var(--text);
+
+  /* 길어도 안전 */
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* 우측 CTA pill */
+.quickCta {
+  justify-self: end;
+
+  font-size: 12px;
+  font-weight: 850;
+  padding: 9px 12px;
+  border-radius: 999px;
+
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* =========================================================
+   18) 모바일 레이아웃 (Quick Actions만 필요한 부분 조정)
+   ========================================================= */
+@media (max-width: 768px) {
+  .quickWrap {
+    justify-content: flex-start;
+    padding-top: 34px;
+    gap: 16px;
+  }
+
+  /* 모바일에서는 카드 폭 때문에 1~2열 자동으로 내려감(280px 기준) */
+  .quickGrid {
+    gap: 12px;
+  }
+
+  .quickCard {
+    padding: 14px 14px;
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    column-gap: 12px;
+  }
+  
+  .quickCta {
+    display: none;
+  }
+
+  .quickIconWrap {
+    width: 50px;
+    height: 50px;
+  }
+
+  .quickLabel {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  .quickGrid {
+    display: block;
+  }
+  /* ✅ 아주 작은 폰: 카드 1줄(아이콘+라벨)로 */
+  .quickCard {
+    margin-bottom: 2vh;
+
+    /* 높이도 한 줄 느낌으로 */
+    min-height: 52px;
+    padding: 10px 12px;
+  }
+
+  /* ✅ CTA는 숨김 유지 */
+  .quickCta {
+    display: none;
+  }
+
+  /* ✅ 라벨을 1줄 ... 처리 */
+  .quickLabel {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    /* 기존 -webkit-line-clamp 쓰고 있으면 무력화 */
+    display: block;
+  }
+
+  .quickTitle {
+    font-size: 18px;
+  }
+}
+
+
 
 /* =========================================================
    13) Hint chips

@@ -1316,16 +1316,19 @@ export default function ChatArea() {
                                   <button
                                     key={action.id}
                                     type="button"
-                                    className={s.quickBtn}
+                                    className={s.quickCard}
                                     data-ga-id={`Chat:ChatArea:QuickButton:${action.id}`}
                                     onClick={() => handleQuickActionClick(action)}
                                   >
-                                    <span className={s.quickIconWrap}>
+                                    <span className={s.quickIconWrap} aria-hidden="true">
                                       <Icon className={s.quickIcon} />
                                     </span>
-                                    <span className={s.quickLabel}>
-                                      {action.label}
+
+                                    <span className={s.quickText}>
+                                      <span className={s.quickLabel}>{action.label}</span>
                                     </span>
+
+                                    <span className={s.quickCta}>선택</span>
                                   </button>
                                 );
                               })}
