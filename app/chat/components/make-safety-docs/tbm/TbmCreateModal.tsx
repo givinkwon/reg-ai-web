@@ -511,10 +511,10 @@ export default function TbmCreateModal({
           role="dialog"
           aria-modal="true"
           aria-label="TBM 활동일지"
-          onMouseDown={(e) => {
-            if (e.target !== e.currentTarget) return;
-            requestClose();
-          }}
+          // onMouseDown={(e) => {
+          //   if (e.target !== e.currentTarget) return;
+          //   requestClose();
+          // }}
         >
           <div className={s.modal}>
             <div className={s.topBar}>

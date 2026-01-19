@@ -662,10 +662,10 @@ export default function MonthlyInspectionCreateModal({
           role="dialog"
           aria-modal="true"
           aria-label="월 작업장 순회 점검표"
-          onMouseDown={(e) => {
-            if (e.target !== e.currentTarget) return;
-            closeOnly();
-          }}
+          // onMouseDown={(e) => {
+          //   if (e.target !== e.currentTarget) return;
+          //   closeOnly();
+          // }}
         >
           <div className={s.modal}>
             <div className={s.topBar}>
