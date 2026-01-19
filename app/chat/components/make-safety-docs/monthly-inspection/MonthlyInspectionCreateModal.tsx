@@ -14,7 +14,13 @@ import CenteredAlertModal from './ui/AlertModal';
 
 import { useUserStore } from '@/app/store/user';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
 export type Rating = 'O' | '△' | 'X';
+
+const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'MonthlyInspection' } as const;
 
 export type ChecklistCategory =
   | '사업장 점검 사항'
@@ -287,6 +293,8 @@ export default function MonthlyInspectionCreateModal({
     showClose?: boolean;
     onConfirm?: () => void;
     onClose?: () => void;
+    gaAction?: string; // ✅ GA 액션(선택)
+    gaExtra?: Record<string, any>;
   }) => {
     setAlertTitle(opts.title ?? '안내');
     setAlertLines(opts.lines);
@@ -295,6 +303,17 @@ export default function MonthlyInspectionCreateModal({
     alertOnConfirmRef.current = opts.onConfirm ?? null;
     alertOnCloseRef.current = opts.onClose ?? null;
     setAlertOpen(true);
+
+    // ✅ GA: Alert Open
+    if (opts.gaAction) {
+      track(gaEvent(GA_CTX, opts.gaAction), {
+        ui_id: gaUiId(GA_CTX, opts.gaAction),
+        step,
+        minor: norm(minorCategory || '') || 'ALL',
+        tasks_count: detailTasks.map(norm).filter(Boolean).length,
+        ...((opts.gaExtra || {}) as Record<string, any>),
+      });
+    }
   };
 
   const closeAlert = () => {
@@ -321,6 +340,27 @@ export default function MonthlyInspectionCreateModal({
     checklistCacheRef.current = loaded;
     saveChecklistCache(loaded);
   }, []);
+
+  // ✅ GA: Modal Open/Close
+  const prevOpenGaRef = useRef(false);
+  useEffect(() => {
+    const prev = prevOpenGaRef.current;
+    prevOpenGaRef.current = open;
+
+    if (!prev && open) {
+      track(gaEvent(GA_CTX, 'Open'), {
+        ui_id: gaUiId(GA_CTX, 'Open'),
+        minor: norm(minorCategory || '') || 'ALL',
+      });
+    }
+    if (prev && !open) {
+      track(gaEvent(GA_CTX, 'Close'), {
+        ui_id: gaUiId(GA_CTX, 'Close'),
+        step,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   /**
    * ✅ open 시 초기화/복원 로직:
@@ -439,19 +479,40 @@ export default function MonthlyInspectionCreateModal({
   const closeOnly = () => {
     // ✅ export 중엔 닫기 방지(원하면 제거 가능)
     if (exportLoading) return;
+
+    track(gaEvent(GA_CTX, 'ClickClose'), {
+      ui_id: gaUiId(GA_CTX, 'ClickClose'),
+      step,
+    });
+
     onClose();
   };
 
   const handleCreateChecklist = async () => {
     markDirty();
     setGenError('');
-    setGenLoading(true);
 
     const tasks = detailTasks.map(norm).filter(Boolean);
+
+    track(gaEvent(GA_CTX, 'ClickGenerateChecklist'), {
+      ui_id: gaUiId(GA_CTX, 'ClickGenerateChecklist'),
+      step,
+      minor: norm(minorCategory || '') || 'ALL',
+      tasks_count: tasks.length,
+    });
+
+    setGenLoading(true);
+
     const { key, minorKey } = stableTasksKey(minorCategory, tasks);
 
     const cached = checklistCacheRef.current[key];
     if (cached && Date.now() - cached.t <= CHECKLIST_CACHE_TTL_MS) {
+      track(gaEvent(GA_CTX, 'GenerateChecklistCacheHit'), {
+        ui_id: gaUiId(GA_CTX, 'GenerateChecklistCacheHit'),
+        step,
+        tasks_count: tasks.length,
+      });
+
       setSections(cached.sections);
       setItems(toItems(cached.sections));
       setStep(1);
@@ -465,6 +526,13 @@ export default function MonthlyInspectionCreateModal({
       });
       return;
     }
+
+    track(gaEvent(GA_CTX, 'GenerateChecklistRequest'), {
+      ui_id: gaUiId(GA_CTX, 'GenerateChecklistRequest'),
+      step,
+      minor: norm(minorCategory || '') || 'ALL',
+      tasks_count: tasks.length,
+    });
 
     try {
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-checklist', {
@@ -514,6 +582,18 @@ export default function MonthlyInspectionCreateModal({
       setItems(toItems(finalSections));
       setStep(1);
 
+      track(gaEvent(GA_CTX, 'GenerateChecklistSuccess'), {
+        ui_id: gaUiId(GA_CTX, 'GenerateChecklistSuccess'),
+        step: 0,
+        next_step: 1,
+        tasks_count: tasks.length,
+        sections_counts: {
+          a: finalSections['사업장 점검 사항'].length,
+          b: finalSections['노동안전 점검 사항'].length,
+          c: finalSections['세부 작업 및 공정별 점검 사항'].length,
+        },
+      });
+
       persistDraftNow({
         step: 1,
         detailTasks: tasks,
@@ -526,6 +606,15 @@ export default function MonthlyInspectionCreateModal({
       setItems(toItems(fb));
       setStep(1);
       setGenError((e as Error)?.message || '점검 항목 생성에 실패했습니다.');
+
+      track(gaEvent(GA_CTX, 'GenerateChecklistFail'), {
+        ui_id: gaUiId(GA_CTX, 'GenerateChecklistFail'),
+        step: 0,
+        next_step: 1,
+        tasks_count: tasks.length,
+        err: (e as Error)?.message || 'unknown',
+        used_fallback: true,
+      });
     } finally {
       setGenLoading(false);
     }
@@ -535,6 +624,17 @@ export default function MonthlyInspectionCreateModal({
     markDirty();
     const cleaned = cleanSections(nextSections);
     const nextItems = toItems(cleaned);
+
+    track(gaEvent(GA_CTX, 'ConfirmChecklist'), {
+      ui_id: gaUiId(GA_CTX, 'ConfirmChecklist'),
+      step: 1,
+      next_step: 2,
+      sections_counts: {
+        a: cleaned['사업장 점검 사항'].length,
+        b: cleaned['노동안전 점검 사항'].length,
+        c: cleaned['세부 작업 및 공정별 점검 사항'].length,
+      },
+    });
 
     setSections(cleaned);
     setItems(nextItems);
@@ -563,6 +663,18 @@ export default function MonthlyInspectionCreateModal({
   };
 
   const handleFinish = async () => {
+    const tasks = detailTasks.map(norm).filter(Boolean);
+
+    // ✅ GA: Finish 클릭 시도
+    track(gaEvent(GA_CTX, 'ClickFinish'), {
+      ui_id: gaUiId(GA_CTX, 'ClickFinish'),
+      step: 2,
+      minor: norm(minorCategory || '') || 'ALL',
+      tasks_count: tasks.length,
+      rated_count: items.filter((it) => !!it.rating).length,
+      total_count: items.length,
+    });
+
     // ✅ 로그인 체크
     if (!userEmail) {
       openAlert({
@@ -572,6 +684,7 @@ export default function MonthlyInspectionCreateModal({
           '로그인 후 다시 시도해주세요.',
         ],
         confirmText: '확인',
+        gaAction: 'AlertLoginRequired',
       });
       return;
     }
@@ -580,7 +693,7 @@ export default function MonthlyInspectionCreateModal({
 
     const payload: MonthlyInspectionPayload = {
       dateISO,
-      detailTasks: detailTasks.map(norm).filter(Boolean),
+      detailTasks: tasks,
       sections,
       results: items,
     };
@@ -593,11 +706,21 @@ export default function MonthlyInspectionCreateModal({
         '서버에서 문서를 생성 중이며, 완료되면 이메일로 안내해드립니다. 파일함에서도 확인 가능해요!',
       ],
       confirmText: '확인',
+      gaAction: 'AlertExportRequested',
+      gaExtra: {
+        tasks_count: tasks.length,
+      },
     });
 
     // ✅ 중복 클릭 방지 + UI 반영 한 프레임 보장
     setExportLoading(true);
     await nextFrame();
+
+    track(gaEvent(GA_CTX, 'ExportRequestStart'), {
+      ui_id: gaUiId(GA_CTX, 'ExportRequestStart'),
+      step: 2,
+      tasks_count: tasks.length,
+    });
 
     try {
       // (옵션) DB 저장/로그
@@ -615,6 +738,14 @@ export default function MonthlyInspectionCreateModal({
 
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
+
+        track(gaEvent(GA_CTX, 'ExportFail'), {
+          ui_id: gaUiId(GA_CTX, 'ExportFail'),
+          step: 2,
+          http_status: res.status,
+          err: txt ? txt.slice(0, 160) : 'no_body',
+        });
+
         openAlert({
           title: '생성 실패',
           lines: [
@@ -622,6 +753,8 @@ export default function MonthlyInspectionCreateModal({
             txt ? txt.slice(0, 160) : '잠시 후 다시 시도해주세요.',
           ],
           confirmText: '확인',
+          gaAction: 'AlertExportFail',
+          gaExtra: { http_status: res.status },
         });
         return;
       }
@@ -632,6 +765,15 @@ export default function MonthlyInspectionCreateModal({
       const filename = getFilenameFromContentDisposition(cd, fallbackName);
 
       const url = window.URL.createObjectURL(blob);
+
+      // ✅ GA: 다운로드 트리거 직전
+      track(gaEvent(GA_CTX, 'DownloadExcel'), {
+        ui_id: gaUiId(GA_CTX, 'DownloadExcel'),
+        step: 2,
+        filename,
+        bytes: blob.size,
+      });
+
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -640,13 +782,27 @@ export default function MonthlyInspectionCreateModal({
       a.remove();
       window.URL.revokeObjectURL(url);
 
+      track(gaEvent(GA_CTX, 'ExportSuccess'), {
+        ui_id: gaUiId(GA_CTX, 'ExportSuccess'),
+        step: 2,
+        filename,
+        bytes: blob.size,
+      });
+
       // ✅ 원하면 완료 후 모달 닫기 (TBM처럼)
       onClose();
     } catch (e) {
+      track(gaEvent(GA_CTX, 'ExportError'), {
+        ui_id: gaUiId(GA_CTX, 'ExportError'),
+        step: 2,
+        err: (e as Error)?.message || 'unknown',
+      });
+
       openAlert({
         title: '오류',
         lines: ['문서 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
         confirmText: '확인',
+        gaAction: 'AlertExportError',
       });
     } finally {
       setExportLoading(false);
@@ -662,6 +818,16 @@ export default function MonthlyInspectionCreateModal({
           role="dialog"
           aria-modal="true"
           aria-label="월 작업장 순회 점검표"
+          onMouseDown={(e) => {
+            // overlay 클릭으로 닫는 UX를 쓴다면 GA도 같이 찍기
+            // (현재 코드에서 closeOnly()는 주석 처리되어 있어, 안전하게 "overlay 자체" 클릭만 기록)
+            if (e.target === e.currentTarget) {
+              track(gaEvent(GA_CTX, 'ClickOverlay'), {
+                ui_id: gaUiId(GA_CTX, 'ClickOverlay'),
+                step,
+              });
+            }
+          }}
           // onMouseDown={(e) => {
           //   if (e.target !== e.currentTarget) return;
           //   closeOnly();
@@ -676,6 +842,8 @@ export default function MonthlyInspectionCreateModal({
                 onClick={closeOnly}
                 aria-label="닫기"
                 disabled={exportLoading}
+                data-ga-event={gaEvent(GA_CTX, 'ClickClose')}
+                data-ga-id={gaUiId(GA_CTX, 'ClickClose')}
               >
                 <X size={18} />
               </button>
@@ -685,7 +853,8 @@ export default function MonthlyInspectionCreateModal({
               <div className={s.header}>
                 <h3 className={s.title}>월 작업장 순회 점검표</h3>
                 <p className={s.desc}>
-                  세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을 생성합니다. <br />
+                  세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을
+                  생성합니다. <br />
                   <span className={s.subDesc}>{weekLabel}</span>
                 </p>
               </div>
@@ -700,6 +869,12 @@ export default function MonthlyInspectionCreateModal({
                       markDirty();
                       setDetailTasks(next);
                       persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
+
+                      track(gaEvent(GA_CTX, 'ChangeDetailTasks'), {
+                        ui_id: gaUiId(GA_CTX, 'ChangeDetailTasks'),
+                        step: 0,
+                        tasks_count: next.map(norm).filter(Boolean).length,
+                      });
                     }}
                   />
 
@@ -710,6 +885,8 @@ export default function MonthlyInspectionCreateModal({
                     className={s.primaryBtn}
                     disabled={!canGoStep1 || genLoading}
                     onClick={handleCreateChecklist}
+                    data-ga-event={gaEvent(GA_CTX, 'ClickGenerateChecklist')}
+                    data-ga-id={gaUiId(GA_CTX, 'ClickGenerateChecklist')}
                   >
                     {genLoading ? (
                       <>
@@ -730,7 +907,14 @@ export default function MonthlyInspectionCreateModal({
                 <StepBuildChecklist
                   detailTasks={detailTasks}
                   initialSections={sections}
-                  onBack={() => setStep(0)}
+                  onBack={() => {
+                    track(gaEvent(GA_CTX, 'ClickBack'), {
+                      ui_id: gaUiId(GA_CTX, 'ClickBack'),
+                      step: 1,
+                      next_step: 0,
+                    });
+                    setStep(0);
+                  }}
                   onNext={handleConfirmChecklist}
                 />
               )}
@@ -743,8 +927,22 @@ export default function MonthlyInspectionCreateModal({
                     markDirty();
                     setItems(next);
                     persistDraftNow({ results: next, step: 2 });
+
+                    track(gaEvent(GA_CTX, 'ChangeRatings'), {
+                      ui_id: gaUiId(GA_CTX, 'ChangeRatings'),
+                      step: 2,
+                      rated_count: next.filter((it) => !!it.rating).length,
+                      total_count: next.length,
+                    });
                   }}
-                  onBack={() => setStep(1)}
+                  onBack={() => {
+                    track(gaEvent(GA_CTX, 'ClickBack'), {
+                      ui_id: gaUiId(GA_CTX, 'ClickBack'),
+                      step: 2,
+                      next_step: 1,
+                    });
+                    setStep(1);
+                  }}
                   onFinish={handleFinish}
                   finishDisabled={!canFinish || exportLoading}
                 />
@@ -761,12 +959,24 @@ export default function MonthlyInspectionCreateModal({
         lines={alertLines}
         confirmText={alertConfirmText}
         onConfirm={() => {
+          track(gaEvent(GA_CTX, 'AlertConfirm'), {
+            ui_id: gaUiId(GA_CTX, 'AlertConfirm'),
+            step,
+            title: alertTitle,
+          });
+
           const fn = alertOnConfirmRef.current;
           closeAlert();
           fn?.();
         }}
         showClose={alertShowClose}
         onClose={() => {
+          track(gaEvent(GA_CTX, 'AlertClose'), {
+            ui_id: gaUiId(GA_CTX, 'AlertClose'),
+            step,
+            title: alertTitle,
+          });
+
           const fn = alertOnCloseRef.current;
           closeAlert();
           fn?.();

@@ -803,13 +803,13 @@ body[data-theme='dark'] .wrap {
 
 /* ✅ 카드 그리드: 넓으면 3열, 줄면 2열/1열로 자연스럽게 */
 .quickGrid {
-  width: 100%;
   display: grid;
   gap: 14px;
 
-  /* auto-fit + minmax로 “카드형” 유지하면서 반응형 */
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* ✅ 데스크톱: 3칸 고정(2개만 있어도 3칸 중 2칸만 채우고 1칸은 빈칸) */
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
 }
+
 
 /* ✅ 퀵 카드 = MakeSafetyDocs.panel 톤 */
 .quickCard {
