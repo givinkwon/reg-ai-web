@@ -20,7 +20,7 @@ export default function ChatCtaRibbon() {
             data-ga-id="Home:ChatCtaRibbon:ClickChat"
             data-ga-label="ribbon"
           >
-            바로 채팅하러 가기
+            바로 사용하기
           </Link>
 
           {/* <Link
