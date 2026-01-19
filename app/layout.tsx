@@ -9,30 +9,31 @@ export const metadata: Metadata = {
   description: "Chat App",
 };
 
-const GTM_ID = "GTM-MS4RQT3J"; // 필요시 env로 이동
-const ADS_ID = "AW-17610431883"; // ✅ Google Ads 전환추적 ID
-const ADS_CONVERSION_LABEL = "LxoSCPy-y-UbEIu7p81B"; // ✅ "가입" 전환 라벨
+const GTM_ID = "GTM-MS4RQT3J";
+const ADS_ID = "AW-17610431883";
+const ADS_CONVERSION_LABEL = "LxoSCPy-y-UbEIu7p81B";
 const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"; // (현재 코드에선 미사용)
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function envBool(v?: string) {
+  const s = (v ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(s);
+}
+
+// ✅ env에 값이 있으면 전체 트래킹 로딩 자체를 막음
+const GA_DISABLED = envBool(process.env.NEXT_PUBLIC_GA_DISABLED);
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        {/* Viewport (삼성 브라우저 확대 버그 방지) */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
 
-        {/* ✅ 라이트/다크 모두 지원을 선언 */}
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
 
-        {/* ✅ OS/브라우저 상단바 색상을 라이트/다크에 각각 명시 */}
         <meta
           name="theme-color"
           media="(prefers-color-scheme: light)"
@@ -44,89 +45,92 @@ export default function RootLayout({
           content="#0b1120"
         />
 
-        {/* iOS 상태바 대비 명시 (선택) */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-        {/* ✅ Kakao JS SDK */}
+        {/* ✅ Kakao JS SDK (트래킹과 무관하면 계속 로딩) */}
         <Script
           id="kakao-sdk"
           src="https://developers.kakao.com/sdk/js/kakao.min.js"
           strategy="afterInteractive"
         />
 
-        {/* ✅ Google Ads gtag.js (AW-...) */}
-        <Script
-          id="ads-gtag-src"
-          src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`}
-          strategy="afterInteractive"
-        />
+        {/* ✅ GA_DISABLED면 아래 트래킹 스크립트/브릿지 모두 로딩 안 함 */}
+        {!GA_DISABLED && (
+          <>
+            {/* Google Ads gtag.js */}
+            <Script
+              id="ads-gtag-src"
+              src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`}
+              strategy="afterInteractive"
+            />
 
-        {/* ✅ gtag 초기화 + Ads config */}
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            window.gtag = function(){ window.dataLayer.push(arguments); };
-            window.gtag('js', new Date());
-            window.gtag('config', '${ADS_ID}');
-          `}
-        </Script>
+            {/* gtag 초기화 */}
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                window.gtag = function(){ window.dataLayer.push(arguments); };
+                window.gtag('js', new Date());
+                window.gtag('config', '${ADS_ID}');
+              `}
+            </Script>
 
-        {/* ✅ Event snippet: "가입" 전환 함수 (React에서 window.gtag_report_conversion(...) 호출) */}
-        <Script id="gtag-conversion-snippet" strategy="afterInteractive">
-          {`
-            window.gtag_report_conversion = function(url, value, currency) {
-              var callback = function () {
-                if (typeof url !== 'undefined' && url) {
-                  window.location = url;
-                }
-              };
+            {/* Ads conversion helper */}
+            <Script id="gtag-conversion-snippet" strategy="afterInteractive">
+              {`
+                window.gtag_report_conversion = function(url, value, currency) {
+                  var callback = function () {
+                    if (typeof url !== 'undefined' && url) window.location = url;
+                  };
 
-              try {
-                if (window.gtag) {
-                  window.gtag('event', 'conversion', {
-                    'send_to': '${ADS_ID}/${ADS_CONVERSION_LABEL}',
-                    'value': (typeof value === 'number' ? value : 1.0),
-                    'currency': (typeof currency === 'string' ? currency : 'KRW'),
-                    'event_callback': callback
-                  });
-                } else {
-                  callback();
-                }
-              } catch (e) {
-                callback();
-              }
+                  try {
+                    if (window.gtag) {
+                      window.gtag('event', 'conversion', {
+                        'send_to': '${ADS_ID}/${ADS_CONVERSION_LABEL}',
+                        'value': (typeof value === 'number' ? value : 1.0),
+                        'currency': (typeof currency === 'string' ? currency : 'KRW'),
+                        'event_callback': callback
+                      });
+                    } else {
+                      callback();
+                    }
+                  } catch (e) {
+                    callback();
+                  }
+                  return false;
+                };
+              `}
+            </Script>
 
-              return false;
-            };
-          `}
-        </Script>
-
-        {/* Google Tag Manager */}
-        <Script id="gtm-base" strategy="afterInteractive">
-          {`
-            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','${GTM_ID}');
-          `}
-        </Script>
+            {/* Google Tag Manager */}
+            <Script id="gtm-base" strategy="afterInteractive">
+              {`
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','${GTM_ID}');
+              `}
+            </Script>
+          </>
+        )}
       </head>
 
       <body>
-        {/* Google Tag Manager (noscript) */}
-        <noscript>
-          <iframe
-            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
-            height="0"
-            width="0"
-            style={{ display: "none", visibility: "hidden" }}
-          />
-        </noscript>
+        {/* GTM noscript도 GA_DISABLED면 숨김 */}
+        {!GA_DISABLED && (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            />
+          </noscript>
+        )}
 
-        {/* ✅ 전역 GA(=dataLayer) 브릿지 */}
-        <GAEventBridge />
+        {/* ✅ 전역 GA 브릿지도 GA_DISABLED면 렌더링 안 함 */}
+        {!GA_DISABLED && <GAEventBridge />}
 
         {children}
       </body>

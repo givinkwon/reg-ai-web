@@ -524,6 +524,7 @@ export default function TbmCreateModal({
                 className={s.iconBtn}
                 onClick={requestClose}
                 aria-label="닫기"
+                data-ga-id="Chat:MakeSafetyDocs:TBM:Close"
                 disabled={false}
               >
                 <X size={18} />
@@ -548,6 +549,7 @@ export default function TbmCreateModal({
                   className={s.addBtn}
                   onClick={addAttendee}
                   disabled={submitting}
+                  data-ga-id="Chat:MakeSafetyDocs:TBM:AddAttendee"
                 >
                   <Plus size={16} />
                   새로운 작업자 추가
@@ -584,6 +586,7 @@ export default function TbmCreateModal({
                       aria-label="삭제"
                       disabled={submitting || attendees.length <= 1}
                       title={attendees.length <= 1 ? '최소 1명은 필요합니다' : '삭제'}
+                      data-ga-id="Chat:MakeSafetyDocs:TBM:RemoveAttendee"
                     >
                       <X size={16} />
                     </button>
@@ -591,7 +594,12 @@ export default function TbmCreateModal({
                 ))}
               </div>
 
-              <button type="button" className={s.primaryBtn} disabled={!canSubmit} onClick={handleSubmit}>
+              <button type="button" 
+                className={s.primaryBtn} 
+                disabled={!canSubmit} 
+                onClick={handleSubmit}
+                data-ga-id="Chat:MakeSafetyDocs:TBM:Submit"
+              >
                 <FileText size={18} />
                 {submitting ? '요청 중…' : 'TBM 활동일지 생성하기'}
               </button>

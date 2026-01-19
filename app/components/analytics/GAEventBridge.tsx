@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { parseDatasetParams, track, trackClick, trackPageView } from '../../lib/ga';
+import { parseDatasetParams, track, trackClick, trackPageView } from '../../lib/ga/ga';
 
 function closestGaEl(start: HTMLElement | null): HTMLElement | null {
   let el: HTMLElement | null = start;

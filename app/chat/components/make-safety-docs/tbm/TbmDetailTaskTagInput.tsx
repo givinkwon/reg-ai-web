@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import s from './TbmDetailTaskTagInput.module.css';
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 const norm = (v?: string | null) => (v ?? '').trim();
 
@@ -74,6 +76,12 @@ export default function TbmDetailTaskTagInput({
   endpoint = 'detail-tasks',
   limit = 200, // ✅ 기본 200
 }: Props) {
+  // ✅ GA 컨텍스트: Chat부터 시작 + PascalCase 보정은 naming.ts에서 처리
+  const GA = useMemo(
+    () => ({ page: 'Chat', section: 'MakeSafetyDocs', area: 'TBM' }),
+    [],
+  );
+
   const [input, setInput] = useState('');
   const [allOptions, setAllOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,7 +185,7 @@ export default function TbmDetailTaskTagInput({
     return base.filter((opt) => opt.toLowerCase().includes(q)).slice(0, 8);
   }, [input, allOptions, selectedSet]);
 
-  const addTag = (raw: string) => {
+  const addTag = (raw: string, source: 'enter' | 'suggest' | 'manual' = 'manual') => {
     const v = norm(raw);
     if (!v) return;
 
@@ -189,13 +197,28 @@ export default function TbmDetailTaskTagInput({
       return;
     }
 
+    track(gaEvent(GA, 'AddTag'), {
+      ui_id: gaUiId(GA, 'AddTag'),
+      source,
+      tag_len: v.length,
+      from_suggest: source === 'suggest',
+    });
+
     onChange([...value, v]);
     setInput('');
     setOpen(false);
     setActiveIndex(-1);
   };
 
-  const removeTag = (idx: number) => {
+  const removeTag = (idx: number, source: 'click' | 'backspace' = 'click') => {
+    const removed = value[idx];
+
+    track(gaEvent(GA, 'RemoveTag'), {
+      ui_id: gaUiId(GA, 'RemoveTag'),
+      source,
+      tag_len: (removed ?? '').length,
+    });
+
     onChange(value.filter((_, i) => i !== idx));
   };
 
@@ -214,16 +237,17 @@ export default function TbmDetailTaskTagInput({
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+
       if (open && activeIndex >= 0 && optionsToShow[activeIndex]) {
-        addTag(optionsToShow[activeIndex]);
+        addTag(optionsToShow[activeIndex], 'suggest');
       } else {
-        addTag(input);
+        addTag(input, 'enter');
       }
       return;
     }
 
     if (e.key === 'Backspace') {
-      if (!input && value.length > 0) removeTag(value.length - 1);
+      if (!input && value.length > 0) removeTag(value.length - 1, 'backspace');
       return;
     }
 
@@ -266,7 +290,10 @@ export default function TbmDetailTaskTagInput({
             <button
               type="button"
               className={s.tagX}
-              onClick={() => removeTag(idx)}
+              onClick={(e) => {
+                e.stopPropagation(); // ✅ box onClick(드롭다운 오픈)로 버블링 방지
+                removeTag(idx, 'click');
+              }}
               aria-label="태그 삭제"
             >
               <X size={14} />
@@ -309,7 +336,7 @@ export default function TbmDetailTaskTagInput({
               type="button"
               className={`${s.option} ${i === activeIndex ? s.optionActive : ''}`}
               onMouseEnter={() => setActiveIndex(i)}
-              onClick={() => addTag(opt)}
+              onClick={() => addTag(opt, 'suggest')}
             >
               {opt}
             </button>

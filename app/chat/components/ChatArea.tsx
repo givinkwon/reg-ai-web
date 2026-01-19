@@ -95,7 +95,7 @@ import LawNoticeArticlesModal from './law-notice/LawNoticeArticlesModal';
 
 import { formatAssistantHtml } from '../../utils/formatAssistantHtml';
 
-import { track } from '../../lib/ga';
+import { track } from '../../lib/ga/ga';
 import CheckSafetyDocs from './check-safety-docs/CheckSafetyDocs';
 
 // 🔹 추가: 쿠키에서 카운트 읽기

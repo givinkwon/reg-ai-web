@@ -8,7 +8,18 @@ declare global {
   }
 }
 
-const isProd = process.env.NODE_ENV === 'production';
+/**
+ * ✅ "env에 특정 값이 있으면 차단, 아니면 미차단" (NODE_ENV 무시)
+ * - .env.local 에 NEXT_PUBLIC_GA_DISABLED=1 넣으면 로컬에서만 차단 가능
+ * - 배포 환경에서 넣으면 해당 환경도 차단됨
+ */
+function envBool(key: string): boolean {
+  const v = (process.env[key] ?? '').toString().trim();
+  if (!v) return false;
+  return ['1', 'true', 'yes', 'on'].includes(v.toLowerCase());
+}
+
+const GA_DISABLED = envBool('NEXT_PUBLIC_GA_DISABLED');
 
 function safeJsonParse(v?: string) {
   if (!v) return undefined;
@@ -25,7 +36,9 @@ function safeJsonParse(v?: string) {
  */
 export function dlPush(event: string, params: GaBaseParams = {}) {
   if (typeof window === 'undefined') return;
-  if (!isProd) return;
+
+  // ✅ 오직 env로만 차단
+  if (GA_DISABLED) return;
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
@@ -102,4 +115,11 @@ export function parseDatasetParams(dataset: DOMStringMap) {
   const extra = safeJsonParse(dataset.gaParams);
 
   return { eventName, uiId, label, text, value, extra };
+}
+
+/**
+ * ✅ (선택) 현재 차단 여부 확인용
+ */
+export function isTrackingDisabled() {
+  return GA_DISABLED;
 }

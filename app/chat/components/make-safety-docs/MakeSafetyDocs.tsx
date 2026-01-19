@@ -131,6 +131,13 @@ export default function MakeSafetyDocs({
           type="button"
           className={`${s.panel} ${selectedDocId === tbmDoc.id ? s.panelActive : ''}`}
           onClick={() => handleSelect(tbmDoc)}
+          data-ga-id={'Chat:MakeSafetyDocs:TBM'}
+          data-ga-label={tbmDoc.label}
+          data-ga-params={JSON.stringify({
+            mode,
+            category_id: category.id,
+            doc_id: tbmDoc.id,
+          })}
         >
           <span className={s.panelIconWrap} aria-hidden="true">
             <FileText className={s.panelIcon} />
@@ -150,6 +157,13 @@ export default function MakeSafetyDocs({
           type="button"
           className={`${s.panel} ${selectedDocId === monthlyDoc.id ? s.panelActive : ''}`}
           onClick={() => handleSelect(monthlyDoc)}
+          data-ga-id={'Chat:MakeSafetyDocs:MonthlyInspection'}
+          data-ga-label={tbmDoc.label}
+          data-ga-params={JSON.stringify({
+            mode,
+            category_id: category.id,
+            doc_id: tbmDoc.id,
+          })}
         >
           <span className={s.panelIconWrap} aria-hidden="true">
             <ClipboardList className={s.panelIcon} />
