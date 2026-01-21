@@ -1,7 +1,7 @@
 // components/law-notice/LawNoticeSummaryModal.tsx
 'use client';
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import s from './LawNoticeSummaryModal.module.css';
 import { formatAssistantHtml } from '../../../utils/formatAssistantHtml';
 
@@ -62,8 +62,7 @@ export default function LawNoticeSummaryModal({
   useEffect(() => {
     if (!open) return;
 
-    const state =
-      loading ? 'loading' : error ? 'error' : summaryHtml ? 'success' : 'empty';
+    const state = loading ? 'loading' : error ? 'error' : summaryHtml ? 'success' : 'empty';
 
     if (prevStateRef.current === state) return;
     prevStateRef.current = state;
@@ -73,17 +72,14 @@ export default function LawNoticeSummaryModal({
       state,
       law_title: title,
       has_articles: !!hasArticles,
-      // error 문자열은 너무 길 수 있어 잘라서 전송
       error: error ? String(error).slice(0, 200) : '',
     });
   }, [open, loading, error, summaryHtml, title, hasArticles]);
 
+  // ✅ Hook들은 항상 여기까지 "무조건" 호출되어야 함
   if (!open) return null;
 
-  const prettyHtml = useMemo(() => {
-    if (!summaryHtml) return '';
-    return formatAssistantHtml(summaryHtml);
-  }, [summaryHtml]);
+  const prettyHtml = summaryHtml ? formatAssistantHtml(summaryHtml) : '';
 
   const close = (reason: 'overlay' | 'wrap' | 'x' | 'esc' | 'program' = 'program') => {
     track(gaEvent(GA_CTX, 'Close'), {
