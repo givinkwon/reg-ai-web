@@ -5,6 +5,10 @@ import s from './StepControls.module.css';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
 type Props = {
   draft: RiskAssessmentDraft;
   setDraft: React.Dispatch<React.SetStateAction<RiskAssessmentDraft>>;
@@ -165,6 +169,12 @@ function extractStringList(payload: any, preferredKeys: string[] = []): string[]
   return [];
 }
 
+const GA_CTX = {
+  page: 'Chat',
+  section: 'RiskAssessment',
+  step: 'StepControls',
+} as const;
+
 export default function StepControls({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
   const userKey = norm(user?.email) || 'guest';
@@ -262,6 +272,22 @@ export default function StepControls({ draft, setDraft }: Props) {
       .join('||');
   }, [targets]);
 
+  // ✅ GA: view 1회
+  const viewedRef = useRef(false);
+  useEffect(() => {
+    if (viewedRef.current) return;
+    viewedRef.current = true;
+
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      user_type: user?.email ? 'user' : 'guest',
+      rows_count: rows.length,
+      tasks_count: draft.tasks?.length ?? 0,
+      hazards_count: rows.length,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const updateHazard = (
     taskId: string,
     processId: string,
@@ -299,12 +325,6 @@ export default function StepControls({ draft, setDraft }: Props) {
 
   // =========================
   // ✅ 자동 채움: 캐시 우선 → 없으면 API 2개 호출
-  //    - control-options: 현재 안전조치
-  //    - mitigation-options: 개선대책
-  //
-  // ✅ FIX:
-  // - API 응답 형태 정규화(extractStringList)
-  // - AbortError 시 return 금지(continue)
   // =========================
   useEffect(() => {
     let cancelled = false;
@@ -332,6 +352,14 @@ export default function StepControls({ draft, setDraft }: Props) {
         // 1) 캐시 먼저 적용
         const cached = readCache(ck);
         if (cached) {
+          track(gaEvent(GA_CTX, 'CacheHit'), {
+            ui_id: gaUiId(GA_CTX, 'CacheHit'),
+            row_key: t.rowKey,
+            fetched: !!cached.fetched,
+            controls_count: cached.current_controls_items?.length ?? 0,
+            mitigations_count: cached.mitigation_items?.length ?? 0,
+          });
+
           const controls = dedup(cached.current_controls_items);
           const mitigations = dedup(cached.mitigation_items);
 
@@ -365,6 +393,15 @@ export default function StepControls({ draft, setDraft }: Props) {
         const ac = new AbortController();
         controllers.push(ac);
 
+        track(gaEvent(GA_CTX, 'AutoFillStart'), {
+          ui_id: gaUiId(GA_CTX, 'AutoFillStart'),
+          row_key: t.rowKey,
+          need_controls: needControls,
+          need_mitigations: needMitigations,
+          process_name: t.process_name,
+          sub_process: t.sub_process,
+        });
+
         try {
           const makeUrl = (endpoint: string) => {
             const qs = new URLSearchParams();
@@ -376,24 +413,24 @@ export default function StepControls({ draft, setDraft }: Props) {
             return `/api/risk-assessment?${qs.toString()}`;
           };
 
-          const fetchJson = async (url: string): Promise<{ ok: boolean; data: any }> => {
+          const fetchJson = async (url: string): Promise<{ ok: boolean; data: any; status: number; ms: number }> => {
+            const startedAt = performance.now();
             const res = await fetch(url, { cache: 'no-store', signal: ac.signal });
-            if (!res.ok) return { ok: false, data: null };
+            const ms = Math.round(performance.now() - startedAt);
+            if (!res.ok) return { ok: false, data: null, status: res.status, ms };
             const data = await res.json();
-            return { ok: true, data };
+            return { ok: true, data, status: res.status, ms };
           };
 
           const [controlRes, mitigationRes] = await Promise.all([
-            needControls ? fetchJson(makeUrl('control-options')) : Promise.resolve({ ok: true, data: null }),
-            needMitigations ? fetchJson(makeUrl('mitigation-options')) : Promise.resolve({ ok: true, data: null }),
+            needControls ? fetchJson(makeUrl('control-options')) : Promise.resolve({ ok: true, data: null, status: 200, ms: 0 }),
+            needMitigations ? fetchJson(makeUrl('mitigation-options')) : Promise.resolve({ ok: true, data: null, status: 200, ms: 0 }),
           ]);
 
           const controlOk = controlRes.ok;
           const mitigationOk = mitigationRes.ok;
 
           // ✅ 응답 형태 정규화
-          // - control-options: current_controls_items / items / array / value 등 모두 대응
-          // - mitigation-options: mitigation_items / items / array / value 등 모두 대응
           const controlsFromApi = needControls
             ? extractStringList(controlRes.data, ['current_controls_items', 'controls', 'control_items', 'options'])
             : [];
@@ -420,6 +457,19 @@ export default function StepControls({ draft, setDraft }: Props) {
             current_control_text: nextControlText,
             mitigation_items: mitigations,
             mitigation_text: nextMitigationText,
+          });
+
+          track(gaEvent(GA_CTX, 'AutoFillResult'), {
+            ui_id: gaUiId(GA_CTX, 'AutoFillResult'),
+            row_key: t.rowKey,
+            controls_ok: controlOk,
+            mitigations_ok: mitigationOk,
+            controls_status: controlRes.status,
+            mitigations_status: mitigationRes.status,
+            controls_ms: controlRes.ms,
+            mitigations_ms: mitigationRes.ms,
+            controls_count: controls.length,
+            mitigations_count: mitigations.length,
           });
 
           // ✅ 캐시는 "최소 1개라도 ok"면 저장하되,
@@ -450,8 +500,20 @@ export default function StepControls({ draft, setDraft }: Props) {
             doneRef.current.add(scopeKey);
           }
         } catch (e: any) {
-          // ✅ AbortError는 전체 중단(return)하지 말고 해당 row만 스킵
-          if (e?.name === 'AbortError') continue;
+          if (e?.name === 'AbortError') {
+            track(gaEvent(GA_CTX, 'AutoFillAbort'), {
+              ui_id: gaUiId(GA_CTX, 'AutoFillAbort'),
+              row_key: t.rowKey,
+            });
+            continue; // finally는 실행됨
+          }
+
+          track(gaEvent(GA_CTX, 'AutoFillError'), {
+            ui_id: gaUiId(GA_CTX, 'AutoFillError'),
+            row_key: t.rowKey,
+            name: e?.name ?? '',
+            message: e?.message ?? '',
+          });
         } finally {
           inflightRef.current.delete(scopeKey);
           setLoadingMap((prev) => ({ ...prev, [t.rowKey]: false }));
@@ -510,6 +572,23 @@ export default function StepControls({ draft, setDraft }: Props) {
     return () => clearTimeout(tmr);
   }, [rows, user?.email]);
 
+  // ✅ 텍스트 입력 GA: onBlur 기준(과도한 이벤트 방지)
+  const lastBlurRef = useRef<Record<string, number>>({});
+  const trackTextBlur = (rowKey: string, field: 'current_control_text' | 'mitigation_text', text: string, opts?: any) => {
+    const key = `${rowKey}:${field}`;
+    const now = Date.now();
+    if (lastBlurRef.current[key] && now - lastBlurRef.current[key] < 800) return; // 초단위 연타 방지
+    lastBlurRef.current[key] = now;
+
+    track(gaEvent(GA_CTX, 'EditTextBlur'), {
+      ui_id: gaUiId(GA_CTX, 'EditTextBlur'),
+      row_key: rowKey,
+      field,
+      len: norm(text).length,
+      ...opts,
+    });
+  };
+
   if (rows.length === 0) {
     return (
       <div className={s.wrap}>
@@ -550,7 +629,16 @@ export default function StepControls({ draft, setDraft }: Props) {
                     key={j}
                     type="button"
                     className={`${s.segBtn} ${r.judgement === j ? s.segBtnActive : ''}`}
-                    onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { judgement: j })}
+                    onClick={() => {
+                      track(gaEvent(GA_CTX, 'SetJudgement'), {
+                        ui_id: gaUiId(GA_CTX, 'SetJudgement'),
+                        row_key: r.rowKey,
+                        judgement: j,
+                      });
+                      updateHazard(r.taskId, r.processId, r.hazardId, { judgement: j });
+                    }}
+                    data-ga-event={gaEvent(GA_CTX, 'SetJudgement')}
+                    data-ga-id={gaUiId(GA_CTX, 'SetJudgement')}
                   >
                     {j}
                   </button>
@@ -571,8 +659,19 @@ export default function StepControls({ draft, setDraft }: Props) {
                         key={x}
                         type="button"
                         className={`${s.chip} ${selected ? s.chipActive : ''}`}
-                        onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: x })}
+                        onClick={() => {
+                          track(gaEvent(GA_CTX, 'SelectControlChip'), {
+                            ui_id: gaUiId(GA_CTX, 'SelectControlChip'),
+                            row_key: r.rowKey,
+                            text: x,
+                            text_len: norm(x).length,
+                          });
+                          updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: x });
+                        }}
                         title="클릭하면 선택됩니다"
+                        data-ga-event={gaEvent(GA_CTX, 'SelectControlChip')}
+                        data-ga-id={gaUiId(GA_CTX, 'SelectControlChip')}
+                        data-ga-text={x}
                       >
                         {x}
                       </button>
@@ -587,7 +686,14 @@ export default function StepControls({ draft, setDraft }: Props) {
                 className={s.textarea}
                 placeholder="현재 적용 중인 안전조치를 입력하세요 (예: 가드 설치, 인터록, PPE 등)"
                 value={r.current_control_text}
-                onChange={(e) => updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: e.target.value })}
+                onChange={(e) =>
+                  updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: e.target.value })
+                }
+                onBlur={() =>
+                  trackTextBlur(r.rowKey, 'current_control_text', r.current_control_text, {
+                    matched_chip: r.current_controls_items.some((x) => norm(x) === norm(r.current_control_text)),
+                  })
+                }
               />
             </div>
 
@@ -604,8 +710,19 @@ export default function StepControls({ draft, setDraft }: Props) {
                         key={x}
                         type="button"
                         className={`${s.chip} ${selected ? s.chipActive : ''}`}
-                        onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { mitigation_text: x })}
+                        onClick={() => {
+                          track(gaEvent(GA_CTX, 'SelectMitigationChip'), {
+                            ui_id: gaUiId(GA_CTX, 'SelectMitigationChip'),
+                            row_key: r.rowKey,
+                            text: x,
+                            text_len: norm(x).length,
+                          });
+                          updateHazard(r.taskId, r.processId, r.hazardId, { mitigation_text: x });
+                        }}
                         title="클릭하면 선택됩니다"
+                        data-ga-event={gaEvent(GA_CTX, 'SelectMitigationChip')}
+                        data-ga-id={gaUiId(GA_CTX, 'SelectMitigationChip')}
+                        data-ga-text={x}
                       >
                         {x}
                       </button>
@@ -621,6 +738,11 @@ export default function StepControls({ draft, setDraft }: Props) {
                 placeholder="개선 대책을 입력하세요 (예: 국소배기 설치, 환기 강화, MSDS 교육, 보호구 지급/착용 등)"
                 value={r.mitigation_text}
                 onChange={(e) => updateHazard(r.taskId, r.processId, r.hazardId, { mitigation_text: e.target.value })}
+                onBlur={() =>
+                  trackTextBlur(r.rowKey, 'mitigation_text', r.mitigation_text, {
+                    matched_chip: r.mitigation_items.some((x) => norm(x) === norm(r.mitigation_text)),
+                  })
+                }
               />
             </div>
           </div>

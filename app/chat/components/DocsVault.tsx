@@ -1,3 +1,6 @@
+// app/(whatever)/DocsVault/DocsVault.tsx  (경로는 너 프로젝트에 맞게)
+// 'use client';
+
 'use client';
 
 import { Download, RefreshCw, Menu } from 'lucide-react';
@@ -5,6 +8,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { useChatStore } from '../../store/chat';
 import s from './DocsVault.module.css';
+
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 type DocItem = {
   id: string;
@@ -27,6 +34,12 @@ type Props = {
   onRequireLogin: () => void;
 };
 
+const GA_CTX = {
+  page: 'DocsVault',
+  section: 'DocsVault',
+  component: 'DocsVault',
+} as const;
+
 export default function DocsVault({ userEmail, onRequireLogin }: Props) {
   // ✅ ChatArea와 동일: 모바일 사이드바 열기
   const setSidebarMobileOpen = useChatStore((st) => st.setSidebarMobileOpen);
@@ -40,6 +53,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
   useEffect(() => {
     if (!userEmail && !autoLoginRef.current) {
       autoLoginRef.current = true;
+
+      track(gaEvent(GA_CTX, 'AutoRequireLogin'), {
+        ui_id: gaUiId(GA_CTX, 'AutoRequireLogin'),
+      });
+
       onRequireLogin();
     }
   }, [userEmail, onRequireLogin]);
@@ -53,8 +71,13 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     };
   }, []);
 
-  const fetchDocs = async () => {
+  const fetchDocs = async (source: 'mount' | 'manual' = 'manual') => {
     if (!userEmail) return;
+
+    track(gaEvent(GA_CTX, 'FetchDocsStart'), {
+      ui_id: gaUiId(GA_CTX, 'FetchDocsStart'),
+      source,
+    });
 
     fetchAbortRef.current?.abort();
     const ac = new AbortController();
@@ -81,10 +104,32 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
 
       setDocs(items);
       setLastFetchedAt(Date.now());
+
+      track(gaEvent(GA_CTX, 'FetchDocsSuccess'), {
+        ui_id: gaUiId(GA_CTX, 'FetchDocsSuccess'),
+        source,
+        count: items.length,
+      });
+
       console.log('[DocsVault] fetched items:', items.length);
     } catch (e: any) {
-      if (e?.name === 'AbortError') return;
-      setError(e?.message ?? '문서 목록을 불러오지 못했습니다.');
+      if (e?.name === 'AbortError') {
+        track(gaEvent(GA_CTX, 'FetchDocsAbort'), {
+          ui_id: gaUiId(GA_CTX, 'FetchDocsAbort'),
+          source,
+        });
+        return;
+      }
+
+      const msg = e?.message ?? '문서 목록을 불러오지 못했습니다.';
+      setError(msg);
+
+      track(gaEvent(GA_CTX, 'FetchDocsError'), {
+        ui_id: gaUiId(GA_CTX, 'FetchDocsError'),
+        source,
+        name: e?.name ?? '',
+        message: msg,
+      });
     } finally {
       setLoading(false);
     }
@@ -92,12 +137,22 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
 
   useEffect(() => {
     if (!userEmail) return;
-    fetchDocs();
+
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      logged_in: true,
+    });
+
+    fetchDocs('mount');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userEmail]);
 
-  const handleDownload = async (doc: DocItem) => {
+  const handleDownload = async (doc: DocItem, source: 'desktop' | 'mobile' = 'desktop') => {
     if (!userEmail) {
+      track(gaEvent(GA_CTX, 'RequireLoginForDownload'), {
+        ui_id: gaUiId(GA_CTX, 'RequireLoginForDownload'),
+        source,
+      });
       onRequireLogin();
       return;
     }
@@ -107,6 +162,14 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     const kind = (doc.kind || meta?.kind || '').toString().trim();
     const name = (doc.name || '').toString();
 
+    track(gaEvent(GA_CTX, 'DownloadStart'), {
+      ui_id: gaUiId(GA_CTX, 'DownloadStart'),
+      source,
+      doc_id: doc.id,
+      kind,
+      has_tbm_id: !!tbmId,
+    });
+
     const qs = new URLSearchParams();
     qs.set('endpoint', 'download');
     qs.set('id', doc.id);
@@ -114,38 +177,64 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     if (tbmId) qs.set('tbmId', tbmId);
     if (name) qs.set('name', name);
 
-    const res = await fetch(`/api/docs?${qs.toString()}`, {
-      method: 'GET',
-      headers: { 'x-user-email': userEmail },
-      cache: 'no-store',
-    });
+    try {
+      const res = await fetch(`/api/docs?${qs.toString()}`, {
+        method: 'GET',
+        headers: { 'x-user-email': userEmail },
+        cache: 'no-store',
+      });
 
-    console.log('download mode:', res.headers.get('x-doc-download-mode'));
-    console.log('debug rid:', res.headers.get('x-debug-rid'));
-    console.log('debug kind:', res.headers.get('x-doc-debug-kind'));
-    console.log('debug tbmId:', res.headers.get('x-doc-debug-tbmId'));
+      console.log('download mode:', res.headers.get('x-doc-download-mode'));
+      console.log('debug rid:', res.headers.get('x-debug-rid'));
+      console.log('debug kind:', res.headers.get('x-doc-debug-kind'));
+      console.log('debug tbmId:', res.headers.get('x-doc-debug-tbmId'));
 
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      alert(`다운로드 실패 (${res.status}) ${t.slice(0, 200)}`);
-      return;
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        const msg = `다운로드 실패 (${res.status}) ${t.slice(0, 200)}`;
+
+        track(gaEvent(GA_CTX, 'DownloadError'), {
+          ui_id: gaUiId(GA_CTX, 'DownloadError'),
+          source,
+          doc_id: doc.id,
+          status: res.status,
+        });
+
+        alert(msg);
+        return;
+      }
+
+      const blob = await res.blob();
+
+      const cd = res.headers.get('content-disposition') ?? '';
+      const utf8 = cd.match(/filename\*\=UTF-8''(.+)$/i);
+      const plain = cd.match(/filename=\"?([^\";]+)\"?/i);
+      const filename = utf8 ? decodeURIComponent(utf8[1]) : plain ? plain[1] : doc.name;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      track(gaEvent(GA_CTX, 'DownloadSuccess'), {
+        ui_id: gaUiId(GA_CTX, 'DownloadSuccess'),
+        source,
+        doc_id: doc.id,
+      });
+    } catch (e: any) {
+      track(gaEvent(GA_CTX, 'DownloadError'), {
+        ui_id: gaUiId(GA_CTX, 'DownloadError'),
+        source,
+        doc_id: doc.id,
+        name: e?.name ?? '',
+        message: e?.message ?? '',
+      });
+      alert('다운로드 중 오류가 발생했습니다.');
     }
-
-    const blob = await res.blob();
-
-    const cd = res.headers.get('content-disposition') ?? '';
-    const utf8 = cd.match(/filename\*\=UTF-8''(.+)$/i);
-    const plain = cd.match(/filename=\"?([^\";]+)\"?/i);
-    const filename = utf8 ? decodeURIComponent(utf8[1]) : plain ? plain[1] : doc.name;
-
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
   };
 
   const countText = useMemo(() => {
@@ -161,6 +250,13 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
     return `${hh}:${mm} 업데이트`;
   }, [lastFetchedAt]);
 
+  const openSidebarMobile = () => {
+    track(gaEvent(GA_CTX, 'OpenSidebarMobile'), {
+      ui_id: gaUiId(GA_CTX, 'OpenSidebarMobile'),
+    });
+    setSidebarMobileOpen(true);
+  };
+
   // ✅ 로그인 안 된 상태
   if (!userEmail) {
     return (
@@ -172,9 +268,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
               <button
                 type="button"
                 className={s.menuBtn}
-                onClick={() => setSidebarMobileOpen(true)}
+                onClick={openSidebarMobile}
                 aria-label="사이드바 열기"
                 title="메뉴"
+                data-ga-event={gaEvent(GA_CTX, 'OpenSidebarMobile')}
+                data-ga-id={gaUiId(GA_CTX, 'OpenSidebarMobile')}
               >
                 <Menu className={s.menuIcon} />
               </button>
@@ -193,7 +291,14 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                 문서 생성/다운로드 이력은 계정에 저장됩니다. 로그인 후 이용해 주세요.
               </div>
               <div className={s.loginActions}>
-                <Button onClick={onRequireLogin}>로그인하기</Button>
+                <Button
+                  onClick={() => {
+                    track(gaEvent(GA_CTX, 'ClickLogin'), { ui_id: gaUiId(GA_CTX, 'ClickLogin') });
+                    onRequireLogin();
+                  }}
+                >
+                  로그인하기
+                </Button>
               </div>
             </div>
           </div>
@@ -212,9 +317,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
             <button
               type="button"
               className={s.menuBtn}
-              onClick={() => setSidebarMobileOpen(true)}
+              onClick={openSidebarMobile}
               aria-label="사이드바 열기"
               title="메뉴"
+              data-ga-event={gaEvent(GA_CTX, 'OpenSidebarMobile')}
+              data-ga-id={gaUiId(GA_CTX, 'OpenSidebarMobile')}
             >
               <Menu className={s.menuIcon} />
             </button>
@@ -226,7 +333,12 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
           </div>
 
           <div className={s.headerRight}>
-            <div className={s.badge} title={lastFetchedLabel}>
+            <div
+              className={s.badge}
+              title={lastFetchedLabel}
+              data-ga-event={gaEvent(GA_CTX, 'DocsCountBadge')}
+              data-ga-id={gaUiId(GA_CTX, 'DocsCountBadge')}
+            >
               <span className={s.badgeDot} />
               <span className={s.badgeText}>{countText}</span>
             </div>
@@ -235,9 +347,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
               variant="outline"
               size="sm"
               className={s.refreshBtn}
-              onClick={fetchDocs}
+              onClick={() => fetchDocs('manual')}
               disabled={loading}
               title="새로고침"
+              data-ga-event={gaEvent(GA_CTX, 'ClickRefresh')}
+              data-ga-id={gaUiId(GA_CTX, 'ClickRefresh')}
             >
               <RefreshCw size={16} />
               <span>새로고침</span>
@@ -284,8 +398,13 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                         </td>
                       </tr>
                     ) : (
-                      docs.map((d) => (
-                        <tr key={d.id} className={s.row}>
+                      docs.map((d, idx) => (
+                        <tr
+                          key={d.id}
+                          className={s.row}
+                          data-ga-event={gaEvent(GA_CTX, 'Row')}
+                          data-ga-id={gaUiId(GA_CTX, `Row_${idx}`)}
+                        >
                           <td className={s.tdName}>
                             <div className={s.docName}>
                               <span className={s.docIcon} aria-hidden />
@@ -304,7 +423,9 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                               variant="outline"
                               size="sm"
                               className={s.dlBtn}
-                              onClick={() => handleDownload(d)}
+                              onClick={() => handleDownload(d, 'desktop')}
+                              data-ga-event={gaEvent(GA_CTX, 'ClickDownload')}
+                              data-ga-id={gaUiId(GA_CTX, `ClickDownload_${idx}`)}
                             >
                               <Download size={16} />
                               <span className={s.dlText}>다운로드</span>
@@ -334,8 +455,13 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                 ) : docs.length === 0 ? (
                   <div className={s.empty}>아직 생성된 문서가 없습니다.</div>
                 ) : (
-                  docs.map((d) => (
-                    <div key={d.id} className={s.mobileRow}>
+                  docs.map((d, idx) => (
+                    <div
+                      key={d.id}
+                      className={s.mobileRow}
+                      data-ga-event={gaEvent(GA_CTX, 'RowMobile')}
+                      data-ga-id={gaUiId(GA_CTX, `RowMobile_${idx}`)}
+                    >
                       <div className={s.mobileLeft}>
                         <div className={s.docName}>
                           <span className={s.docIcon} aria-hidden />
@@ -353,9 +479,11 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                         variant="outline"
                         size="sm"
                         className={s.dlBtn}
-                        onClick={() => handleDownload(d)}
+                        onClick={() => handleDownload(d, 'mobile')}
                         aria-label="다운로드"
                         title="다운로드"
+                        data-ga-event={gaEvent(GA_CTX, 'ClickDownload')}
+                        data-ga-id={gaUiId(GA_CTX, `ClickDownloadMobile_${idx}`)}
                       >
                         <Download size={16} />
                         <span className={s.dlText}>다운로드</span>
