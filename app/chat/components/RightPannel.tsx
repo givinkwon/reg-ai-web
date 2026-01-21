@@ -1,6 +1,3 @@
-// app/chat/components/RightPanel.tsx (예시 경로)
-// ※ 너가 올린 코드 기반 + URL에 "https: //" 처럼 공백 끼는 케이스 보완
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -9,20 +6,9 @@ import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { useChatStore } from '@/app/store/chat';
 import s from './RightPanel.module.css';
 
-/* =========================
- * 공통 URL 추출/정리 유틸
- * ========================= */
-function extractUrl(line: string): { href: string; index: number } | null {
-  // ✅ https: // 처럼 중간 공백 허용
-  const m = line.match(/https?:\s*\/\/\S+/i);
-  if (!m || m.index == null) return null;
-
-  let href = m[0].replace(/\s+/g, ''); // ✅ 공백 제거 -> https://...
-  // URL 뒤에 붙은 괄호/쉼표/마침표 등 꼬리문자 삭제
-  href = href.replace(/[)\]\u3009>.,]+$/u, '');
-
-  return { href, index: m.index };
-}
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 /* =========================
  * 뉴스(참고 기사) 파서
@@ -58,15 +44,19 @@ function parseNewsItems(html: string | undefined | null): NewsItem[] {
     // "참고 기사 목록" 헤더 라인은 스킵
     if (/^#*\s*참고\s*기사\s*목록/.test(raw)) continue;
 
-    const u = extractUrl(raw);
-    if (!u) continue;
+    const urlMatch = raw.match(/https?:\/\/\S+/i);
+    if (!urlMatch) continue;
 
-    const href = u.href;
+    let href = urlMatch[0];
+
+    // URL 뒤에 붙은 괄호/쉼표/마침표 등 꼬리문자 삭제
+    href = href.replace(/[)\]\u3009>.,]+$/u, '');
+
     if (seen.has(href)) continue; // ✅ 중복 URL 제거
     seen.add(href);
 
     // URL 앞부분 = 제목 후보
-    let beforeUrl = raw.slice(0, u.index).trim();
+    let beforeUrl = raw.slice(0, urlMatch.index ?? raw.length).trim();
 
     // "제목 - " 꼴이면 끝의 대시 제거
     beforeUrl = beforeUrl.replace(/[-–—]\s*$/, '').trim();
@@ -97,12 +87,11 @@ function parseLawNoticeItems(html: string | undefined | null): NewsItem[] {
   let m: RegExpExecArray | null;
 
   while ((m = aRe.exec(html)) !== null) {
-    let href = (m[1] ?? '').trim();
-    href = href.replace(/&amp;/g, '&'); // ✅ 최소 엔티티 처리
+    let href = m[1].trim();
     if (!href || seen.has(href)) continue;
     seen.add(href);
 
-    let title = (m[2] ?? '').replace(/<[^>]+>/g, '').trim();
+    let title = m[2].replace(/<[^>]+>/g, '').trim();
     if (!title) title = href;
 
     items.push({ title, href });
@@ -129,20 +118,13 @@ function parseLawNoticeItems(html: string | undefined | null): NewsItem[] {
     // "참고 입법예고 목록" 헤더는 스킵
     if (/^#*\s*참고\s*입법예고\s*목록/.test(raw)) continue;
 
-    // URL 뽑기 (공백 허용)
-    const u = extractUrl(raw);
-    if (!u) continue;
-
     // 예시:
     // 1. 제목 (입법예고기간: 2025-10-02~2025-11-11, URL: https://www.moleg.go.kr/....)
-    // 또는 그냥 "제목 ... https://..."
-    let title = raw.slice(0, u.index).trim();
-    title = title
-      .replace(/^\d+\s*[.)]\s*/, '') // 번호 제거
-      .replace(/[-–—]\s*$/, '')
-      .trim();
+    const m2 = raw.match(/^\d+\.\s*(.+?)\s*\((?:입법예고기간:[^,]*,)?\s*URL:\s*([^)]+)\)/);
+    if (!m2) continue;
 
-    const href = u.href;
+    let title = m2[1].trim();
+    let href = m2[2].trim().replace(/[)\]\u3009>.,]+$/u, '');
 
     if (!href || seen.has(href)) continue;
     seen.add(href);
@@ -208,6 +190,7 @@ function parseAccidentCases(html: string | undefined | null): AccidentCase[] {
         currentBody = [];
       }
 
+      // 제목 부분만 뽑기
       const m = line.match(/사고사례\s*\d+\]?\s*제목[:：]?\s*(.+)$/);
       const titleText = m ? m[1].trim() : line.replace(/^[-•]\s*/, '');
 
@@ -234,6 +217,19 @@ function parseAccidentCases(html: string | undefined | null): AccidentCase[] {
  * 컴포넌트
  * ========================= */
 
+const GA_CTX = {
+  page: 'Chat',
+  section: 'RightPanel',
+  component: 'RightPanel',
+} as const;
+
+function modeName(mode: any): 'news' | 'lawNotice' | 'accident' | 'evidence' {
+  if (mode === 'news') return 'news';
+  if (mode === 'lawNotice') return 'lawNotice';
+  if (mode === 'accident') return 'accident';
+  return 'evidence';
+}
+
 export default function RightPanel() {
   const rightOpen = useChatStore((st) => st.rightOpen);
   const setRightOpen = useChatStore((st) => st.setRightOpen);
@@ -243,9 +239,29 @@ export default function RightPanel() {
   const isLawNoticeMode = data?.mode === 'lawNotice';
   const isAccidentMode = data?.mode === 'accident';
 
+  const mode = modeName(data?.mode);
+
   // SSR/CSR 불일치 방지용
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // ✅ GA: open/close 트래킹 (상태 변화 기준)
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (rightOpen) {
+      track(gaEvent(GA_CTX, 'Open'), {
+        ui_id: gaUiId(GA_CTX, 'Open'),
+        mode,
+      });
+    } else {
+      track(gaEvent(GA_CTX, 'Close'), {
+        ui_id: gaUiId(GA_CTX, 'Close'),
+        mode,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rightOpen, mounted, mode]);
 
   // 열렸을 때 바디 스크롤 잠금
   useEffect(() => {
@@ -303,13 +319,31 @@ export default function RightPanel() {
     ? '참고 사고사례'
     : '답변 근거';
 
+  const closeByOverlay = () => {
+    track(gaEvent(GA_CTX, 'ClickOverlayClose'), {
+      ui_id: gaUiId(GA_CTX, 'ClickOverlayClose'),
+      mode,
+    });
+    setRightOpen(false);
+  };
+
+  const closeByBackBtn = () => {
+    track(gaEvent(GA_CTX, 'ClickBackClose'), {
+      ui_id: gaUiId(GA_CTX, 'ClickBackClose'),
+      mode,
+    });
+    setRightOpen(false);
+  };
+
   const panel = (
     <>
       {/* overlay */}
       <div
         className={`${s.overlay} ${rightOpen ? s.show : ''}`}
         aria-hidden={!rightOpen}
-        onClick={() => setRightOpen(false)}
+        onClick={closeByOverlay}
+        data-ga-event={gaEvent(GA_CTX, 'Overlay')}
+        data-ga-id={gaUiId(GA_CTX, 'Overlay')}
       />
 
       {/* sheet */}
@@ -324,8 +358,10 @@ export default function RightPanel() {
           <button
             type="button"
             className={s.backBtn}
-            onClick={() => setRightOpen(false)}
+            onClick={closeByBackBtn}
             aria-label="닫기"
+            data-ga-event={gaEvent(GA_CTX, 'ClickBackClose')}
+            data-ga-id={gaUiId(GA_CTX, 'ClickBackClose')}
           >
             <ChevronLeft
               color="#ffffff"
@@ -335,12 +371,15 @@ export default function RightPanel() {
               aria-hidden
             />
           </button>
+
           <span className={s.title}>{panelTitle}</span>
           <ChevronDown className={s.iconGhost} aria-hidden />
         </div>
 
         <div className={s.body}>
-          {/* 1) 뉴스 모드 */}
+          {/* =========================
+           * 1) 뉴스 모드 (참고 기사 목록)
+           * ========================= */}
           {isNewsMode ? (
             <>
               <div className={s.groupTitle}>참고 기사 목록</div>
@@ -355,7 +394,18 @@ export default function RightPanel() {
                         className={s.newsLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          track(gaEvent(GA_CTX, 'ClickNewsLink'), {
+                            ui_id: gaUiId(GA_CTX, 'ClickNewsLink'),
+                            mode,
+                            index: idx + 1,
+                            href: item.href,
+                            title: item.title,
+                          });
+                        }}
+                        data-ga-event={gaEvent(GA_CTX, 'ClickNewsLink')}
+                        data-ga-id={gaUiId(GA_CTX, 'ClickNewsLink')}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -367,7 +417,9 @@ export default function RightPanel() {
             </>
           ) : isLawNoticeMode ? (
             <>
-              {/* 2) 입법예고 모드 */}
+              {/* =========================
+               * 2) 입법예고 모드 (참고 입법예고 목록)
+               * ========================= */}
               <div className={s.groupTitle}>참고 입법예고 목록</div>
               {!lawNoticeItems.length ? (
                 <div className={s.emptyBox}>참고 입법예고 목록을 불러오지 못했습니다.</div>
@@ -380,7 +432,18 @@ export default function RightPanel() {
                         className={s.newsLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          track(gaEvent(GA_CTX, 'ClickLawNoticeLink'), {
+                            ui_id: gaUiId(GA_CTX, 'ClickLawNoticeLink'),
+                            mode,
+                            index: idx + 1,
+                            href: item.href,
+                            title: item.title,
+                          });
+                        }}
+                        data-ga-event={gaEvent(GA_CTX, 'ClickLawNoticeLink')}
+                        data-ga-id={gaUiId(GA_CTX, 'ClickLawNoticeLink')}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -392,14 +455,20 @@ export default function RightPanel() {
             </>
           ) : isAccidentMode ? (
             <>
-              {/* 3) 사고사례 모드 */}
               <div className={s.groupTitle}>참고 사고사례</div>
               {!accidentCases.length ? (
                 <div className={s.emptyBox}>참고 사고사례를 찾지 못했습니다.</div>
               ) : (
                 <ul className={s.newsList}>
                   {accidentCases.map((item, idx) => (
-                    <li key={`${idx}-${item.title}`} className={s.newsItem}>
+                    <li
+                      key={idx}
+                      className={s.newsItem}
+                      data-ga-event={gaEvent(GA_CTX, 'ViewAccidentCase')}
+                      data-ga-id={gaUiId(GA_CTX, 'ViewAccidentCase')}
+                      // ✅ 화면에 보일 때까지 정확히 트래킹하려면 IntersectionObserver가 필요하지만,
+                      // 여기서는 "렌더된 목록 기준"으로 최소 트래킹만 남김.
+                    >
                       <div className={s.newsLink}>
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -412,7 +481,7 @@ export default function RightPanel() {
             </>
           ) : (
             <>
-              {/* 기본 모드: 답변 근거 + 관련 별표/서식 */}
+              {/* ✅ 기본 모드: 답변 근거 + 관련 별표/서식만 표시 */}
               <div className={s.groupTitle}>답변 근거</div>
               {!evidence.length ? (
                 <div className={s.emptyBox}>답변에서 근거를 찾지 못했습니다.</div>
@@ -428,7 +497,18 @@ export default function RightPanel() {
                             target="_blank"
                             rel="noopener noreferrer"
                             title="새 탭으로 열기"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              track(gaEvent(GA_CTX, 'ClickEvidenceLink'), {
+                                ui_id: gaUiId(GA_CTX, 'ClickEvidenceLink'),
+                                mode,
+                                index: i + 1,
+                                href: it.href,
+                                title: it.title,
+                              });
+                            }}
+                            data-ga-event={gaEvent(GA_CTX, 'ClickEvidenceLink')}
+                            data-ga-id={gaUiId(GA_CTX, 'ClickEvidenceLink')}
                           >
                             {it.title}
                           </a>
@@ -456,7 +536,18 @@ export default function RightPanel() {
                           target="_blank"
                           rel="noopener noreferrer"
                           title="새 탭으로 열기"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            track(gaEvent(GA_CTX, 'ClickFormLink'), {
+                              ui_id: gaUiId(GA_CTX, 'ClickFormLink'),
+                              mode,
+                              index: i + 1,
+                              href: it.href,
+                              title: it.title,
+                            });
+                          }}
+                          data-ga-event={gaEvent(GA_CTX, 'ClickFormLink')}
+                          data-ga-id={gaUiId(GA_CTX, 'ClickFormLink')}
                         >
                           {it.title}
                         </a>
