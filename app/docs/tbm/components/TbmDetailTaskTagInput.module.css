@@ -1,0 +1,88 @@
+/* components/risk-assessment/TbmDetailTaskTagInput.module.css */
+
+.wrap {
+  position: relative;
+  width: 100%;
+}
+
+.box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  cursor: text;
+  min-height: 42px;
+}
+.box:focus-within {
+  border-color: #6c5ce7;
+  background-color: #fff;
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  color: #4f46e5;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tagX {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #6366f1;
+  padding: 0;
+}
+.tagX:hover {
+  color: #4338ca;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  outline: none;
+  min-width: 120px;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.3rem;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.optionActive, .option:hover {
+  background-color: #f3f4f6;
+  color: #6c5ce7;
+}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { AlertTriangle, Plus, FileText } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
-import s from '../components/ToolLayout.module.css';
+import s from '../page.module.css';
 
 // ✅ 컴포넌트 임포트
 import RiskAssessmentWizard, { RiskAssessmentDraft } from './components/RiskAssessmentWizard';
