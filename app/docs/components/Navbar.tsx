@@ -14,9 +14,9 @@ export default function Navbar() {
   // 메뉴 정의
   const NAV_LINKS = [
     { name: '도구함', href: '/docs/tools' },
-    { name: '위험성평가', href: '/docs/risk' },
+    { name: '위험성평가', href: '/docs/risk-assessment' },
     { name: 'TBM', href: '/docs/tbm' },
-    { name: '순회점검', href: '/docs/monthly' },
+    { name: '순회점검', href: '/docs/monthly-inspection' },
   ];
 
   const isActive = (path: string) => pathname === path;

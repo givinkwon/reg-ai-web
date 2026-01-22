@@ -18,7 +18,7 @@ const MENU_ITEMS = [
     title: '위험성평가',
     desc: '유해·위험요인 파악 및 감소대책 수립',
     icon: <AlertTriangle size={32} />,
-    href: '/docs/risk',
+    href: '/docs/risk-assessment',
   },
   {
     id: 'tbm',
@@ -32,7 +32,7 @@ const MENU_ITEMS = [
     title: '월 순회점검표',
     desc: '현장 정기 안전 점검 리포트',
     icon: <CalendarCheck size={32} />,
-    href: '/docs/monthly',
+    href: '/docs/monthly-inspection',
   },
 ];
 
