@@ -17,6 +17,16 @@ import { useChatStore } from '../../store/chat';
 import { useUserStore } from '../../store/user';
 import { useRouter } from 'next/navigation';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+const GA_CTX = {
+  page: 'Chat',
+  section: 'Sidebar',
+  component: 'Sidebar',
+} as const;
+
 export default function Sidebar() {
   const user = useUserStore((st) => st.user);
 
@@ -57,33 +67,134 @@ export default function Sidebar() {
     if (isCompact && collapsed) setCollapsed(false);
   }, [isCompact, collapsed, setCollapsed]);
 
-  const toggleCollapse = () => setCollapsed(!collapsed);
-  const handleLogoClick = () => router.push('/');
+  const toggleCollapse = () => {
+    const next = !collapsed;
 
-  const closeCompactOverlay = () => {
-    if (isCompact && sidebarMobileOpen) setSidebarMobileOpen(false);
+    track(gaEvent(GA_CTX, next ? 'Expand' : 'Collapse'), {
+      ui_id: gaUiId(GA_CTX, next ? 'Expand' : 'Collapse'),
+      collapsed: !next,
+      compact: isCompact,
+    });
+
+    setCollapsed(next);
+  };
+
+  const handleLogoClick = () => {
+    track(gaEvent(GA_CTX, 'ClickLogo'), {
+      ui_id: gaUiId(GA_CTX, 'ClickLogo'),
+      compact: isCompact,
+    });
+    router.push('/');
+  };
+
+  const closeCompactOverlay = (reason: string) => {
+    if (isCompact && sidebarMobileOpen) {
+      track(gaEvent(GA_CTX, 'CloseOverlay'), {
+        ui_id: gaUiId(GA_CTX, 'CloseOverlay'),
+        reason,
+        compact: isCompact,
+      });
+      setSidebarMobileOpen(false);
+    }
   };
 
   const handleHomeClick = () => {
-    closeCompactOverlay();
+    track(gaEvent(GA_CTX, 'OpenHome'), {
+      ui_id: gaUiId(GA_CTX, 'OpenHome'),
+      compact: isCompact,
+    });
+
+    closeCompactOverlay('home');
 
     try {
       // @ts-ignore
       useChatStore.persist?.clearStorage?.();
-    } catch {}
+      track(gaEvent(GA_CTX, 'ClearPersistStorage'), {
+        ui_id: gaUiId(GA_CTX, 'ClearPersistStorage'),
+      });
+    } catch {
+      track(gaEvent(GA_CTX, 'ClearPersistStorageFail'), {
+        ui_id: gaUiId(GA_CTX, 'ClearPersistStorageFail'),
+      });
+    }
 
     window.location.assign('/chat');
   };
 
   const handleDocsClick = () => {
+    track(gaEvent(GA_CTX, 'OpenDocs'), {
+      ui_id: gaUiId(GA_CTX, 'OpenDocs'),
+      compact: isCompact,
+      logged_in: !!user?.email,
+    });
+
     if (!user?.email) {
       alert('로그인해야 내 문서함을 볼 수 있어요.');
+
+      track(gaEvent(GA_CTX, 'RequireLoginForDocs'), {
+        ui_id: gaUiId(GA_CTX, 'RequireLoginForDocs'),
+        compact: isCompact,
+      });
+
       setShowLoginModal(true);
       return;
     }
+
     setMainView('docs');
-    closeCompactOverlay();
+    closeCompactOverlay('docs');
   };
+
+  const handleOpenRoom = (roomId: string, roomTitle: string) => {
+    track(gaEvent(GA_CTX, 'OpenRoom'), {
+      ui_id: gaUiId(GA_CTX, 'OpenRoom'),
+      room_id: roomId,
+      room_title: roomTitle,
+      compact: isCompact,
+    });
+
+    setMainView('chat');
+    setActiveRoom(roomId);
+    closeCompactOverlay('open_room');
+  };
+
+  const handleDeleteRoom = (roomId: string, roomTitle: string) => {
+    track(gaEvent(GA_CTX, 'DeleteRoom'), {
+      ui_id: gaUiId(GA_CTX, 'DeleteRoom'),
+      room_id: roomId,
+      room_title: roomTitle,
+      compact: isCompact,
+    });
+
+    deleteRoom(roomId);
+  };
+
+  const handleNewChat = () => {
+    track(gaEvent(GA_CTX, 'CreateRoom'), {
+      ui_id: gaUiId(GA_CTX, 'CreateRoom'),
+      compact: isCompact,
+    });
+
+    setMainView('chat');
+    createRoom();
+    closeCompactOverlay('new_chat');
+  };
+
+  const handleCompactCloseBtn = () => {
+    track(gaEvent(GA_CTX, 'ClickCloseBtn'), {
+      ui_id: gaUiId(GA_CTX, 'ClickCloseBtn'),
+      compact: isCompact,
+    });
+    setSidebarMobileOpen(false);
+  };
+
+  // ✅ (선택) overlay 열림/닫힘 상태 변화 트래킹 (컴팩트에서만 의미 있음)
+  useEffect(() => {
+    if (!isCompact) return;
+    track(gaEvent(GA_CTX, sidebarMobileOpen ? 'OverlayOpen' : 'OverlayClosed'), {
+      ui_id: gaUiId(GA_CTX, sidebarMobileOpen ? 'OverlayOpen' : 'OverlayClosed'),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidebarMobileOpen, isCompact]);
 
   return (
     // ✅ 컴팩트(모바일/태블릿)에서는 collapsed 클래스 적용 금지
@@ -95,7 +206,8 @@ export default function Sidebar() {
           {!(!isCompact && collapsed) && (
             <div className={s.brand}>
               <img
-                data-ga-id="Chat:Sidebar:ClickLogo"
+                data-ga-id={gaUiId(GA_CTX, 'ClickLogo')}
+                data-ga-event={gaEvent(GA_CTX, 'ClickLogo')}
                 onClick={handleLogoClick}
                 src="/logo.png"
                 className={s.fav}
@@ -107,7 +219,8 @@ export default function Sidebar() {
           {/* ✅ 데스크톱(>=1025px): 접기/펼치기 버튼 */}
           {!isCompact && (
             <button
-              data-ga-id={collapsed ? 'Chat:Sidebar:ExpandCollapse' : 'Chat:Sidebar:MinimizeCollapse'}
+              data-ga-id={gaUiId(GA_CTX, collapsed ? 'Expand' : 'Collapse')}
+              data-ga-event={gaEvent(GA_CTX, collapsed ? 'Expand' : 'Collapse')}
               onClick={toggleCollapse}
               className={s.collapseBtn}
               aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
@@ -124,9 +237,10 @@ export default function Sidebar() {
           {isCompact && (
             <button
               type="button"
-              data-ga-id="Chat:Sidebar:Close"
+              data-ga-id={gaUiId(GA_CTX, 'ClickCloseBtn')}
+              data-ga-event={gaEvent(GA_CTX, 'ClickCloseBtn')}
               className={s.mobileCloseBtn}
-              onClick={() => setSidebarMobileOpen(false)}
+              onClick={handleCompactCloseBtn}
               aria-label="사이드바 닫기"
               title="닫기"
             >
@@ -140,7 +254,8 @@ export default function Sidebar() {
           <div
             className={s.navItem}
             role="button"
-            data-ga-id="Chat:Sidebar:OpenHome"
+            data-ga-id={gaUiId(GA_CTX, 'OpenHome')}
+            data-ga-event={gaEvent(GA_CTX, 'OpenHome')}
             tabIndex={0}
             onClick={handleHomeClick}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleHomeClick()}
@@ -154,7 +269,8 @@ export default function Sidebar() {
           <div
             className={s.navItem}
             role="button"
-            data-ga-id="Chat:Sidebar:OpenDocs"
+            data-ga-id={gaUiId(GA_CTX, 'OpenDocs')}
+            data-ga-event={gaEvent(GA_CTX, 'OpenDocs')}
             tabIndex={0}
             onClick={handleDocsClick}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDocsClick()}
@@ -173,29 +289,28 @@ export default function Sidebar() {
       <div className={s.listArea}>
         {rooms.map((r) => {
           const active = r.id === activeRoomId;
+          const title = r.title || '새 대화';
           return (
             <div
               key={r.id}
               className={`${s.chatItem} ${active ? s.chatActive : ''}`}
-              data-ga-id="Chat:Sidebar:OpenRoom"
-              data-ga-label={r.title || '새 대화'}
-              onClick={() => {
-                setMainView('chat');
-                setActiveRoom(r.id);
-                closeCompactOverlay(); // ✅ 컴팩트에서 대화 선택하면 sidebar 닫힘
-              }}
+              data-ga-id={gaUiId(GA_CTX, 'OpenRoom')}
+              data-ga-event={gaEvent(GA_CTX, 'OpenRoom')}
+              data-ga-label={title}
+              onClick={() => handleOpenRoom(r.id, title)}
             >
               <MessageSquare className={active ? s.iconSmAccent : s.iconSmMuted} />
-              <span className={s.chatText}>{r.title || '새 대화'}</span>
+              <span className={s.chatText}>{title}</span>
 
               {active && !(!isCompact && collapsed) && (
                 <button
-                  data-ga-id="Chat:Sidebar:DeleteRoom"
-                  data-ga-label={r.title || '새 대화'}
+                  data-ga-id={gaUiId(GA_CTX, 'DeleteRoom')}
+                  data-ga-event={gaEvent(GA_CTX, 'DeleteRoom')}
+                  data-ga-label={title}
                   className={s.deleteBtn}
                   onClick={(e) => {
                     e.stopPropagation();
-                    deleteRoom(r.id);
+                    handleDeleteRoom(r.id, title);
                   }}
                   aria-label="대화 삭제"
                 >
@@ -211,11 +326,9 @@ export default function Sidebar() {
       <div className={s.footer}>
         <Button
           className={s.startBtn}
-          onClick={() => {
-            setMainView('chat');
-            createRoom();
-            closeCompactOverlay(); // ✅ 컴팩트에서 새 대화 만들면 sidebar 닫힘
-          }}
+          data-ga-id={gaUiId(GA_CTX, 'CreateRoom')}
+          data-ga-event={gaEvent(GA_CTX, 'CreateRoom')}
+          onClick={handleNewChat}
         >
           <Plus className={s.plus} />
           <span className={s.startLabel}>Start new chat</span>

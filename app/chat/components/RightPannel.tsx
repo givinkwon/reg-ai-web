@@ -6,6 +6,10 @@ import { ChevronLeft, ChevronDown } from 'lucide-react';
 import { useChatStore } from '@/app/store/chat';
 import s from './RightPanel.module.css';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
 /* =========================
  * 뉴스(참고 기사) 파서
  * ========================= */
@@ -26,10 +30,7 @@ function parseNewsItems(html: string | undefined | null): NewsItem[] {
     .replace(/<[^>]+>/g, '')
     .replace(/\r/g, '');
 
-  text = text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .trim();
+  text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
 
   const lines = text
     .split('\n')
@@ -119,9 +120,7 @@ function parseLawNoticeItems(html: string | undefined | null): NewsItem[] {
 
     // 예시:
     // 1. 제목 (입법예고기간: 2025-10-02~2025-11-11, URL: https://www.moleg.go.kr/....)
-    const m2 = raw.match(
-      /^\d+\.\s*(.+?)\s*\((?:입법예고기간:[^,]*,)?\s*URL:\s*([^)]+)\)/,
-    );
+    const m2 = raw.match(/^\d+\.\s*(.+?)\s*\((?:입법예고기간:[^,]*,)?\s*URL:\s*([^)]+)\)/);
     if (!m2) continue;
 
     let title = m2[1].trim();
@@ -159,10 +158,7 @@ function parseAccidentCases(html: string | undefined | null): AccidentCase[] {
     .replace(/<[^>]+>/g, '')
     .replace(/\r/g, '');
 
-  text = text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .trim();
+  text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
 
   // 2) "5) 참고 사고사례" 섹션만 잘라내기
   const idx = text.indexOf('5) 참고 사고사례');
@@ -195,7 +191,6 @@ function parseAccidentCases(html: string | undefined | null): AccidentCase[] {
       }
 
       // 제목 부분만 뽑기
-      // 예: "- [사고사례 1] 제목: 카고 크레인 붐이 고압전선과 접촉되면서 감전"
       const m = line.match(/사고사례\s*\d+\]?\s*제목[:：]?\s*(.+)$/);
       const titleText = m ? m[1].trim() : line.replace(/^[-•]\s*/, '');
 
@@ -218,23 +213,55 @@ function parseAccidentCases(html: string | undefined | null): AccidentCase[] {
   return cases;
 }
 
-
 /* =========================
  * 컴포넌트
  * ========================= */
 
+const GA_CTX = {
+  page: 'Chat',
+  section: 'RightPanel',
+  component: 'RightPanel',
+} as const;
+
+function modeName(mode: any): 'news' | 'lawNotice' | 'accident' | 'evidence' {
+  if (mode === 'news') return 'news';
+  if (mode === 'lawNotice') return 'lawNotice';
+  if (mode === 'accident') return 'accident';
+  return 'evidence';
+}
+
 export default function RightPanel() {
-  const rightOpen    = useChatStore((st) => st.rightOpen);
+  const rightOpen = useChatStore((st) => st.rightOpen);
   const setRightOpen = useChatStore((st) => st.setRightOpen);
-  const data         = useChatStore((st) => st.rightData);
+  const data = useChatStore((st) => st.rightData);
 
   const isNewsMode = data?.mode === 'news';
-  const isLawNoticeMode  = data?.mode === 'lawNotice';
+  const isLawNoticeMode = data?.mode === 'lawNotice';
   const isAccidentMode = data?.mode === 'accident';
+
+  const mode = modeName(data?.mode);
 
   // SSR/CSR 불일치 방지용
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // ✅ GA: open/close 트래킹 (상태 변화 기준)
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (rightOpen) {
+      track(gaEvent(GA_CTX, 'Open'), {
+        ui_id: gaUiId(GA_CTX, 'Open'),
+        mode,
+      });
+    } else {
+      track(gaEvent(GA_CTX, 'Close'), {
+        ui_id: gaUiId(GA_CTX, 'Close'),
+        mode,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rightOpen, mounted, mode]);
 
   // 열렸을 때 바디 스크롤 잠금
   useEffect(() => {
@@ -256,19 +283,13 @@ export default function RightPanel() {
 
   // ---- 입법예고용 데이터 (제목/링크 리스트)
   const lawNoticeItems = useMemo(
-    () =>
-      isLawNoticeMode
-        ? parseLawNoticeItems(data?.newsHtml ?? data?.rawHtml ?? '')
-        : [],
+    () => (isLawNoticeMode ? parseLawNoticeItems(data?.newsHtml ?? data?.rawHtml ?? '') : []),
     [isLawNoticeMode, data?.newsHtml, data?.rawHtml],
   );
 
   // ---- 사고사례용 데이터
   const accidentCases = useMemo(
-    () =>
-      isAccidentMode
-          ? parseAccidentCases(data?.newsHtml ?? data?.rawHtml ?? '')
-          : [],
+    () => (isAccidentMode ? parseAccidentCases(data?.newsHtml ?? data?.rawHtml ?? '') : []),
     [isAccidentMode, data?.newsHtml, data?.rawHtml],
   );
 
@@ -290,22 +311,39 @@ export default function RightPanel() {
 
   if (!mounted) return null;
 
-  const panelTitle =
-  isNewsMode
+  const panelTitle = isNewsMode
     ? '참고 기사 목록'
     : isLawNoticeMode
     ? '참고 입법예고 목록'
     : isAccidentMode
     ? '참고 사고사례'
     : '답변 근거';
-  
+
+  const closeByOverlay = () => {
+    track(gaEvent(GA_CTX, 'ClickOverlayClose'), {
+      ui_id: gaUiId(GA_CTX, 'ClickOverlayClose'),
+      mode,
+    });
+    setRightOpen(false);
+  };
+
+  const closeByBackBtn = () => {
+    track(gaEvent(GA_CTX, 'ClickBackClose'), {
+      ui_id: gaUiId(GA_CTX, 'ClickBackClose'),
+      mode,
+    });
+    setRightOpen(false);
+  };
+
   const panel = (
     <>
       {/* overlay */}
       <div
         className={`${s.overlay} ${rightOpen ? s.show : ''}`}
         aria-hidden={!rightOpen}
-        onClick={() => setRightOpen(false)}
+        onClick={closeByOverlay}
+        data-ga-event={gaEvent(GA_CTX, 'Overlay')}
+        data-ga-id={gaUiId(GA_CTX, 'Overlay')}
       />
 
       {/* sheet */}
@@ -320,17 +358,20 @@ export default function RightPanel() {
           <button
             type="button"
             className={s.backBtn}
-            onClick={() => setRightOpen(false)}
+            onClick={closeByBackBtn}
             aria-label="닫기"
+            data-ga-event={gaEvent(GA_CTX, 'ClickBackClose')}
+            data-ga-id={gaUiId(GA_CTX, 'ClickBackClose')}
           >
             <ChevronLeft
-              color="#ffffff" 
+              color="#ffffff"
               className={s.iconWhite}
               size={18}
               strokeWidth={2}
               aria-hidden
             />
           </button>
+
           <span className={s.title}>{panelTitle}</span>
           <ChevronDown className={s.iconGhost} aria-hidden />
         </div>
@@ -343,9 +384,7 @@ export default function RightPanel() {
             <>
               <div className={s.groupTitle}>참고 기사 목록</div>
               {!newsItems.length ? (
-                <div className={s.emptyBox}>
-                  참고 기사 목록을 불러오지 못했습니다.
-                </div>
+                <div className={s.emptyBox}>참고 기사 목록을 불러오지 못했습니다.</div>
               ) : (
                 <ul className={s.newsList}>
                   {newsItems.map((item, idx) => (
@@ -355,7 +394,18 @@ export default function RightPanel() {
                         className={s.newsLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          track(gaEvent(GA_CTX, 'ClickNewsLink'), {
+                            ui_id: gaUiId(GA_CTX, 'ClickNewsLink'),
+                            mode,
+                            index: idx + 1,
+                            href: item.href,
+                            title: item.title,
+                          });
+                        }}
+                        data-ga-event={gaEvent(GA_CTX, 'ClickNewsLink')}
+                        data-ga-id={gaUiId(GA_CTX, 'ClickNewsLink')}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -372,9 +422,7 @@ export default function RightPanel() {
                * ========================= */}
               <div className={s.groupTitle}>참고 입법예고 목록</div>
               {!lawNoticeItems.length ? (
-                <div className={s.emptyBox}>
-                  참고 입법예고 목록을 불러오지 못했습니다.
-                </div>
+                <div className={s.emptyBox}>참고 입법예고 목록을 불러오지 못했습니다.</div>
               ) : (
                 <ul className={s.newsList}>
                   {lawNoticeItems.map((item, idx) => (
@@ -384,7 +432,18 @@ export default function RightPanel() {
                         className={s.newsLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          track(gaEvent(GA_CTX, 'ClickLawNoticeLink'), {
+                            ui_id: gaUiId(GA_CTX, 'ClickLawNoticeLink'),
+                            mode,
+                            index: idx + 1,
+                            href: item.href,
+                            title: item.title,
+                          });
+                        }}
+                        data-ga-event={gaEvent(GA_CTX, 'ClickLawNoticeLink')}
+                        data-ga-id={gaUiId(GA_CTX, 'ClickLawNoticeLink')}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -395,73 +454,42 @@ export default function RightPanel() {
               )}
             </>
           ) : isAccidentMode ? (
-              <>
-                <div className={s.groupTitle}>참고 사고사례</div>
-                {!accidentCases.length ? (
-                  <div className={s.emptyBox}>
-                    참고 사고사례를 찾지 못했습니다.
-                  </div>
-                ) : (
-                  <ul className={s.newsList}>
-                    {accidentCases.map((item, idx) => (
-                      <li key={idx} className={s.newsItem}>
-                        <div className={s.newsLink}>
-                          <span className={s.newsIndex}>{idx + 1}.</span>
-                          <span className={s.newsTitle}>{item.title}</span>
-                        </div>
-                        {item.body && (
-                          <div className={s.evSnippet}>{item.body}</div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            ) : (
-              <>
-                {/* ✅ 기본 모드: 답변 근거 + 관련 별표/서식만 표시 */}
-                <div className={s.groupTitle}>답변 근거</div>
-                {!evidence.length ? (
-                  <div className={s.emptyBox}>
-                    답변에서 근거를 찾지 못했습니다.
-                  </div>
-                ) : (
-                  <ul className={s.evList}>
-                    {evidence.map((it, i) => (
-                      <li key={`ev-${i}`} className={s.evItem}>
-                        <div className={s.evTitle}>
-                          {it.href ? (
-                            <a
-                              href={it.href}
-                              className={s.linkA}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="새 탭으로 열기"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {it.title}
-                            </a>
-                          ) : (
-                            it.title
-                          )}
-                        </div>
-                        {it.snippet && (
-                          <div className={s.evSnippet}>{it.snippet}</div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-  
-                <div className={s.groupTitle}>관련 별표/서식</div>
-                {!forms.length ? (
-                  <div className={s.emptyBox}>
-                    항목을 선택하면 상세가 표시됩니다.
-                  </div>
-                ) : (
-                  <ul className={s.linkList}>
-                    {forms.map((it, i) => (
-                      <li key={`form-${i}`} className={s.linkItem}>
+            <>
+              <div className={s.groupTitle}>참고 사고사례</div>
+              {!accidentCases.length ? (
+                <div className={s.emptyBox}>참고 사고사례를 찾지 못했습니다.</div>
+              ) : (
+                <ul className={s.newsList}>
+                  {accidentCases.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className={s.newsItem}
+                      data-ga-event={gaEvent(GA_CTX, 'ViewAccidentCase')}
+                      data-ga-id={gaUiId(GA_CTX, 'ViewAccidentCase')}
+                      // ✅ 화면에 보일 때까지 정확히 트래킹하려면 IntersectionObserver가 필요하지만,
+                      // 여기서는 "렌더된 목록 기준"으로 최소 트래킹만 남김.
+                    >
+                      <div className={s.newsLink}>
+                        <span className={s.newsIndex}>{idx + 1}.</span>
+                        <span className={s.newsTitle}>{item.title}</span>
+                      </div>
+                      {item.body && <div className={s.evSnippet}>{item.body}</div>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <>
+              {/* ✅ 기본 모드: 답변 근거 + 관련 별표/서식만 표시 */}
+              <div className={s.groupTitle}>답변 근거</div>
+              {!evidence.length ? (
+                <div className={s.emptyBox}>답변에서 근거를 찾지 못했습니다.</div>
+              ) : (
+                <ul className={s.evList}>
+                  {evidence.map((it, i) => (
+                    <li key={`ev-${i}`} className={s.evItem}>
+                      <div className={s.evTitle}>
                         {it.href ? (
                           <a
                             href={it.href}
@@ -469,20 +497,70 @@ export default function RightPanel() {
                             target="_blank"
                             rel="noopener noreferrer"
                             title="새 탭으로 열기"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              track(gaEvent(GA_CTX, 'ClickEvidenceLink'), {
+                                ui_id: gaUiId(GA_CTX, 'ClickEvidenceLink'),
+                                mode,
+                                index: i + 1,
+                                href: it.href,
+                                title: it.title,
+                              });
+                            }}
+                            data-ga-event={gaEvent(GA_CTX, 'ClickEvidenceLink')}
+                            data-ga-id={gaUiId(GA_CTX, 'ClickEvidenceLink')}
                           >
                             {it.title}
                           </a>
                         ) : (
                           it.title
                         )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
-          </div>
+                      </div>
+                      {it.snippet && <div className={s.evSnippet}>{it.snippet}</div>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className={s.groupTitle}>관련 별표/서식</div>
+              {!forms.length ? (
+                <div className={s.emptyBox}>항목을 선택하면 상세가 표시됩니다.</div>
+              ) : (
+                <ul className={s.linkList}>
+                  {forms.map((it, i) => (
+                    <li key={`form-${i}`} className={s.linkItem}>
+                      {it.href ? (
+                        <a
+                          href={it.href}
+                          className={s.linkA}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="새 탭으로 열기"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            track(gaEvent(GA_CTX, 'ClickFormLink'), {
+                              ui_id: gaUiId(GA_CTX, 'ClickFormLink'),
+                              mode,
+                              index: i + 1,
+                              href: it.href,
+                              title: it.title,
+                            });
+                          }}
+                          data-ga-event={gaEvent(GA_CTX, 'ClickFormLink')}
+                          data-ga-id={gaUiId(GA_CTX, 'ClickFormLink')}
+                        >
+                          {it.title}
+                        </a>
+                      ) : (
+                        it.title
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
       </aside>
     </>
   );

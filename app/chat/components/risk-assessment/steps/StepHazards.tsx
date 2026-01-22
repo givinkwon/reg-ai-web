@@ -6,6 +6,10 @@ import AddItemSheet from '../ui/AddItemSheet';
 import type { RiskAssessmentDraft, RiskLevel } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
 type Props = {
   draft: RiskAssessmentDraft;
   setDraft: React.Dispatch<React.SetStateAction<RiskAssessmentDraft>>;
@@ -127,6 +131,12 @@ function extractItems(payload: any): string[] {
   return Array.from(new Set(arr.map(toText).map(norm).filter(Boolean)));
 }
 
+const GA_CTX = {
+  page: 'Chat',
+  section: 'RiskAssessment',
+  step: 'StepHazards',
+} as const;
+
 export default function StepHazards({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
 
@@ -184,31 +194,80 @@ export default function StepHazards({ draft, setDraft }: Props) {
     return (targetTask.processes ?? []).find((p) => p.id === target.processId) ?? null;
   }, [targetTask, target]);
 
+  // ✅ GA: view 1회
+  const viewedRef = useRef(false);
+  useEffect(() => {
+    if (viewedRef.current) return;
+    viewedRef.current = true;
+
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      user_type: user?.email ? 'user' : 'guest',
+      tasks_count: tasks.length,
+      processes_count: tasks.reduce((acc, t) => acc + (t.processes?.length ?? 0), 0),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openSheet = (taskId: string, processId: string) => {
     setTarget({ taskId, processId });
     setSheetOpen(true);
+
+    const t = tasks.find((x) => x.id === taskId);
+    const p = (t?.processes ?? []).find((x) => x.id === processId);
+
+    track(gaEvent(GA_CTX, 'OpenAddSheet'), {
+      ui_id: gaUiId(GA_CTX, 'OpenAddSheet'),
+      task_id: taskId,
+      process_id: processId,
+      process_name_len: norm(t?.title).length,
+      sub_process_len: norm(p?.title).length,
+    });
   };
 
   const addHazard = (title: string) => {
     const v = norm(title);
     if (!v || !target) return;
 
+    const t = tasks.find((x) => x.id === target.taskId);
+    const p = (t?.processes ?? []).find((x) => x.id === target.processId);
+    const existingCount = (p?.hazards ?? []).length;
+
+    track(gaEvent(GA_CTX, 'AddHazardManual'), {
+      ui_id: gaUiId(GA_CTX, 'AddHazardManual'),
+      task_id: target.taskId,
+      process_id: target.processId,
+      hazard_title: v,
+      hazard_title_len: v.length,
+      existing_count: existingCount,
+      process_name: norm(t?.title),
+      sub_process: norm(p?.title),
+    });
+
     setDraft((prev) => ({
       ...prev,
-      tasks: (prev.tasks ?? []).map((t) => {
-        if (t.id !== target.taskId) return t;
+      tasks: (prev.tasks ?? []).map((tt) => {
+        if (tt.id !== target.taskId) return tt;
         return {
-          ...t,
-          processes: (t.processes ?? []).map((p) => {
-            if (p.id !== target.processId) return p;
+          ...tt,
+          processes: (tt.processes ?? []).map((pp) => {
+            if (pp.id !== target.processId) return pp;
 
-            const exists = new Set((p.hazards ?? []).map((h: any) => norm(h.title)));
-            if (exists.has(v)) return p;
+            const exists = new Set((pp.hazards ?? []).map((h: any) => norm(h.title)));
+            if (exists.has(v)) {
+              track(gaEvent(GA_CTX, 'AddHazardManualDuplicate'), {
+                ui_id: gaUiId(GA_CTX, 'AddHazardManualDuplicate'),
+                task_id: target.taskId,
+                process_id: target.processId,
+                hazard_title: v,
+              });
+              return pp;
+            }
 
             return {
-              ...p,
+              ...pp,
               hazards: [
-                ...(p.hazards ?? []),
+                ...(pp.hazards ?? []),
                 { id: uid(), title: v, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' },
               ],
             };
@@ -231,6 +290,13 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
     if (items.length === 0) return;
 
+    track(gaEvent(GA_CTX, 'RestoreFromCache'), {
+      ui_id: gaUiId(GA_CTX, 'RestoreFromCache'),
+      task_id: taskId,
+      process_id: processId,
+      hazards_count: items.length,
+    });
+
     setDraft((prev) => ({
       ...prev,
       tasks: (prev.tasks ?? []).map((t) => {
@@ -243,10 +309,28 @@ export default function StepHazards({ draft, setDraft }: Props) {
             const exists = new Set((p.hazards ?? []).map((hh: any) => norm(hh.title)));
             const next = [...(p.hazards ?? [])];
 
+            let added = 0;
             for (const h of items) {
               if (exists.has(h.title)) continue;
-              next.push({ id: uid(), title: h.title, likelihood: h.likelihood, severity: h.severity, controls: h.controls });
+              next.push({
+                id: uid(),
+                title: h.title,
+                likelihood: h.likelihood,
+                severity: h.severity,
+                controls: h.controls,
+              });
               exists.add(h.title);
+              added += 1;
+            }
+
+            if (added > 0) {
+              track(gaEvent(GA_CTX, 'RestoreFromCacheMerged'), {
+                ui_id: gaUiId(GA_CTX, 'RestoreFromCacheMerged'),
+                task_id: taskId,
+                process_id: processId,
+                added,
+                kept_existing: next.length - added,
+              });
             }
 
             return { ...p, hazards: next };
@@ -261,6 +345,13 @@ export default function StepHazards({ draft, setDraft }: Props) {
     const uniq = Array.from(new Set((titles ?? []).map(norm))).filter(Boolean);
     if (uniq.length === 0) return;
 
+    track(gaEvent(GA_CTX, 'AddHazardsFromApi'), {
+      ui_id: gaUiId(GA_CTX, 'AddHazardsFromApi'),
+      task_id: taskId,
+      process_id: processId,
+      titles_count: uniq.length,
+    });
+
     setDraft((prev) => ({
       ...prev,
       tasks: (prev.tasks ?? []).map((t) => {
@@ -273,11 +364,21 @@ export default function StepHazards({ draft, setDraft }: Props) {
             const exists = new Set((p.hazards ?? []).map((h: any) => norm(h.title)));
             const next = [...(p.hazards ?? [])];
 
+            let added = 0;
             for (const title of uniq) {
               if (exists.has(title)) continue;
               next.push({ id: uid(), title, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' });
               exists.add(title);
+              added += 1;
             }
+
+            track(gaEvent(GA_CTX, 'AddHazardsFromApiMerged'), {
+              ui_id: gaUiId(GA_CTX, 'AddHazardsFromApiMerged'),
+              task_id: taskId,
+              process_id: processId,
+              added,
+              skipped_duplicates: uniq.length - added,
+            });
 
             return { ...p, hazards: next };
           }),
@@ -287,6 +388,19 @@ export default function StepHazards({ draft, setDraft }: Props) {
   };
 
   const removeChip = (taskId: string, processId: string, hazardId: string) => {
+    const t = tasks.find((x) => x.id === taskId);
+    const p = (t?.processes ?? []).find((x) => x.id === processId);
+    const h = (p?.hazards ?? []).find((x: any) => x.id === hazardId);
+
+    track(gaEvent(GA_CTX, 'RemoveHazard'), {
+      ui_id: gaUiId(GA_CTX, 'RemoveHazard'),
+      task_id: taskId,
+      process_id: processId,
+      hazard_id: hazardId,
+      hazard_title: norm(h?.title),
+      source: 'chip_click',
+    });
+
     setDraft((prev) => ({
       ...prev,
       tasks: (prev.tasks ?? []).map((t) => {
@@ -384,26 +498,52 @@ export default function StepHazards({ draft, setDraft }: Props) {
           attemptRef.current.set(scopeKey, Date.now());
           setAutoLoading((prev) => ({ ...prev, [uiKey]: true }));
 
+          track(gaEvent(GA_CTX, 'AutoFillFetchStart'), {
+            ui_id: gaUiId(GA_CTX, 'AutoFillFetchStart'),
+            task_id: t.id,
+            process_id: p.id,
+            process_name: processName,
+            sub_process: subProcess,
+            user_type: user?.email ? 'user' : 'guest',
+          });
+
           try {
             const qs = new URLSearchParams();
             qs.set('endpoint', 'risk-situations');
             qs.set('process_name', processName);
             qs.set('sub_process', subProcess);
             qs.set('limit', '80');
-            
+
             try {
               // ✅ signal 제거 (AbortError 방지)
+              const startedAt = performance.now();
               const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
                 cache: 'no-store',
               });
+              const ms = Math.round(performance.now() - startedAt);
 
               if (!res.ok) {
                 attemptRef.current.delete(scopeKey);
+                track(gaEvent(GA_CTX, 'AutoFillFetchFail'), {
+                  ui_id: gaUiId(GA_CTX, 'AutoFillFetchFail'),
+                  task_id: t.id,
+                  process_id: p.id,
+                  status: res.status,
+                  ms,
+                });
                 continue;
               }
 
               const raw = await res.json();
               const items = extractItems(raw);
+
+              track(gaEvent(GA_CTX, 'AutoFillFetchSuccess'), {
+                ui_id: gaUiId(GA_CTX, 'AutoFillFetchSuccess'),
+                task_id: t.id,
+                process_id: p.id,
+                ms,
+                items_count: items.length,
+              });
 
               if (items.length > 0) {
                 if (!cancelled) addHazardsBulk(t.id, p.id, items);
@@ -429,7 +569,14 @@ export default function StepHazards({ draft, setDraft }: Props) {
                 attemptRef.current.delete(scopeKey);
               }
             } catch (e: any) {
-              console.log('[StepProcesses] fetch rejected', e?.name, e?.message);
+              track(gaEvent(GA_CTX, 'AutoFillFetchError'), {
+                ui_id: gaUiId(GA_CTX, 'AutoFillFetchError'),
+                task_id: t.id,
+                process_id: p.id,
+                name: e?.name ?? '',
+                message: e?.message ?? '',
+              });
+              console.log('[StepHazards] fetch rejected', e?.name, e?.message);
               throw e;
             }
           } catch (e: any) {
@@ -506,7 +653,13 @@ export default function StepHazards({ draft, setDraft }: Props) {
                 <div key={p.id} className={s.procBlock}>
                   <div className={s.procHead}>
                     <div className={s.procTitle}>{p.title}</div>
-                    <button className={s.addBtn} onClick={() => openSheet(t.id, p.id)}>
+                    <button
+                      className={s.addBtn}
+                      onClick={() => openSheet(t.id, p.id)}
+                      type="button"
+                      data-ga-event={gaEvent(GA_CTX, 'OpenAddSheet')}
+                      data-ga-id={gaUiId(GA_CTX, 'OpenAddSheet')}
+                    >
                       위험요인 추가
                     </button>
                   </div>
@@ -524,6 +677,9 @@ export default function StepHazards({ draft, setDraft }: Props) {
                           className={s.chip}
                           onClick={() => removeChip(t.id, p.id, h.id)}
                           title="클릭하면 제거됩니다"
+                          data-ga-event={gaEvent(GA_CTX, 'RemoveHazard')}
+                          data-ga-id={gaUiId(GA_CTX, 'RemoveHazard')}
+                          data-ga-text={norm(h.title)}
                         >
                           {h.title} <span className={s.chipX}>×</span>
                         </button>
@@ -542,7 +698,10 @@ export default function StepHazards({ draft, setDraft }: Props) {
         title="유해·위험요인 추가"
         placeholder="추가할 위험요인을 입력하세요"
         suggestions={SUGGEST_HAZARDS}
-        onClose={() => setSheetOpen(false)}
+        onClose={() => {
+          track(gaEvent(GA_CTX, 'CloseAddSheet'), { ui_id: gaUiId(GA_CTX, 'CloseAddSheet') });
+          setSheetOpen(false);
+        }}
         onAdd={(v) => addHazard(v)}
         searchEndpoint="risk-situations"
         searchParams={{
