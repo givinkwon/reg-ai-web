@@ -65,7 +65,7 @@ function toItems(sections: Sections): ChecklistItem[] {
       id: uid(),
       category: cat,
       question: q,
-      rating: undefined,
+      rating: 'O', 
       note: '',
     })),
   );
