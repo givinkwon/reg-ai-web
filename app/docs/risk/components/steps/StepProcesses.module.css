@@ -1,0 +1,116 @@
+/* app/chat/risk/steps/StepProcesses.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.headerDesc {
+  font-size: 0.95rem;
+  color: var(--text-sub);
+  background-color: var(--bg-sub);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 작업 블록 카드 */
+.taskBlock {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  background-color: var(--bg-sub);
+  border-bottom: 1px solid var(--border);
+}
+
+.taskTitle {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 1.05rem;
+}
+
+.addBtn {
+  font-size: 0.85rem;
+  height: 32px;
+}
+
+/* 공정 리스트 영역 */
+.procList {
+  padding: 1.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  min-height: 60px;
+}
+
+/* 로딩/빈 상태 */
+.loadingBox, .emptyBox {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  padding: 1rem;
+  background-color: #f9fafb; /* light gray */
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+}
+
+/* 공정 칩 스타일 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  background-color: white;
+  border: 1px solid var(--primary-light);
+  border-radius: 20px;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+}
+
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(0,0,0,0.05);
+  color: #999;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.removeBtn:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+}

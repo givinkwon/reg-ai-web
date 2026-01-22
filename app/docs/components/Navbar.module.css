@@ -1,0 +1,106 @@
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #333;
+}
+
+.logoIcon {
+  color: #6c5ce7;
+}
+
+.logoText {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.desktopMenu {
+  display: flex;
+  gap: 2rem;
+}
+
+.navLink {
+  text-decoration: none;
+  color: #555;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.navLink:hover {
+  color: #6c5ce7;
+}
+
+.navLink.active {
+  color: #6c5ce7;
+  border-bottom-color: #6c5ce7;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobileToggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* 모바일 스타일 */
+.mobileMenu {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+.mobileLink {
+  padding: 0.75rem;
+  font-weight: 600;
+  color: #444;
+  border-radius: 8px;
+}
+.mobileLink:hover {
+  background-color: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+  .desktopMenu { display: none; }
+  .mobileToggle { display: block; }
+  .loginBtn, .trialBtn { display: none; } /* 공간 부족 시 버튼 숨김 */
+}

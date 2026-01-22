@@ -1,0 +1,140 @@
+/* app/chat/risk/steps/StepHazards.module.css */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.topNote {
+  font-size: 0.95rem;
+  color: var(--text-sub);
+  background-color: var(--bg-sub);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.taskBlock {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-bottom: 1rem;
+}
+
+.taskTitle {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  padding: 1rem 1.2rem;
+  background-color: var(--bg-sub);
+  border-bottom: 1px solid var(--border);
+}
+
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+}
+
+/* 세부 공정 블록 */
+.procBlock {
+  padding: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.procBlock:last-child {
+  border-bottom: none;
+}
+
+.procHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.procTitle {
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.procTitle::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 16px;
+  background-color: var(--primary);
+  border-radius: 2px;
+}
+
+.addBtn {
+  font-size: 0.85rem;
+  height: 32px;
+}
+
+/* 칩 영역 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  min-height: 40px;
+}
+
+.loadingBox, .emptyBox {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.9rem;
+  background-color: #fff0f0; /* 위험요인이므로 붉은 틴트 */
+  border: 1px solid #fecaca;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  color: #991b1b;
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  background-color: #fee2e2;
+  border-color: #f87171;
+}
+
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(0,0,0,0.05);
+  color: #991b1b;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+
+.removeBtn:hover {
+  background-color: #ef4444;
+  color: white;
+}

@@ -1,0 +1,309 @@
+/* app/chat/tbm/page.module.css */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background-color: #fff;
+  min-height: 100vh;
+}
+
+/* === 1. 액션 섹션 (보라색 그라데이션) === */
+.actionSection {
+  width: 100%;
+  background-color: #f8f9fa;
+  padding: 4rem 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.actionBox {
+  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+  width: 100%;
+  max-width: 900px;
+  border-radius: 20px;
+  padding: 3.5rem 2rem;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 40px rgba(108, 92, 231, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+
+.iconWrapper {
+  background-color: rgba(255, 255, 255, 0.2);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(5px);
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  letter-spacing: -0.5px;
+}
+
+.desc {
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.6;
+  opacity: 0.95;
+  font-weight: 400;
+}
+
+.btnGroup {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* 버튼 스타일 */
+.whiteBtn {
+  background-color: #ffffff !important;
+  color: #6c5ce7 !important;
+  border: none !important;
+  font-weight: 700 !important;
+  height: 56px !important;
+  padding: 0 2rem !important;
+  font-size: 1.1rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+.whiteBtn:hover {
+  background-color: #f8f9fa !important;
+  transform: translateY(-2px);
+}
+
+.glassBtn {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  height: 56px !important;
+  padding: 0 1.5rem !important;
+  font-size: 1.05rem !important;
+  backdrop-filter: blur(4px);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+.glassBtn:hover {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* === 2. 정보 섹션 === */
+.infoSection {
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 5rem 1.5rem;
+  text-align: center;
+}
+
+.sectionTitle {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 3rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 3rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+}
+
+.stepBadge {
+  width: 40px;
+  height: 40px;
+  background-color: #6c5ce7;
+  color: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
+}
+
+.cardTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #222;
+}
+
+.cardDesc {
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* === 3. 추가 기능(특장점) 섹션 === */
+.featureSection {
+  width: 100%;
+  background-color: #f8f9fa;
+  padding: 4rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.featureGrid {
+  max-width: 900px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.featureItem {
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: transform 0.2s;
+}
+.featureItem:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+.featureIcon {
+  color: #6c5ce7;
+  background-color: #f3f0ff;
+  padding: 0.8rem;
+  border-radius: 10px;
+}
+
+.featureText h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.featureText p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* === 4. FAQ 섹션 === */
+.faqSection {
+  width: 100%;
+  background-color: #fff;
+  padding: 4rem 1.5rem 6rem;
+  border-top: 1px solid #eee;
+}
+
+.faqContainer {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faqItem {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #eee;
+}
+
+.faqQ {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.faqA {
+  color: #555;
+  line-height: 1.6;
+  padding-left: 1rem;
+  border-left: 3px solid #6c5ce7;
+}
+
+/* === Wizard Placeholder 스타일 === */
+.wizardContainer {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+}
+
+.wizardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.wizardTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.wizardContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+  padding: 2rem;
+}
+
+.placeholderBox {
+  background-color: #fff;
+  border: 1px dashed #ccc;
+  border-radius: 16px;
+  padding: 4rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .title { font-size: 2rem; }
+  .actionBox { padding: 2.5rem 1.5rem; }
+  .grid { gap: 2rem; }
+  .btnGroup { width: 100%; flex-direction: column; }
+  .whiteBtn, .glassBtn { width: 100%; }
+}
