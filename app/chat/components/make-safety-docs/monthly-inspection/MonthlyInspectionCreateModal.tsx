@@ -69,13 +69,14 @@ function formatKoreanWeekLabel(d: Date) {
   return `${yyyy}년 ${mm}월 ${week}주차`;
 }
 
+// (기존) rating: undefined -> (수정) rating: 'O'
 function toItems(sections: Sections): ChecklistItem[] {
   return (Object.keys(sections) as ChecklistCategory[]).flatMap((cat) =>
     (sections[cat] ?? []).map((q) => ({
       id: uid(),
       category: cat,
       question: q,
-      rating: undefined,
+      rating: 'O', 
       note: '',
     })),
   );
