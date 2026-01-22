@@ -67,10 +67,10 @@
 
 .mark { font-weight: 800; font-family: monospace; }
 
-/* Active States */
-.O { background: #ecfdf5 !important; border-color: #10b981 !important; color: #047857 !important; }
-.△ { background: #fffbeb !important; border-color: #f59e0b !important; color: #b45309 !important; }
-.X { background: #fef2f2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
+/* ✅ 수정된 클래스 이름 (안전한 영문명) */
+.rate_O { background: #ecfdf5 !important; border-color: #10b981 !important; color: #047857 !important; }
+.rate_Tri { background: #fffbeb !important; border-color: #f59e0b !important; color: #b45309 !important; }
+.rate_X { background: #fef2f2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
 
 .note {
   width: 100%;

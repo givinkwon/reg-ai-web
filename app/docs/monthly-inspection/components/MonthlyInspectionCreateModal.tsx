@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, FileText, Loader2, ArrowLeft } from 'lucide-react';
+import { X, FileText, Loader2 } from 'lucide-react';
 import s from './MonthlyInspectionCreateModal.module.css';
 
 import MonthlyInspectionDetailTaskAutocompleteInput from './MonthlyInspectionDetailTaskAutocompleteInput';
@@ -15,7 +15,7 @@ import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 export type Rating = 'O' | '△' | 'X';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'MonthlyInspection' } as const;
+// ... (기존 타입 정의 및 상수 유지)
 
 export type ChecklistCategory =
   | '사업장 점검 사항'
@@ -48,6 +48,7 @@ type Props = {
   onRequireLogin?: () => void;
 };
 
+// ... (uid, norm, formatKoreanWeekLabel 함수 등 유지)
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 
@@ -59,6 +60,7 @@ function formatKoreanWeekLabel(d: Date) {
   return `${yyyy}년 ${mm}월 ${week}주차`;
 }
 
+// ✅ [확인] 초기 생성 시 rating 'O' 설정
 function toItems(sections: Sections): ChecklistItem[] {
   return (Object.keys(sections) as ChecklistCategory[]).flatMap((cat) =>
     (sections[cat] ?? []).map((q) => ({
@@ -71,6 +73,7 @@ function toItems(sections: Sections): ChecklistItem[] {
   );
 }
 
+// ... (cleanSections 등 나머지 헬퍼 함수 유지)
 function cleanSections(nextSections: Sections): Sections {
   return {
     '사업장 점검 사항': Array.from(new Set((nextSections['사업장 점검 사항'] ?? []).map(norm).filter(Boolean))),
@@ -79,6 +82,21 @@ function cleanSections(nextSections: Sections): Sections {
       new Set((nextSections['세부 작업 및 공정별 점검 사항'] ?? []).map(norm).filter(Boolean)),
     ),
   };
+}
+
+// ✅ Draft 로드/저장 로직 추가 (필요한 경우)
+const DRAFT_KEY = 'regai:monthlyInspection:draft:v1';
+function loadDraft(): any {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+function saveDraft(data: any) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...data, t: Date.now() }));
+  } catch {}
 }
 
 export default function MonthlyInspectionCreateModal({
@@ -103,7 +121,6 @@ export default function MonthlyInspectionCreateModal({
   const [genError, setGenError] = useState<string>('');
   const [exportLoading, setExportLoading] = useState(false);
 
-  // Alert State
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', lines: [] as string[], confirmText: '확인', showClose: false });
   const alertOnConfirmRef = useRef<(() => void) | null>(null);
@@ -126,15 +143,39 @@ export default function MonthlyInspectionCreateModal({
     alertOnConfirmRef.current = null;
   };
 
-  // Reset or Restore on Open
+  // ✅ [수정] 모달 열릴 때 초기화 및 Draft 로드 (데이터 마이그레이션 포함)
   useEffect(() => {
     if (!open) {
       setGenLoading(false);
       setExportLoading(false);
       return;
     }
-    // (Optional: Load from localStorage draft here if needed)
+
+    // 이미 데이터가 있으면(defaultValue 등) 패스
+    if (detailTasks.length > 0) return;
+
+    const draft = loadDraft();
+    if (draft) {
+      setDetailTasks(draft.detailTasks || []);
+      setSections(draft.sections || {});
+      
+      // ✅ [중요] 기존 Draft 데이터에 rating이 없으면 'O'로 강제 설정 (마이그레이션)
+      const loadedItems = (draft.results as ChecklistItem[]) || [];
+      const migratedItems = loadedItems.map(it => ({
+        ...it,
+        rating: it.rating || 'O' // 여기서 undefined를 'O'로 바꿈
+      }));
+      
+      setItems(migratedItems);
+      setStep(draft.step || 0);
+    }
   }, [open]);
+
+  // ✅ 상태 변경 시 Draft 저장
+  useEffect(() => {
+    if (!open) return;
+    saveDraft({ detailTasks, sections, results: items, step });
+  }, [open, detailTasks, sections, items, step]);
 
   if (!open && !alertOpen) return null;
 
@@ -169,7 +210,7 @@ export default function MonthlyInspectionCreateModal({
 
       const cleaned = cleanSections(next);
       setSections(cleaned);
-      setItems(toItems(cleaned));
+      setItems(toItems(cleaned)); // ✅ 여기서 'O' 기본값 들어감
       setStep(1);
     } catch (e: any) {
       setGenError(e.message || '오류가 발생했습니다.');
@@ -181,7 +222,7 @@ export default function MonthlyInspectionCreateModal({
   const handleConfirmChecklist = (nextSections: Sections) => {
     const cleaned = cleanSections(nextSections);
     setSections(cleaned);
-    setItems(toItems(cleaned));
+    setItems(toItems(cleaned)); // ✅ 여기서도 'O' 기본값
     setStep(2);
   };
 
@@ -253,7 +294,7 @@ export default function MonthlyInspectionCreateModal({
   };
 
   const canGoStep1 = detailTasks.length > 0;
-  const canFinish = items.some((it) => !!it.rating);
+  const canFinish = items.length > 0;
 
   return (
     <>

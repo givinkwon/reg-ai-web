@@ -40,6 +40,14 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
     return { done, total: items.length };
   }, [items]);
 
+  // ✅ CSS 클래스 매핑 함수
+  const getRatingClass = (r: Rating) => {
+    if (r === 'O') return s.rate_O;
+    if (r === '△') return s.rate_Tri;
+    if (r === 'X') return s.rate_X;
+    return '';
+  };
+
   return (
     <div className={s.wrap}>
       <div className={s.header}>
@@ -57,15 +65,20 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
                 <div className={s.question}>{it.question}</div>
                 
                 <div className={s.ratingRow}>
-                  {RATINGS.map(r => (
-                    <button
-                      key={r.key}
-                      className={`${s.rateBtn} ${it.rating === r.key ? s[r.key] : ''}`}
-                      onClick={() => updateItem(it.id, { rating: r.key })}
-                    >
-                      <span className={s.mark}>{r.key}</span> {r.label}
-                    </button>
-                  ))}
+                  {RATINGS.map(r => {
+                    // ✅ rating 비교 시 안전하게 처리 (it.rating이 undefined면 선택 안 됨)
+                    const isActive = it.rating === r.key;
+                    return (
+                      <button
+                        key={r.key}
+                        type="button"
+                        className={`${s.rateBtn} ${isActive ? getRatingClass(r.key) : ''}`}
+                        onClick={() => updateItem(it.id, { rating: r.key })}
+                      >
+                        <span className={s.mark}>{r.key}</span> {r.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <textarea
