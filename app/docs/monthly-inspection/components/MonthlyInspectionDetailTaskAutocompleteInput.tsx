@@ -15,7 +15,7 @@ const norm = (v?: string | null) => (v ?? '').trim();
 export default function MonthlyInspectionDetailTaskAutocompleteInput({
   value,
   onChange,
-  placeholder = '세부 작업 입력 (예: 용접)',
+  placeholder = '작업 입력 (예: 용접)',
 }: Props) {
   const [q, setQ] = useState('');
   const [items, setItems] = useState<string[]>([]);

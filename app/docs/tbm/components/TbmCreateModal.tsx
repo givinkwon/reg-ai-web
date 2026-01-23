@@ -320,7 +320,7 @@ export default function TbmCreateModal({
                   <button
                     className={s.removeBtn}
                     onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}
-                    disabled={attendees.length <= 1}
+                    
                   >
                     <X size={14} />
                   </button>
@@ -345,9 +345,21 @@ export default function TbmCreateModal({
         confirmText={alertConfig.confirmText}
         showClose={alertConfig.showClose}
         onConfirm={() => {
+          // 1. [중요] 실행할 함수를 먼저 변수에 '백업'해둡니다.
+          // closeAlert()가 실행되면 ref가 초기화되어 함수가 사라질 수 있기 때문입니다.
           const fn = alertOnConfirmRef.current;
-          if (fn) fn();
-          else closeAlert();
+
+          // 2. 알림창을 닫습니다. (화면에서 제거)
+          closeAlert();
+
+          // 3. 백업해둔 함수가 있다면 실행합니다.
+          if (fn) {
+            // React 상태 업데이트가 겹치는 것을 방지하기 위해 
+            // 아주 짧은 딜레이(setTimeout)를 주면 더 확실하게 뜹니다.
+            setTimeout(() => {
+              fn();
+            }, 100); 
+          }
         }}
         onClose={closeAlert}
       />

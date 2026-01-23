@@ -103,7 +103,7 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
   value,
   onChange,
   fetcher,
-  placeholder = '세부 작업을 입력하세요 (예: 플라스틱 사출 금형 제조)',
+  placeholder = '작업을 입력하세요 (예: 플라스틱 사출 금형 제조)',
   minQueryLength = 1,
 }: Props) {
   const [q, setQ] = useState('');
@@ -499,7 +499,7 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
       </div>
 
       {showList && (
-        <div className={cs.list} role="listbox" aria-label="세부 작업 자동완성">
+        <div className={cs.list} role="listbox" aria-label="작업 자동완성">
           {items.length > 0 ? (
             items.map((it, idx) => {
               const active = idx === activeIdx;

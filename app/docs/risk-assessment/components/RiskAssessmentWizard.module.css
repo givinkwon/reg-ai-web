@@ -67,10 +67,26 @@
   gap: 0.6rem;
   padding: 1rem 0;
   cursor: pointer;
+  margin-left: 2vw;
+  padding: 2vw;
+  
+  /* ▼▼▼ [수정된 부분] 버튼 기본 스타일 초기화 ▼▼▼ */
+  background: none;        /* 배경색 제거 (투명하게) */
+  background-color: transparent; 
+  border: none;            /* 기본 테두리 제거 */
+  outline: none;           /* 포커스 라인 제거 (선택사항) */
+  font-family: inherit;    /* 폰트 상속 */
+  font-size: 1rem;         /* 글자 크기 명시 (필요시) */
+  /* ▲▲▲ --------------------------------- ▲▲▲ */
+
   color: #999;
-  border-bottom: 2px solid transparent;
+  border-bottom: 2px solid transparent; /* 밑줄 디자인 유지를 위해 필수 */
   transition: all 0.2s;
   white-space: nowrap;
+}
+
+.tab:hover {
+  color: white;
 }
 
 .tabPast {
@@ -138,6 +154,7 @@
   border-radius: 8px;
   border: 1px solid #ddd;
   background-color: #fff;
+  margin-right: 2vw;
   color: #555;
   font-weight: 600;
   cursor: pointer;
@@ -146,6 +163,9 @@
 .navBtn:disabled {
   color: #ccc;
   cursor: not-allowed;
+}
+.navBtn:hover {
+  color: white;
 }
 
 .navBtnPrimary {
@@ -171,7 +191,7 @@
   padding: 0.8rem 2rem;
   border-radius: 8px;
   border: none;
-  background-color: #10b981; /* Green */
+  background-color: #2388FF; /* Green */
   color: #fff;
   font-weight: 700;
   cursor: pointer;

@@ -16,7 +16,7 @@ const MENU_ITEMS = [
   {
     id: 'risk',
     title: '위험성평가',
-    desc: '유해·위험요인 파악부터 감소대책 수립까지, 업종별 AI 추천에 따라 자동화하세요!',
+    desc: '유해·위험요인 파악부터 감소대책 수립까지, 작업별 AI 추천에 따라 자동화하세요!',
     icon: <AlertTriangle size={32} />,
     href: '/docs/risk-assessment',
   },

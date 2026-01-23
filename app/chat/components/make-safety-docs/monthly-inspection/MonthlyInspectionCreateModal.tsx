@@ -25,7 +25,7 @@ const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'MonthlyInspecti
 export type ChecklistCategory =
   | '사업장 점검 사항'
   | '노동안전 점검 사항'
-  | '세부 작업 및 공정별 점검 사항';
+  | '작업 및 공정별 점검 사항';
 
 export type ChecklistItem = {
   id: string;
@@ -58,7 +58,7 @@ const norm = (v?: string | null) => (v ?? '').trim();
 const CATS: ChecklistCategory[] = [
   '사업장 점검 사항',
   '노동안전 점검 사항',
-  '세부 작업 및 공정별 점검 사항',
+  '작업 및 공정별 점검 사항',
 ];
 
 function formatKoreanWeekLabel(d: Date) {
@@ -90,8 +90,8 @@ function cleanSections(nextSections: Sections): Sections {
     '노동안전 점검 사항': Array.from(
       new Set((nextSections['노동안전 점검 사항'] ?? []).map(norm).filter(Boolean)),
     ),
-    '세부 작업 및 공정별 점검 사항': Array.from(
-      new Set((nextSections['세부 작업 및 공정별 점검 사항'] ?? []).map(norm).filter(Boolean)),
+    '작업 및 공정별 점검 사항': Array.from(
+      new Set((nextSections['작업 및 공정별 점검 사항'] ?? []).map(norm).filter(Boolean)),
     ),
   };
 }
@@ -109,7 +109,7 @@ function buildFallbackSections(detailTasks: string[]): Sections {
       '기계/설비 방호장치가 정상 작동하는가?',
       '작업 전 위험성 공유(TBM)가 실시되었는가?',
     ],
-    '세부 작업 및 공정별 점검 사항': [
+    '작업 및 공정별 점검 사항': [
       '끼임/협착 위험 구간에서 안전거리/방호조치가 확보되었는가?',
       '중량물 취급 시 인양장비 점검 및 신호수 배치가 되었는가?',
       '화기/가연물 작업 시 화재예방 및 감시가 이루어지는가?',
@@ -259,7 +259,7 @@ export default function MonthlyInspectionCreateModal({
       ({
         '사업장 점검 사항': [],
         '노동안전 점검 사항': [],
-        '세부 작업 및 공정별 점검 사항': [],
+        '작업 및 공정별 점검 사항': [],
       } as Sections),
   );
   const [items, setItems] = useState<ChecklistItem[]>(defaultValue?.results ?? []);
@@ -407,7 +407,7 @@ export default function MonthlyInspectionCreateModal({
         setSections({
           '사업장 점검 사항': [],
           '노동안전 점검 사항': [],
-          '세부 작업 및 공정별 점검 사항': [],
+          '작업 및 공정별 점검 사항': [],
         });
         setItems([]);
         setStep(0);
@@ -423,7 +423,7 @@ export default function MonthlyInspectionCreateModal({
           (draft.sections as Sections) ?? {
             '사업장 점검 사항': [],
             '노동안전 점검 사항': [],
-            '세부 작업 및 공정별 점검 사항': [],
+            '작업 및 공정별 점검 사항': [],
           },
         ),
       );
@@ -437,7 +437,7 @@ export default function MonthlyInspectionCreateModal({
     setSections({
       '사업장 점검 사항': [],
       '노동안전 점검 사항': [],
-      '세부 작업 및 공정별 점검 사항': [],
+      '작업 및 공정별 점검 사항': [],
     });
     setItems([]);
   }, [open, defaultValue, minorCategory]); // minorCategory 변경도 반영
@@ -556,7 +556,7 @@ export default function MonthlyInspectionCreateModal({
       const next: Sections = {
         '사업장 점검 사항': (sec['사업장 점검 사항'] ?? []).map(String),
         '노동안전 점검 사항': (sec['노동안전 점검 사항'] ?? []).map(String),
-        '세부 작업 및 공정별 점검 사항': (sec['세부 작업 및 공정별 점검 사항'] ?? []).map(String),
+        '작업 및 공정별 점검 사항': (sec['작업 및 공정별 점검 사항'] ?? []).map(String),
       };
 
       const cleaned = cleanSections(next);
@@ -564,7 +564,7 @@ export default function MonthlyInspectionCreateModal({
       const anyEmpty =
         cleaned['사업장 점검 사항'].length === 0 ||
         cleaned['노동안전 점검 사항'].length === 0 ||
-        cleaned['세부 작업 및 공정별 점검 사항'].length === 0;
+        cleaned['작업 및 공정별 점검 사항'].length === 0;
 
       const finalSections = anyEmpty ? buildFallbackSections(tasks) : cleaned;
 
@@ -591,7 +591,7 @@ export default function MonthlyInspectionCreateModal({
         sections_counts: {
           a: finalSections['사업장 점검 사항'].length,
           b: finalSections['노동안전 점검 사항'].length,
-          c: finalSections['세부 작업 및 공정별 점검 사항'].length,
+          c: finalSections['작업 및 공정별 점검 사항'].length,
         },
       });
 
@@ -633,7 +633,7 @@ export default function MonthlyInspectionCreateModal({
       sections_counts: {
         a: cleaned['사업장 점검 사항'].length,
         b: cleaned['노동안전 점검 사항'].length,
-        c: cleaned['세부 작업 및 공정별 점검 사항'].length,
+        c: cleaned['작업 및 공정별 점검 사항'].length,
       },
     });
 
@@ -854,7 +854,7 @@ export default function MonthlyInspectionCreateModal({
               <div className={s.header}>
                 <h3 className={s.title}>월 작업장 순회 점검표</h3>
                 <p className={s.desc}>
-                  세부 작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을
+                  작업을 검색해 추가하면, 해당 작업/소분류 위험요인 기반으로 점검 항목을
                   생성합니다. <br />
                   <span className={s.subDesc}>{weekLabel}</span>
                 </p>
@@ -862,7 +862,7 @@ export default function MonthlyInspectionCreateModal({
 
               {step === 0 && (
                 <>
-                  <label className={s.label}>세부 작업 검색</label>
+                  <label className={s.label}>작업 검색</label>
 
                   <MonthlyInspectionDetailTaskAutocompleteInput
                     value={detailTasks}

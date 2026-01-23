@@ -20,7 +20,7 @@ export type Rating = 'O' | '△' | 'X';
 export type ChecklistCategory =
   | '사업장 점검 사항'
   | '노동안전 점검 사항'
-  | '세부 작업 및 공정별 점검 사항';
+  | '작업 및 공정별 점검 사항';
 
 export type ChecklistItem = {
   id: string;
@@ -78,8 +78,8 @@ function cleanSections(nextSections: Sections): Sections {
   return {
     '사업장 점검 사항': Array.from(new Set((nextSections['사업장 점검 사항'] ?? []).map(norm).filter(Boolean))),
     '노동안전 점검 사항': Array.from(new Set((nextSections['노동안전 점검 사항'] ?? []).map(norm).filter(Boolean))),
-    '세부 작업 및 공정별 점검 사항': Array.from(
-      new Set((nextSections['세부 작업 및 공정별 점검 사항'] ?? []).map(norm).filter(Boolean)),
+    '작업 및 공정별 점검 사항': Array.from(
+      new Set((nextSections['작업 및 공정별 점검 사항'] ?? []).map(norm).filter(Boolean)),
     ),
   };
 }
@@ -113,7 +113,7 @@ export default function MonthlyInspectionCreateModal({
     defaultValue?.sections ?? {
       '사업장 점검 사항': [],
       '노동안전 점검 사항': [],
-      '세부 작업 및 공정별 점검 사항': [],
+      '작업 및 공정별 점검 사항': [],
     },
   );
   const [items, setItems] = useState<ChecklistItem[]>(defaultValue?.results ?? []);
@@ -205,7 +205,7 @@ export default function MonthlyInspectionCreateModal({
       const next: Sections = {
         '사업장 점검 사항': (sec['사업장 점검 사항'] ?? []).map(String),
         '노동안전 점검 사항': (sec['노동안전 점검 사항'] ?? []).map(String),
-        '세부 작업 및 공정별 점검 사항': (sec['세부 작업 및 공정별 점검 사항'] ?? []).map(String),
+        '작업 및 공정별 점검 사항': (sec['작업 및 공정별 점검 사항'] ?? []).map(String),
       };
 
       const cleaned = cleanSections(next);
@@ -312,14 +312,14 @@ export default function MonthlyInspectionCreateModal({
               <div className={s.header}>
                 <h3 className={s.title}>월 작업장 순회 점검표</h3>
                 <p className={s.desc}>
-                  세부 작업을 입력하면 AI가 맞춤형 점검 항목을 생성합니다.<br />
+                  작업을 입력하면 AI가 맞춤형 점검 항목을 생성합니다.<br />
                   <span className={s.subDesc}>{weekLabel}</span>
                 </p>
               </div>
 
               {step === 0 && (
                 <>
-                  <label className={s.label}>세부 작업 검색</label>
+                  <label className={s.label}>작업 검색</label>
                   <MonthlyInspectionDetailTaskAutocompleteInput
                     value={detailTasks}
                     onChange={setDetailTasks}

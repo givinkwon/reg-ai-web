@@ -555,7 +555,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
       <AnimatedLoadingModal
         open={showLoadingModal}
         title="작업 목록을 불러오는 중…"
-        message="소분류 기준 세부작업을 불러와 자동으로 선택하고 있습니다."
+        message="소분류 기준 작업을 불러와 자동으로 선택하고 있습니다."
       />
 
       <div className={s.sectionHead}>
@@ -564,7 +564,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
           <div className={s.sectionDesc}>
             {norm(minorCategory) ? (
               <>
-                소분류 <b className={s.badge}>{minorCategory}</b> 기준 세부작업을 불러와 <b>자동 선택</b>합니다. 필요하면 클릭해서 해제하세요.
+                소분류 <b className={s.badge}>{minorCategory}</b> 기준 작업을 불러와 <b>자동 선택</b>합니다. 필요하면 클릭해서 해제하세요.
               </>
             ) : (
               <>소분류 정보를 찾지 못했습니다. “직접 추가”로 검색해서 선택할 수 있어요. (선택한 항목은 새로고침해도 유지됩니다)</>

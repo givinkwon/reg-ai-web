@@ -149,7 +149,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
       <div className={s.modal} onMouseDown={(e) => e.stopPropagation()}>
         <div className={s.head}>
           <div>
-            <div className={s.title}>세부작업 선택</div>
+            <div className={s.title}>작업 선택</div>
             <div className={s.subTitle}>키워드로 검색한 뒤 여러 개 선택하고 “확인”을 누르세요</div>
           </div>
           <button className={s.close} onClick={onClose} aria-label="닫기">

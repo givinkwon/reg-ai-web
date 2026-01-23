@@ -72,7 +72,7 @@ export default function TbmDetailTaskTagInput({
   value,
   onChange,
   minorCategory,
-  placeholder = '세부 작업을 입력하고 Enter (예: 지게차 운전, 용접 작업)',
+  placeholder = '작업을 입력하고 Enter (예: 지게차 운전, 용접 작업)',
   endpoint = 'detail-tasks',
   limit = 200, // ✅ 기본 200
 }: Props) {
@@ -142,7 +142,7 @@ export default function TbmDetailTaskTagInput({
 
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
-          throw new Error(`세부작업 로드 실패 (${res.status}) ${txt.slice(0, 120)}`);
+          throw new Error(`작업 로드 실패 (${res.status}) ${txt.slice(0, 120)}`);
         }
 
         const data = (await res.json()) as { items?: string[] };
@@ -165,7 +165,7 @@ export default function TbmDetailTaskTagInput({
         if (e?.name === 'AbortError') return;
         if (cancelled) return;
         setAllOptions([]);
-        setErr(e?.message ?? '세부작업 로드 중 오류');
+        setErr(e?.message ?? '작업 로드 중 오류');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -320,7 +320,7 @@ export default function TbmDetailTaskTagInput({
 
       <div className={s.hintRow}>
         {loading ? (
-          <span className={s.hint}>세부 작업을 불러오는 중…</span>
+          <span className={s.hint}>작업을 불러오는 중…</span>
         ) : err ? (
           <span className={s.hint}>자동완성 불러오기 실패: {err}</span>
         ) : (

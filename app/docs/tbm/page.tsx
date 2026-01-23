@@ -85,10 +85,10 @@ export default function TBMPage() {
               <ClipboardList size={20} className="mr-2" />
               오늘의 TBM 시작하기
             </Button>
-            <Button className={s.glassBtn}>
+            {/* <Button className={s.glassBtn}>
               <History size={20} className="mr-2" />
               지난 일지 조회
-            </Button>
+            </Button> */}
           </div>
         </div>
       </section>

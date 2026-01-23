@@ -4,12 +4,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, RefreshCw, X } from 'lucide-react';
 import s from './StepProcesses.module.css';
-import AddProcessModal from '../ui/AddProcessModal'; // ✅ AddItemSheet 대신 AddProcessModal 사용
+import AddProcessModal from '../ui/AddProcessModal';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 import { Button } from '@/app/components/ui/button';
-
-// ✅ GA
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
@@ -25,9 +23,6 @@ const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 const minorScope = (v?: string | null) => (norm(v) ? norm(v) : 'ALL');
 
-// =========================
-// ✅ Cache Logic
-// =========================
 const CACHE_PREFIX = 'regai:risk:stepProcesses:v2';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180;
 const RETRY_COOLDOWN_MS = 1000 * 20;
@@ -68,7 +63,6 @@ function safeWriteCache(key: string, payload: ProcessCache) {
   } catch { /* ignore */ }
 }
 
-// ✅ API 응답 정규화 함수
 function extractItems(payload: any): string[] {
   const arr =
     Array.isArray(payload)
@@ -84,24 +78,19 @@ function extractItems(payload: any): string[] {
 
 export default function StepProcesses({ draft, setDraft, minorCategory }: Props) {
   const user = useUserStore((st) => st.user);
-  const userEmail = (user?.email ?? '').trim();
   const mc = minorScope(minorCategory);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [targetTaskId, setTargetTaskId] = useState<string | null>(null);
-
-  // ✅ 로딩 상태 (taskId -> boolean)
   const [autoLoadingIds, setAutoLoadingIds] = useState<Record<string, boolean>>({});
 
-  // ✅ 중복 실행 방지용 Refs
   const completedRef = useRef<Set<string>>(new Set());
   const attemptRef = useRef<Map<string, number>>(new Map());
-  const fetchSet = useRef<Set<string>>(new Set()); // 현재 실행 중인 fetch 추적
+  const fetchSet = useRef<Set<string>>(new Set());
 
   const tasks = useMemo(() => draft.tasks ?? [], [draft.tasks]);
   const targetTask = useMemo(() => tasks.find((t) => t.id === targetTaskId) ?? null, [tasks, targetTaskId]);
 
-  // ✅ GA View
   const mountedRef = useRef(false);
   useEffect(() => {
     if (mountedRef.current) return;
@@ -121,7 +110,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   const addProcess = (taskId: string, title: string) => {
     const v = norm(title);
     if (!v) return;
-
     setDraft((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) => {
@@ -144,38 +132,45 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   };
 
   // =======================================================
-  // ✅ [수정된 핵심 로직] 자동 채움 (Batch Fetching)
+  // ✅ [최종 수정] 쿨다운 초기화 포함 로직
   // =======================================================
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
+    const { signal } = controller;
+    
+    // 현재 이펙트에서 건드린 키들을 추적 (Cleanup 때 쓰기 위함)
+    const activeScopeKeys: string[] = [];
+    const effectId = Math.random().toString(36).slice(2, 6); // 로그 식별용
 
     const runAutoFill = async () => {
-      // 1. 데이터를 가져와야 할 Task 식별
       const tasksToFetch: Array<{ t: typeof tasks[0], ck: string, scopeKey: string }> = [];
       const cacheUpdates: Record<string, string[]> = {}; 
+
+      console.log(`[${effectId}] Run AutoFill Start. Tasks: ${tasks.length}`);
 
       for (const t of tasks) {
         const processName = norm(t.title);
         if (!processName) continue;
 
-        // 이미 공정이 있으면 완료 처리
         if ((t.processes ?? []).length > 0) {
           const ck = cacheKey(user?.email, processName, mc);
-          const scopeKey = `${t.id}|${ck}`;
-          completedRef.current.add(scopeKey);
+          completedRef.current.add(`${t.id}|${ck}`);
           continue;
         }
 
         const ck = cacheKey(user?.email, processName, mc);
         const scopeKey = `${t.id}|${ck}`;
 
-        // 이미 완료했거나, 쿨다운 중이거나, 현재 Fetch 중이면 스킵
         if (completedRef.current.has(scopeKey)) continue;
-        if (fetchSet.current.has(scopeKey)) continue; // ✅ 중복 Fetch 방지
+        if (fetchSet.current.has(scopeKey)) continue;
+        
+        // 쿨다운 체크
         const last = attemptRef.current.get(scopeKey);
-        if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
+        if (last && Date.now() - last < RETRY_COOLDOWN_MS) {
+          console.log(`[${effectId}] Skip Cooldown: ${t.title}`);
+          continue;
+        }
 
-        // 1-1. 캐시 확인
         let cached = safeReadCache(ck);
         if (!cached && user?.email) cached = safeReadCache(cacheKey(null, processName, mc));
 
@@ -183,19 +178,19 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
           cacheUpdates[t.id] = cached.subProcesses;
           completedRef.current.add(scopeKey);
         } else {
-          // 1-2. API 호출 대상 목록에 추가
           tasksToFetch.push({ t, ck, scopeKey });
         }
       }
 
-      // 2. 캐시 데이터가 있으면 즉시 업데이트 (API 호출과 무관하게)
+      // 캐시 업데이트
       if (Object.keys(cacheUpdates).length > 0) {
+        if (signal.aborted) return;
+        console.log(`[${effectId}] Apply Cache:`, Object.keys(cacheUpdates));
         setDraft((prev) => ({
           ...prev,
           tasks: prev.tasks.map((t) => {
             const items = cacheUpdates[t.id];
             if (!items) return t;
-            
             const cur = t.processes ?? [];
             const exists = new Set(cur.map((p) => norm(p.title)));
             const next = [...cur];
@@ -210,27 +205,40 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         }));
       }
 
-      if (tasksToFetch.length === 0) return;
+      if (tasksToFetch.length === 0) {
+        console.log(`[${effectId}] Nothing to fetch.`);
+        // ★ 중요: 할 게 없으면 로딩이 켜져있을 수도 있으니(이전 렌더에서 넘어온 state) 확실히 끔
+        if (!signal.aborted) {
+           setAutoLoadingIds((prev) => {
+             // 혹시 켜져있는게 있다면 끔
+             if (Object.keys(prev).length === 0) return prev;
+             return {}; 
+           });
+        }
+        return;
+      }
 
-      // 3. 로딩 상태 켜기
+      // 로딩 켜기
       const loadingState: Record<string, boolean> = {};
       tasksToFetch.forEach(({ t, scopeKey }) => {
         loadingState[t.id] = true;
-        fetchSet.current.add(scopeKey); // ✅ Fetching 마킹
-        attemptRef.current.set(scopeKey, Date.now());
+        fetchSet.current.add(scopeKey);
+        attemptRef.current.set(scopeKey, Date.now()); // 쿨다운 기록
+        activeScopeKeys.push(scopeKey); // 추적
       });
       
-      if(isMounted) {
+      if (!signal.aborted) {
+        console.log(`[${effectId}] Loading ON`, loadingState);
         setAutoLoadingIds((prev) => ({ ...prev, ...loadingState }));
       }
 
-      // 4. 병렬 API 호출 (Promise.all)
       const fetchedResults: Record<string, string[]> = {};
 
       await Promise.all(
         tasksToFetch.map(async ({ t, ck, scopeKey }) => {
-          if (!isMounted) return;
+          if (signal.aborted) return;
           try {
+            console.log(`[${effectId}] Fetching API... ${t.title}`);
             const processName = norm(t.title);
             const qs = new URLSearchParams({
               endpoint: 'sub-processes',
@@ -239,8 +247,10 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
               ...(norm(minorCategory) ? { minor: norm(minorCategory) } : {}),
             });
 
-            // ✅ API 호출
-            const res = await fetch(`/api/risk-assessment?${qs.toString()}`, { cache: 'no-store' });
+            const res = await fetch(`/api/risk-assessment?${qs.toString()}`, { 
+                cache: 'no-store',
+                signal 
+            });
             
             if (!res.ok) throw new Error(`API Error ${res.status}`);
 
@@ -250,8 +260,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
             if (items.length > 0) {
               fetchedResults[t.id] = items;
               completedRef.current.add(scopeKey);
-              
-              // 캐시 저장
               safeWriteCache(ck, {
                 v: 2,
                 ts: Date.now(),
@@ -261,60 +269,62 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
                 subProcesses: items,
               });
             }
-          } catch (e) {
-            console.error(`[StepProcesses] Error for ${t.title}:`, e);
+          } catch (e: any) {
+            if (e.name !== 'AbortError') {
+                console.error(`[${effectId}] Error:`, e);
+            }
           } finally {
-             // FetchSet 해제는 마지막에 일괄적으로 하거나 여기서 해도 됨
              fetchSet.current.delete(scopeKey);
           }
         })
       );
 
-      // 5. [API 결과 반영 (일괄 업데이트)]
-      if (isMounted && Object.keys(fetchedResults).length > 0) {
+      if (signal.aborted) return;
+
+      // 로딩 끄기 (setDraft보다 먼저!)
+      console.log(`[${effectId}] Loading OFF`);
+      setAutoLoadingIds((prev) => {
+        const next = { ...prev };
+        tasksToFetch.forEach(({ t }) => delete next[t.id]);
+        return next;
+      });
+
+      // 데이터 반영
+      if (Object.keys(fetchedResults).length > 0) {
         setDraft((prev) => {
-          // 불변성 유지하며 새 객체 생성
           const newTasks = prev.tasks.map((t) => {
             const items = fetchedResults[t.id];
-            if (!items) return t; // 변경 없는 Task는 그대로 반환
-
+            if (!items) return t;
             const cur = t.processes ?? [];
             const exists = new Set(cur.map((p) => norm(p.title)));
-            const next = [...cur]; // 기존 공정 복사
-
-            // 중복 없이 새 공정 추가
+            const next = [...cur];
             items.forEach((title) => {
               if (!exists.has(title)) {
                 next.push({ id: uid(), title, hazards: [] });
                 exists.add(title);
               }
             });
-
-            // ✅ 프로세스가 변경된 새로운 Task 객체 반환
             return { ...t, processes: next };
           });
-
           return { ...prev, tasks: newTasks };
         });
-      }
-
-      // 6. [로딩 상태 끄기 (무조건 실행)]
-      if (isMounted) {
-        // 약간의 딜레이를 주어 상태 업데이트 충돌 방지 (선택 사항)
-        setTimeout(() => {
-            setAutoLoadingIds((prev) => {
-            const next = { ...prev };
-            tasksToFetch.forEach(({ t }) => delete next[t.id]);
-            return next;
-            });
-        }, 0);
       }
     };
 
     runAutoFill();
 
-    return () => { isMounted = false; };
-  }, [tasks, user?.email, minorCategory, mc]); // ✅ tasks 전체를 deps로 (tasksSig 대신)
+    // 3. Cleanup: 리렌더링/언마운트 시 실행
+    return () => {
+        console.log(`[${effectId}] Cleanup (Abort & Clear)`);
+        controller.abort();
+        
+        // ★ 핵심: 취소된 요청들의 '실행중 깃발(fetchSet)'과 '쿨다운 기록(attemptRef)'을 모두 삭제
+        activeScopeKeys.forEach(key => {
+            fetchSet.current.delete(key);
+            attemptRef.current.delete(key); // 이게 없으면 재시도시 쿨다운에 걸림!
+        });
+    };
+  }, [tasks, user?.email, minorCategory, mc]);
 
   return (
     <div className={s.container}>
@@ -325,7 +335,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
       <div className={s.taskList}>
         {tasks.map((t) => {
           const procs = Array.isArray(t.processes) ? t.processes : [];
-          // ✅ boolean으로 명확히 변환
           const isLoading = !!autoLoadingIds[t.id]; 
 
           return (
@@ -343,7 +352,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
               </div>
 
               <div className={s.procList}>
-                {/* 로딩 중일 때 */}
                 {isLoading && (
                   <div className={s.loadingBox}>
                     <RefreshCw size={14} className="animate-spin text-purple-500" />
@@ -351,14 +359,12 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
                   </div>
                 )}
 
-                {/* 로딩 끝났는데 데이터가 없을 때 */}
                 {!isLoading && procs.length === 0 && (
                   <div className={s.emptyBox}>
                     등록된 공정이 없습니다. '공정 추가' 버튼을 눌러주세요.
                   </div>
                 )}
 
-                {/* 데이터가 있을 때 (로딩 중이어도 기존 데이터가 있으면 보여줌) */}
                 {procs.map((p) => (
                   <div key={p.id} className={s.chip}>
                     {p.title}
@@ -376,15 +382,17 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         })}
       </div>
 
-      <AddProcessModal 
-        open={modalOpen}
-        taskTitle={targetTask?.title || ''}
-        minorCategory={minorCategory}
-        onClose={() => setModalOpen(false)}
-        onAdd={(title) => {
-          if (targetTaskId) addProcess(targetTaskId, title);
-        }}
-      />
+      {modalOpen && (
+        <AddProcessModal 
+          open={true} // 항상 true 전달
+          taskTitle={targetTask?.title || ''}
+          minorCategory={minorCategory}
+          onClose={() => setModalOpen(false)}
+          onAdd={(title) => {
+            if (targetTaskId) addProcess(targetTaskId, title);
+          }}
+        />
+      )}
     </div>
   );
 }

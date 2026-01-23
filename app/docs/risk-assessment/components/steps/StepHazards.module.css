@@ -106,35 +106,23 @@
   display: inline-flex;
   align-items: center;
   padding: 0.5rem 0.9rem;
-  background-color: #fff0f0; /* 위험요인이므로 붉은 틴트 */
-  border: 1px solid #fecaca;
+  border: 1px solid var(--border);
   border-radius: 20px;
   font-size: 0.95rem;
-  color: #991b1b;
   transition: all 0.2s;
-}
-
-.chip:hover {
-  background-color: #fee2e2;
-  border-color: #f87171;
 }
 
 .removeBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
   border-radius: 50%;
-  background-color: rgba(0,0,0,0.05);
-  color: #991b1b;
-  border: none;
+  border: 1px;
   cursor: pointer;
   transition: all 0.2s;
   margin-left: 0.5rem;
 }
 
 .removeBtn:hover {
-  background-color: #ef4444;
   color: white;
 }

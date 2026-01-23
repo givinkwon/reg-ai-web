@@ -121,12 +121,8 @@
 }
 
 .closeBtn {
-  width: 34px;
-  height: 34px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: var(--close-bg);
-  color: var(--text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -172,7 +168,7 @@
   padding: 0 20px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: var(--btn-bg);
+  background: #2388FF;
   color: var(--btn-text);
   font-weight: 800;
   cursor: pointer;

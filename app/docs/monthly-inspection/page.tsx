@@ -96,10 +96,10 @@ export default function MonthlyPage() {
                   <Camera size={20} className="mr-2" />
                   점검 시작하기
                 </Button>
-                <Button className={s.glassBtn}>
+                {/* <Button className={s.glassBtn}>
                   <FileCheck size={20} className="mr-2" />
                   점검 리포트 확인
-                </Button>
+                </Button> */}
               </div>
             </div>
           </section>

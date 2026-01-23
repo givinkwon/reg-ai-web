@@ -7,6 +7,7 @@ import AddHazardModal from '../ui/AddHazardModal';
 import type { RiskAssessmentDraft, RiskLevel } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 import { Button } from '@/app/components/ui/button';
+import { useRiskWizardStore } from '@/app/store/docs'; // ✅ 전역 스토어 임포트
 
 // ✅ GA
 import { track } from '@/app/lib/ga/ga';
@@ -76,7 +77,6 @@ function safeWriteCache(key: string, payload: HazardCache) {
   } catch { /* ignore */ }
 }
 
-// ✅ API 응답 정규화
 function extractItems(payload: any): string[] {
   const arr = Array.isArray(payload) ? payload : (payload?.items ?? []);
   return Array.from(new Set(arr.map((x: any) => (typeof x === 'string' ? x : x?.title ?? x?.risk_situation ?? '')).map(norm).filter(Boolean)));
@@ -85,20 +85,20 @@ function extractItems(payload: any): string[] {
 export default function StepHazards({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
   
+  // ✅ 전역 로딩 상태 함수 가져오기
+  const setIsAnalyzing = useRiskWizardStore((st) => st.setIsAnalyzing);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [target, setTarget] = useState<{ taskId: string; processId: string } | null>(null);
 
-  // 로직 관리 Refs
   const completedRef = useRef<Set<string>>(new Set());
   const attemptRef = useRef<Map<string, number>>(new Map());
-  const fetchSet = useRef<Set<string>>(new Set()); // 중복 fetch 방지
+  const fetchSet = useRef<Set<string>>(new Set());
 
-  // UI 로딩 표시용 (taskId:processId -> boolean)
   const [autoLoadingIds, setAutoLoadingIds] = useState<Record<string, boolean>>({});
 
   const tasks = useMemo(() => (draft.tasks ?? []), [draft.tasks]);
 
-  // ✅ 변경 감지용 시그니처 (작업+공정이 바뀌면 자동 로딩 트리거)
   const procSig = useMemo(() => {
     return tasks.map(t => `${t.id}|${norm(t.title)}|` + (t.processes ?? []).map(p => `${p.id}:${norm(p.title)}`).join(',')).join('||');
   }, [tasks]);
@@ -106,7 +106,6 @@ export default function StepHazards({ draft, setDraft }: Props) {
   const targetTask = useMemo(() => tasks.find((t) => t.id === target?.taskId) ?? null, [tasks, target]);
   const targetProc = useMemo(() => (targetTask?.processes ?? []).find((p) => p.id === target?.processId) ?? null, [targetTask, target]);
 
-  // ✅ GA View
   const mountedRef = useRef(false);
   useEffect(() => {
     if (mountedRef.current) return;
@@ -115,7 +114,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
       ui_id: gaUiId(GA_CTX, 'View'),
       tasks_len: tasks.length,
     });
-  }, []);
+  }, [tasks.length]);
 
   const openModal = (taskId: string, processId: string) => {
     setTarget({ taskId, processId });
@@ -162,17 +161,15 @@ export default function StepHazards({ draft, setDraft }: Props) {
     }));
   };
 
-  // =======================================================
-  // ✅ [수정된 핵심 로직] 자동 채움 (Batch Fetching)
-  // =======================================================
+  // ✅ [최종 수정 로직] 전역 로딩(setIsAnalyzing) 연동
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
+    const { signal } = controller;
+    const activeScopeKeys: string[] = [];
 
     const runAutoFill = async () => {
-      // 1. 데이터를 가져와야 할 대상 식별
-      // { t, p, ck, scopeKey, uiKey }
       const targetsToFetch: Array<any> = [];
-      const cacheUpdates: Record<string, HazardCacheItem[]> = {}; // "taskId:processId" -> items
+      const cacheUpdates: Record<string, HazardCacheItem[]> = {};
 
       for (const t of tasks) {
         const processName = norm(t.title);
@@ -186,21 +183,17 @@ export default function StepHazards({ draft, setDraft }: Props) {
           const ck = cacheKey(user?.email, processName, subProcess);
           const scopeKey = `${uiKey}|${ck}`;
 
-          const curHazards = p.hazards ?? [];
-
-          // 이미 데이터가 있으면 완료 처리
-          if (curHazards.length > 0) {
+          if ((p.hazards ?? []).length > 0) {
             completedRef.current.add(scopeKey);
             continue;
           }
 
           if (completedRef.current.has(scopeKey)) continue;
-          if (fetchSet.current.has(scopeKey)) continue; // 중복 fetch 방지
+          if (fetchSet.current.has(scopeKey)) continue;
 
           const last = attemptRef.current.get(scopeKey);
           if (last && Date.now() - last < RETRY_COOLDOWN_MS) continue;
 
-          // 1-1. 캐시 확인
           let cached = safeReadCache(ck);
           if (!cached && user?.email) cached = safeReadCache(cacheKey(null, processName, subProcess));
 
@@ -208,141 +201,131 @@ export default function StepHazards({ draft, setDraft }: Props) {
             cacheUpdates[uiKey] = cached.hazards;
             completedRef.current.add(scopeKey);
           } else {
-            // 1-2. API 호출 대상
             targetsToFetch.push({ t, p, processName, subProcess, ck, scopeKey, uiKey });
           }
         }
       }
 
-      // 2. 캐시 데이터가 있으면 즉시 업데이트
+      // 1. 캐시 데이터 업데이트
       if (Object.keys(cacheUpdates).length > 0) {
-        setDraft((prev) => ({
-          ...prev,
-          tasks: prev.tasks.map((t) => ({
-            ...t,
-            processes: t.processes.map((p) => {
-              const key = `${t.id}:${p.id}`;
-              const items = cacheUpdates[key];
-              if (!items) return p;
-
-              const next = [...(p.hazards ?? [])];
-              const exists = new Set(next.map(h => norm(h.title)));
-
-              items.forEach(h => {
-                const title = norm(h.title);
-                if (!exists.has(title)) {
-                  next.push({ 
-                    id: uid(), title, 
-                    likelihood: h.likelihood || DEFAULT_L, 
-                    severity: h.severity || DEFAULT_S, 
-                    controls: h.controls || '' 
-                  });
-                  exists.add(title);
-                }
-              });
-              return { ...p, hazards: next };
-            })
-          }))
-        }));
+        if (!signal.aborted) {
+          setDraft((prev) => ({
+            ...prev,
+            tasks: prev.tasks.map((t) => ({
+              ...t,
+              processes: t.processes.map((p) => {
+                const key = `${t.id}:${p.id}`;
+                const items = cacheUpdates[key];
+                if (!items) return p;
+                const next = [...(p.hazards ?? [])];
+                const exists = new Set(next.map(h => norm(h.title)));
+                items.forEach(h => {
+                  const title = norm(h.title);
+                  if (!exists.has(title)) {
+                    next.push({ id: uid(), title, likelihood: h.likelihood || DEFAULT_L, severity: h.severity || DEFAULT_S, controls: h.controls || '' });
+                    exists.add(title);
+                  }
+                });
+                return { ...p, hazards: next };
+              })
+            }))
+          }));
+        }
       }
 
-      if (targetsToFetch.length === 0) return;
+      if (targetsToFetch.length === 0) {
+        if (!signal.aborted) {
+          setAutoLoadingIds({});
+          setIsAnalyzing(false); // ✅ 가져올 게 없으면 로딩 해제
+        }
+        return;
+      }
 
-      // 3. 로딩 상태 켜기
+      // 🚀 [중요] 분석 시작: 전역 로딩 ON
+      setIsAnalyzing(true);
+
+      // 2. 개별 로딩 상태 ON
       const loadingState: Record<string, boolean> = {};
       targetsToFetch.forEach(({ scopeKey, uiKey }) => {
         loadingState[uiKey] = true;
         fetchSet.current.add(scopeKey);
+        activeScopeKeys.push(scopeKey);
         attemptRef.current.set(scopeKey, Date.now());
       });
-      if (isMounted) setAutoLoadingIds((prev) => ({ ...prev, ...loadingState }));
+      if (!signal.aborted) setAutoLoadingIds((prev) => ({ ...prev, ...loadingState }));
 
-      // 4. 병렬 API 호출
-      const fetchedResults: Record<string, string[]> = {}; // uiKey -> titles
+      try {
+        // 3. API 호출
+        await Promise.all(
+          targetsToFetch.map(async ({ processName, subProcess, ck, scopeKey, uiKey }) => {
+            if (signal.aborted) return;
+            try {
+              const qs = new URLSearchParams({ endpoint: 'risk-situations', process_name: processName, sub_process: subProcess, limit: '80' });
+              const res = await fetch(`/api/risk-assessment?${qs.toString()}`, { cache: 'no-store', signal });
+              
+              if (!res.ok) throw new Error('API Error');
+              const raw = await res.json();
+              const items = extractItems(raw);
 
-      await Promise.all(
-        targetsToFetch.map(async ({ t, p, processName, subProcess, ck, scopeKey, uiKey }) => {
-          if (!isMounted) return;
-          try {
-            const qs = new URLSearchParams({
-              endpoint: 'risk-situations',
-              process_name: processName,
-              sub_process: subProcess,
-              limit: '80'
-            });
-
-            const res = await fetch(`/api/risk-assessment?${qs.toString()}`, { cache: 'no-store' });
-            if (!res.ok) throw new Error('API Error');
-
-            const raw = await res.json();
-            const items = extractItems(raw);
-
-            if (items.length > 0) {
-              fetchedResults[uiKey] = items;
-              completedRef.current.add(scopeKey);
-
-              // 캐시 저장
-              safeWriteCache(ck, {
-                v: 2,
-                ts: Date.now(),
-                user: norm(user?.email) || 'guest',
-                processName,
-                subProcess,
-                hazards: items.map(title => ({
-                  id: uid(), title, 
-                  likelihood: DEFAULT_L, severity: DEFAULT_S, controls: ''
-                }))
-              });
-            }
-          } catch (e) {
-            console.error(e);
-          } finally {
-            fetchSet.current.delete(scopeKey);
-          }
-        })
-      );
-
-      // 5. API 결과 일괄 반영
-      if (isMounted && Object.keys(fetchedResults).length > 0) {
-        setDraft((prev) => ({
-          ...prev,
-          tasks: prev.tasks.map((t) => ({
-            ...t,
-            processes: t.processes.map((p) => {
-              const key = `${t.id}:${p.id}`;
-              const items = fetchedResults[key];
-              if (!items) return p;
-
-              const next = [...(p.hazards ?? [])];
-              const exists = new Set(next.map(h => norm(h.title)));
-
-              items.forEach(title => {
-                if (!exists.has(title)) {
-                  next.push({ id: uid(), title, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' });
-                  exists.add(title);
+              if (items.length > 0) {
+                // 개별 데이터 즉시 반영
+                if (!signal.aborted) {
+                  setDraft((prev) => ({
+                    ...prev,
+                    tasks: prev.tasks.map((t) => ({
+                      ...t,
+                      processes: t.processes.map((p) => {
+                        if (`${t.id}:${p.id}` !== uiKey) return p;
+                        const next = [...(p.hazards ?? [])];
+                        const exists = new Set(next.map(h => norm(h.title)));
+                        items.forEach(title => {
+                          if (!exists.has(title)) {
+                            next.push({ id: uid(), title, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' });
+                            exists.add(title);
+                          }
+                        });
+                        return { ...p, hazards: next };
+                      })
+                    }))
+                  }));
+                  // 개별 로딩 끄기
+                  setAutoLoadingIds((prev) => {
+                    const next = { ...prev };
+                    delete next[uiKey];
+                    return next;
+                  });
                 }
-              });
-              return { ...p, hazards: next };
-            })
-          }))
-        }));
-      }
-
-      // 6. 로딩 상태 끄기
-      if (isMounted) {
-        setTimeout(() => {
-          setAutoLoadingIds((prev) => {
-            const next = { ...prev };
-            targetsToFetch.forEach(({ uiKey }) => delete next[uiKey]);
-            return next;
-          });
-        }, 0);
+                completedRef.current.add(scopeKey);
+                safeWriteCache(ck, {
+                  v: 2, ts: Date.now(), user: norm(user?.email) || 'guest',
+                  processName, subProcess,
+                  hazards: items.map(title => ({ id: uid(), title, likelihood: DEFAULT_L, severity: DEFAULT_S, controls: '' }))
+                });
+              }
+            } catch (e: any) {
+              if (e.name !== 'AbortError') console.error(e);
+            } finally {
+              fetchSet.current.delete(scopeKey);
+            }
+          })
+        );
+      } finally {
+        // 🏁 [중요] 모든 분석 종료: 전역 로딩 OFF
+        setIsAnalyzing(false);
       }
     };
 
     runAutoFill();
-    return () => { isMounted = false; };
-  }, [procSig, user?.email]);
+
+    return () => {
+      controller.abort();
+      setIsAnalyzing(false); // ✅ 언마운트 시 초기화
+      activeScopeKeys.forEach(key => {
+        fetchSet.current.delete(key);
+        attemptRef.current.delete(key);
+      });
+    };
+  }, [procSig, user?.email, setIsAnalyzing]);
 
   return (
     <div className={s.wrap}>
@@ -375,7 +358,6 @@ export default function StepHazards({ draft, setDraft }: Props) {
                   </div>
 
                   <div className={s.chips}>
-                    {/* 로딩 중 */}
                     {isLoading && (
                       <div className={s.loadingBox}>
                         <RefreshCw size={14} className="animate-spin text-purple-500" />
@@ -383,14 +365,12 @@ export default function StepHazards({ draft, setDraft }: Props) {
                       </div>
                     )}
 
-                    {/* 데이터 없음 */}
                     {!isLoading && hazards.length === 0 && (
                       <div className={s.emptyBox}>
                         아직 위험요인이 없습니다.
                       </div>
                     )}
 
-                    {/* 데이터 있음 */}
                     {hazards.map((h: any) => (
                       <div key={h.id} className={s.chip}>
                         <AlertTriangle size={14} className="text-red-500 mr-1.5" />

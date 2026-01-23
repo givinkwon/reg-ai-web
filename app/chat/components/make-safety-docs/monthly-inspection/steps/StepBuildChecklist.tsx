@@ -16,7 +16,7 @@ type Props = {
   onNext: (sections: Sections) => void;
 };
 
-const CATS: ChecklistCategory[] = ['사업장 점검 사항', '노동안전 점검 사항', '세부 작업 및 공정별 점검 사항'];
+const CATS: ChecklistCategory[] = ['사업장 점검 사항', '노동안전 점검 사항', '작업 및 공정별 점검 사항'];
 const norm = (v: string) => v.trim();
 
 const GA_CTX = {
@@ -33,7 +33,7 @@ export default function StepBuildChecklist({ detailTasks, initialSections, onBac
   const [draft, setDraft] = useState<Record<ChecklistCategory, string>>({
     '사업장 점검 사항': '',
     '노동안전 점검 사항': '',
-    '세부 작업 및 공정별 점검 사항': '',
+    '작업 및 공정별 점검 사항': '',
   });
 
   const selectedCount = useMemo(

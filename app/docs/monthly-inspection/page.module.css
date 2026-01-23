@@ -73,7 +73,7 @@
 /* 버튼 스타일 */
 .whiteBtn {
   background-color: #ffffff !important;
-  color: #2388FF !important;
+  color: white !important;
   border: none !important;
   font-weight: 700 !important;
   height: 56px !important;
@@ -87,6 +87,7 @@
   transition: transform 0.2s ease;
 }
 .whiteBtn:hover {
+  color: #2388FF !important;
   background-color: #f8f9fa !important;
   transform: translateY(-2px);
 }

@@ -10,6 +10,7 @@ import StepControls from './steps/StepControls';
 
 import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
+import { useRiskWizardStore } from '@/app/store/docs'; 
 
 // ✅ GA
 import { track } from '@/app/lib/ga/ga';
@@ -17,7 +18,7 @@ import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessment' } as const;
 
-// ... (타입 정의들은 기존과 동일, 생략 없이 유지) ...
+// --- 타입 정의 ---
 export type RiskLevel = 1 | 2 | 3 | 4 | 5;
 export type Judgement = '상' | '중' | '하';
 
@@ -34,17 +35,8 @@ export type Hazard = {
   mitigation_text?: string;
 };
 
-export type ProcessItem = {
-  id: string;
-  title: string;
-  hazards: Hazard[];
-};
-
-export type TaskItem = {
-  id: string;
-  title: string;
-  processes: ProcessItem[];
-};
+export type ProcessItem = { id: string; title: string; hazards: Hazard[]; };
+export type TaskItem = { id: string; title: string; processes: ProcessItem[]; };
 
 export type RiskAssessmentDraft = {
   meta: { siteName: string; dateISO: string };
@@ -57,8 +49,6 @@ type Props = {
   open?: boolean;
   onClose?: () => void;
   onSubmit: (draft: RiskAssessmentDraft, opts?: { signal?: AbortSignal; userEmail?: string }) => void | Promise<void>;
-  
-  // ✅ [추가] 로그인이 필요할 때 부모에게 알림
   onRequireLogin?: () => void;
 };
 
@@ -91,9 +81,11 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   const [draft, setDraft] = useState<RiskAssessmentDraft>(INITIAL_DRAFT);
   const [minor, setMinor] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  
+  // ✅ 전역 분석 상태 (Zustand)
+  const isAnalyzing = useRiskWizardStore((state) => state.isAnalyzing);
 
-  // Alert 상태
+  const abortRef = useRef<AbortController | null>(null);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTitle, setAlertTitle] = useState('안내');
   const [alertLines, setAlertLines] = useState<string[]>([]);
@@ -105,18 +97,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   const user = useUserStore((st) => st.user);
   const userEmail = (user?.email || '').trim();
 
-  // 메타데이터 계산
-  const countMeta = useMemo(() => {
-    const tasks = draft.tasks.length;
-    const processes = draft.tasks.reduce((acc, t) => acc + (t.processes?.length ?? 0), 0);
-    const hazards = draft.tasks.reduce(
-      (acc, t) => acc + (t.processes ?? []).reduce((a, p) => a + (p.hazards?.length ?? 0), 0),
-      0,
-    );
-    return { tasks, processes, hazards };
-  }, [draft.tasks]);
-
-  const openAlert = (opts: { title?: string; lines: string[]; confirmText?: string; showClose?: boolean; onConfirm?: () => void; onClose?: () => void }) => {
+  const openAlert = (opts: any) => {
     setAlertTitle(opts.title ?? '안내');
     setAlertLines(opts.lines);
     setAlertConfirmText(opts.confirmText ?? '확인');
@@ -133,85 +114,55 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   };
 
   useEffect(() => {
-    setDraft((prev) => {
-      if (prev.meta.dateISO) return prev;
-      return { ...prev, meta: { ...prev.meta, dateISO: todayISOClient() } };
-    });
-    try {
-      const v = localStorage.getItem('risk_minor_category') || '';
-      if (v.trim()) setMinor(v.trim());
-    } catch {}
+    setDraft((prev) => (prev.meta.dateISO ? prev : { ...prev, meta: { ...prev.meta, dateISO: todayISOClient() } }));
+    const v = localStorage.getItem('risk_minor_category') || '';
+    if (v.trim()) setMinor(v.trim());
   }, []);
 
-  // GA View
-  useEffect(() => {
-    if (open) {
-      track(gaEvent(GA_CTX, 'Open'), { ui_id: gaUiId(GA_CTX, 'Open'), step, minor });
-    }
-  }, [open, step, minor]);
-
   const canGoNext = useMemo(() => {
+    if (isAnalyzing) return false;
     if (step === 'tasks') return draft.tasks.length > 0;
     if (step === 'processes') return draft.tasks.some((t) => t.processes.length > 0);
     if (step === 'hazards') return draft.tasks.some((t) => t.processes.some((p) => p.hazards.length > 0));
     return true;
-  }, [draft, step]);
-
-  const goNext = () => {
-    const idx = TAB_LABELS.findIndex((t) => t.id === step);
-    const next = TAB_LABELS[idx + 1]?.id;
-    if (next) setStep(next);
-  };
-
-  const goPrev = () => {
-    const idx = TAB_LABELS.findIndex((t) => t.id === step);
-    const prev = TAB_LABELS[idx - 1]?.id;
-    if (prev) setStep(prev);
-  };
+  }, [draft, step, isAnalyzing]);
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submitting || isAnalyzing) return;
 
     if (!userEmail) {
-      // ✅ [수정] 로그인 안내 및 로그인 모달 트리거
       openAlert({
         title: '로그인이 필요합니다',
-        lines: ['위험성 평가 보고서를 생성하려면 로그인이 필요합니다.', '로그인 후 다시 시도해주세요.'],
-        confirmText: '로그인하기',
-        showClose: true,
-        onConfirm: () => {
-          onRequireLogin?.(); // 부모의 로그인 모달 함수 호출
-        }
+        lines: ['위험성 평가 보고서를 생성하려면 로그인이 필요합니다.'],
+        confirmText: '확인',
+        onConfirm: () => onRequireLogin?.(),
       });
       return;
     }
 
-    // 1. 요청 완료 알림 즉시 표시
+    // 1) 즉시 알림 표시
     openAlert({
       title: '위험성 평가 생성 요청',
-      lines: [
-        '보고서 생성이 요청되었습니다!',
-        '완료되면 이메일 또는 문서함에서 확인할 수 있습니다.',
-      ],
+      lines: ['위험성 평가 보고서 생성이 요청되었습니다!', '완료되면 문서함/이메일에서 확인 가능합니다.'],
       confirmText: '확인',
     });
 
     setSubmitting(true);
     await nextFrame();
-
-    onClose?.();
+    onClose?.(); // 위자드 닫기
 
     const ac = new AbortController();
     abortRef.current = ac;
 
     try {
+      // 2) 부모에게 제출 위임
       await onSubmit(draft, { signal: ac.signal, userEmail });
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
-      console.error(e);
+      console.error('[Wizard Submit Error]', e);
       openAlert({
         title: '생성 실패',
-        lines: ['보고서 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
+        lines: ['보고서 생성 중 오류가 발생했습니다.', e?.message || '다시 시도해주세요.'],
         confirmText: '확인',
       });
     } finally {
@@ -229,38 +180,24 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
           <div className={s.header}>
             <div className={s.headerLeft}>
               {onClose && (
-                <button className={s.closeBtn} onClick={onClose} disabled={submitting}>
-                  ← 나가기
-                </button>
+                <button className={s.closeBtn} onClick={onClose} disabled={submitting}>← 나가기</button>
               )}
               <h2 className={s.title}>위험성평가 작성</h2>
             </div>
-            <div className={s.progressText}>
-              {TAB_LABELS.findIndex(t => t.id === step) + 1} / 4 단계
-            </div>
+            <div className={s.progressText}>{TAB_LABELS.findIndex(t => t.id === step) + 1} / 4 단계</div>
           </div>
 
           <div className={s.tabs}>
-            {TAB_LABELS.map((t, i) => {
-              const currentIdx = TAB_LABELS.findIndex(x => x.id === step);
-              const isActive = t.id === step;
-              const isPast = i < currentIdx;
-              return (
-                <div
-                  key={t.id}
-                  className={`${s.tab} ${isActive ? s.tabActive : ''} ${isPast ? s.tabPast : ''}`}
-                  onClick={() => !submitting && setStep(t.id)}
-                >
-                  <div className={s.stepNum}>{i + 1}</div>
-                  <span className={s.stepLabel}>{t.label}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className={s.helperBox}>
-            <span className={s.helperIcon}>💡</span>
-            {TAB_LABELS.find((t) => t.id === step)?.helper}
+            {TAB_LABELS.map((t, i) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`${s.tab} ${step === t.id ? s.tabActive : ''}`}
+                onClick={() => !submitting && !isAnalyzing && setStep(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
           <div className={s.content}>
@@ -271,19 +208,23 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
           </div>
 
           <div className={s.footer}>
-            <button className={s.navBtn} onClick={goPrev} disabled={step === 'tasks' || submitting}>
-              이전
-            </button>
-            
-            {step !== 'controls' ? (
-              <button className={s.navBtnPrimary} onClick={goNext} disabled={!canGoNext || submitting}>
-                다음 단계
-              </button>
-            ) : (
-              <button className={s.submitBtn} onClick={handleSubmit} disabled={submitting}>
-                {submitting ? '요청 중...' : '보고서 생성 완료'}
-              </button>
-            )}
+            <div className={s.footerMessage}>
+              {isAnalyzing && <span className={s.loadingText}>⚙️ 데이터를 분석하고 있습니다...</span>}
+            </div>
+            <div className={s.footerBtns}>
+              <button className={s.navBtn} onClick={() => setStep(TAB_LABELS[TAB_LABELS.findIndex(x => x.id === step) - 1].id)} disabled={step === 'tasks' || submitting}>이전</button>
+              {step !== 'controls' ? (
+                <button className={s.navBtnPrimary} onClick={() => setStep(TAB_LABELS[TAB_LABELS.findIndex(x => x.id === step) + 1].id)} disabled={!canGoNext || submitting}>다음 단계</button>
+              ) : (
+                <button 
+                  className={s.submitBtn} 
+                  onClick={handleSubmit} 
+                  disabled={submitting || isAnalyzing || !canGoNext}
+                >
+                  {submitting ? '요청 중...' : isAnalyzing ? '데이터 분석 중' : '보고서 생성 완료'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -299,11 +240,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
           fn?.();
         }}
         showClose={alertShowClose}
-        onClose={() => {
-          const fn = alertOnCloseRef.current;
-          closeAlert();
-          fn?.();
-        }}
+        onClose={closeAlert}
       />
     </>
   );

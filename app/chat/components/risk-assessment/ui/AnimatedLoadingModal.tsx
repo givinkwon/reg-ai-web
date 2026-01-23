@@ -11,7 +11,7 @@ type Props = {
 
 export default function AnimatedLoadingModal({
   open,
-  title = '세부작업을 불러오는 중…',
+  title = '작업을 불러오는 중…',
   message = '잠시만 기다려 주세요.',
 }: Props) {
   // ✅ 모달 열릴 때 스크롤 잠금(선택)

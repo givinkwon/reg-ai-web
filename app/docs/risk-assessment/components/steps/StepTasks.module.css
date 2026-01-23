@@ -80,7 +80,7 @@
 
 .cardText {
   font-weight: 500;
-  color: var(--text-main);
+  color: black;
   font-size: 0.95rem;
 }
 
@@ -146,11 +146,7 @@
 }
 
 .chipRemove {
-  width: 18px;
-  height: 18px;
   border-radius: 50%;
-  background-color: #fee2e2;
-  color: #ef4444;
   border: none;
   cursor: pointer;
   display: flex;

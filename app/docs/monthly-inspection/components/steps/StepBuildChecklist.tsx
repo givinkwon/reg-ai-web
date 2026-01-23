@@ -12,7 +12,7 @@ type Props = {
   onNext: (sections: Sections) => void;
 };
 
-const CATS: ChecklistCategory[] = ['사업장 점검 사항', '노동안전 점검 사항', '세부 작업 및 공정별 점검 사항'];
+const CATS: ChecklistCategory[] = ['사업장 점검 사항', '노동안전 점검 사항', '작업 및 공정별 점검 사항'];
 
 export default function StepBuildChecklist({ detailTasks, initialSections, onBack, onNext }: Props) {
   const [sections, setSections] = useState<Sections>(initialSections);

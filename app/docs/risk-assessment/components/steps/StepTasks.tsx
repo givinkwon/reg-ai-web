@@ -168,7 +168,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const resolvedScope = `${userId}|${currentMinor}`;
     if (Array.isArray(cached.tasks) && cached.tasks.length > 0) {
       setDraft((prev) => {
-        if (prev.tasks.length > 0) return prev; // 이미 업종 중이면 덮어쓰기 방지
+        if (prev.tasks.length > 0) return prev; // 이미 작업 중이면 덮어쓰기 방지
         return { ...prev, tasks: cached.tasks };
       });
       autoAppliedRef.current = resolvedScope;
@@ -179,7 +179,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     setRecoLoading(false);
   }, [minorCategory, user?.email, overrideMinor, setDraft]);
 
-  // ✅ 3. API 호출 (추천 업종 목록)
+  // ✅ 3. API 호출 (추천 작업 목록)
   useEffect(() => {
     const currentMinor = norm(minorCategory);
     if (!currentMinor || currentMinor === 'ALL') return;
@@ -288,12 +288,12 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     <div className={s.container}>
       <div className={s.header}>
         <div>
-          <h3 className={s.title}>업종 선택</h3>
+          <h3 className={s.title}>작업 선택</h3>
           <div className={s.desc}>
             {norm(minorCategory) ? (
-              <>소분류 <b className="text-purple-600 font-semibold">{minorCategory}</b> 기준으로 업종을 자동 추천해 드렸습니다.</>
+              <>소분류 <b className="text-purple-600 font-semibold">{minorCategory}</b> 기준으로 작업을 자동 추천해 드렸습니다.</>
             ) : (
-              '진행할 업종을 선택하세요. 관련된 공정 데이터를 자동으로 불러옵니다.'
+              '진행할 작업을 선택하세요. 관련된 공정 데이터를 자동으로 불러옵니다.'
             )}
           </div>
         </div>
@@ -310,7 +310,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
       {recoLoading && (
         <div className={s.loadingState}>
           <RefreshCw className="animate-spin text-purple-500" />
-          <span>추천 업종을 불러오는 중...</span>
+          <span>추천 작업을 불러오는 중...</span>
         </div>
       )}
 
@@ -344,16 +344,16 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
       {/* 빈 상태 */}
       {!recoLoading && !recoError && displayList.length === 0 && (
         <div className={s.loadingState}>
-          <span>추천 업종이 없습니다. 직접 추가해주세요.</span>
+          <span>추천 작업이 없습니다. 직접 추가해주세요.</span>
         </div>
       )}
 
       {/* 하단 선택 요약 (칩) */}
       <div className={s.summary}>
-        <span className={s.summaryLabel}>선택된 업종 ({draft.tasks.length})</span>
+        <span className={s.summaryLabel}>선택된 작업 ({draft.tasks.length})</span>
         <div className={s.chipList}>
           {draft.tasks.length === 0 ? (
-            <span className={s.emptyText}>선택된 업종이 없습니다.</span>
+            <span className={s.emptyText}>선택된 작업이 없습니다.</span>
           ) : (
             draft.tasks.map(t => (
               <span key={t.id} className={s.chip}>

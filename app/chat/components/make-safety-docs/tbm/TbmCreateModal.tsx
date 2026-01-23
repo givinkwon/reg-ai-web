@@ -535,11 +535,11 @@ export default function TbmCreateModal({
               <div className={s.header}>
                 <h3 className={s.title}>TBM 활동일지</h3>
                 <p className={s.desc}>
-                  금일 작업(세부작업 태그)을 입력하면 REG AI가 작업에 따라 알맞은 TBM 활동일지를 생성합니다.
+                  금일 작업(작업 태그)을 입력하면 REG AI가 작업에 따라 알맞은 TBM 활동일지를 생성합니다.
                 </p>
               </div>
 
-              <label className={s.label}>금일 작업(세부작업 태그)</label>
+              <label className={s.label}>금일 작업(작업 태그)</label>
               <TbmDetailTaskTagInput value={detailTasks} onChange={onChangeTasks} minorCategory={minorForApi} />
 
               <div className={s.sectionRow}>

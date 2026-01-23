@@ -2,11 +2,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
-import s from './AddDetailTaskModal.module.css'; // ✅ 스타일 재사용 (또는 AddProcessModal.module.css)
+import s from './AddDetailTaskModal.module.css';
 
 type Props = {
   open: boolean;
-  taskTitle: string; // ✅ 검색 기준이 될 작업명
+  taskTitle: string;
   minorCategory?: string | null;
   onClose: () => void;
   onAdd: (title: string) => void;
@@ -20,16 +20,13 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
   const [items, setItems] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   
-  // 멀티 선택 상태
   const [selected, setSelected] = useState<string[]>([]);
   const selectedSet = useMemo(() => new Set(selected.map(norm)), [selected]);
 
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
-  const canSearch = useMemo(() => norm(q).length >= 1, [q]);
-
-  // 초기화
+  // 1. 모달이 열릴 때 상태 초기화
   useEffect(() => {
     if (!open) return;
     setQ('');
@@ -38,28 +35,24 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
     setSelected([]);
   }, [open]);
 
-  // API 검색 (Debounce 적용)
+  // 2. 검색 API 호출
   useEffect(() => {
     if (!open) return;
-    if (!canSearch) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
     debounceRef.current = window.setTimeout(async () => {
       setLoading(true);
       setError(null);
+      
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
 
       try {
         const qs = new URLSearchParams({ 
-          endpoint: 'sub-processes', // ✅ 공정 검색 엔드포인트
-          process_name: norm(taskTitle), // ✅ 작업명 전달
+          endpoint: 'sub-processes',
+          process_name: norm(taskTitle),
           q: norm(q), 
           limit: '50' 
         });
@@ -72,15 +65,16 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
           cache: 'no-store',
         });
 
-        if (!res.ok) throw new Error('검색 실패');
+        if (!res.ok) throw new Error('데이터를 불러오지 못했습니다.');
 
         const data = await res.json();
-        
-        // ✅ [수정] 타입 명시: Array.from<string>(...)
         const next = Array.from<string>(new Set((data.items ?? []).map(norm).filter(Boolean)));
+        
         setItems(next);
       } catch (e: any) {
-        if (e.name !== 'AbortError') setError('검색 중 오류가 발생했습니다.');
+        if (e.name !== 'AbortError') {
+          setError('목록을 불러오는 중 오류가 발생했습니다.');
+        }
       } finally {
         setLoading(false);
       }
@@ -89,11 +83,12 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [q, open, canSearch, taskTitle, minorCategory]);
+  }, [q, open, taskTitle, minorCategory]);
 
   const toggleSelect = (title: string) => {
     const v = norm(title);
     if (!v) return;
+
     setSelected(prev => {
       const set = new Set(prev.map(norm));
       if (set.has(v)) return prev.filter(x => norm(x) !== v);
@@ -101,7 +96,8 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
     });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.preventDefault(); // 폼 제출 방지
     const uniq = Array.from(new Set(selected.map(norm).filter(Boolean)));
     if (uniq.length === 0) return;
     uniq.forEach(t => onAdd(t));
@@ -113,45 +109,54 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
   return (
     <div className={s.overlay} onMouseDown={onClose} role="dialog">
       <div className={s.modal} onMouseDown={(e) => e.stopPropagation()}>
-        {/* 헤더 */}
         <div className={s.header}>
           <div className={s.titleGroup}>
             <div className={s.title}>공정 추가</div>
             <div className={s.subTitle}>
-              <span className="text-purple-600 font-bold">{taskTitle}</span> 작업의 세부 공정을 검색하세요.
+              <span className="text-purple-600 font-bold">{taskTitle}</span> 작업의 세부 공정을 선택하세요.
             </div>
           </div>
-          <button className={s.closeBtn} onClick={onClose} aria-label="닫기">
+          <button 
+            type="button" 
+            className={s.closeBtn} 
+            onClick={(e) => { e.preventDefault(); onClose(); }} 
+            aria-label="닫기"
+          >
             <X size={20} />
           </button>
         </div>
 
-        {/* 검색창 */}
         <div className={s.searchBox}>
           <Search size={18} className={s.searchIcon} />
           <input
             className={s.input}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="예: 준비, 절단, 용접..."
+            placeholder="추가로 검색할 키워드를 입력하세요..."
             autoFocus
           />
         </div>
 
-        {/* 선택된 항목 (Chips) */}
         {selected.length > 0 && (
           <div className={s.selectedBar}>
             {selected.map(t => (
-              <button key={t} className={s.selectedChip} onClick={() => toggleSelect(t)}>
+              <button 
+                key={t} 
+                type="button" 
+                className={s.selectedChip} 
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleSelect(t);
+                }}
+              >
                 {t} <span className={s.selectedX}>×</span>
               </button>
             ))}
           </div>
         )}
 
-        {/* 결과 리스트 */}
         <div className={s.list}>
-          {loading && <div className={s.empty}>검색 중...</div>}
+          {loading && <div className={s.empty}>목록을 불러오는 중...</div>}
           {!loading && error && <div className={s.empty}>{error}</div>}
           
           {!loading && !error && items.length > 0 && (
@@ -162,8 +167,12 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
                 return (
                   <button
                     key={v}
+                    type="button"
                     className={`${s.item} ${isSelected ? s.itemSelected : ''}`}
-                    onClick={() => toggleSelect(v)}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        toggleSelect(v);
+                    }}
                   >
                     <span className={s.itemText}>{v}</span>
                     {isSelected && <span className={s.pick}>선택됨</span>}
@@ -173,24 +182,40 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
             </>
           )}
 
-          {/* 결과 없음: 직접 추가 버튼 */}
-          {!loading && !error && q && items.length === 0 && (
+          {!loading && !error && items.length === 0 && (
             <div className={s.empty}>
-              검색 결과가 없습니다.<br/>
-              <button 
-                className={s.createBtn}
-                onClick={() => { onAdd(q); onClose(); }}
-              >
-                '{q}' 직접 추가하기
-              </button>
+              {q ? (
+                <>
+                  검색 결과가 없습니다.<br/>
+                  <button 
+                    type="button"
+                    className={s.createBtn}
+                    onClick={(e) => { 
+                        e.preventDefault();
+                        onAdd(q); 
+                        onClose(); 
+                    }}
+                  >
+                    '{q}' 직접 추가하기
+                  </button>
+                </>
+              ) : (
+                '관련된 공정 데이터가 없습니다.'
+              )}
             </div>
           )}
         </div>
 
-        {/* 푸터 */}
         <div className={s.footer}>
-          <button className={s.cancel} onClick={onClose}>취소</button>
           <button 
+            type="button" 
+            className={s.cancel} 
+            onClick={(e) => { e.preventDefault(); onClose(); }}
+          >
+            취소
+          </button>
+          <button 
+            type="button"
             className={s.confirm} 
             onClick={handleConfirm} 
             disabled={selected.length === 0}
