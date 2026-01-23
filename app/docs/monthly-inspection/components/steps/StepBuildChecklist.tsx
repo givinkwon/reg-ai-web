@@ -53,8 +53,13 @@ export default function StepBuildChecklist({ detailTasks, initialSections, onBac
           return (
             <div key={cat} className={s.group}>
               <button className={s.groupHeader} onClick={() => setOpenCat(isOpen ? ('' as any) : cat)}>
-                <span className={s.catTitle}>{cat}</span>
-                <span className={s.count}>{items.length}</span>
+                {/* ✅ [수정] 제목과 카운트를 div로 묶어서 왼쪽 그룹으로 만듦 */}
+                <div className={s.titleGroup}>
+                  <span className={s.catTitle}>{cat}</span>
+                  <span className={s.count}>{items.length}</span>
+                </div>
+                
+                {/* 화살표는 오른쪽 그룹 */}
                 <ChevronDown size={18} className={isOpen ? s.rot : ''} />
               </button>
               

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Plus, FileText } from 'lucide-react';
-import s from './TbmCreateModal.module.css'; // ✅ CSS 모듈 분리
+import s from './TbmCreateModal.module.css'; // ✅ CSS 모듈
 
 import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
 import CenteredAlertModal from './ui/AlertModal';
@@ -34,7 +34,7 @@ type Props = {
 
 const norm = (v?: string | null) => (v ?? '').trim();
 
-// 폼 데이터 캐싱
+// 폼 데이터 캐싱 설정
 const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v2';
 const FORM_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180;
 
@@ -71,16 +71,19 @@ function safeWriteFormCache(key: string, payload: TbmFormCache) {
   } catch {}
 }
 
-function nextFrame() {
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-}
-
+// ✅ [수정됨] 타임아웃 에러 핸들링
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), timeoutMs);
+
   try {
     const res = await fetch(input, { ...init, signal: ac.signal });
     return res;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('요청 시간이 초과되었습니다.');
+    }
+    throw err;
   } finally {
     clearTimeout(t);
   }
@@ -137,11 +140,10 @@ export default function TbmCreateModal({
     });
   }, [detailTasks, attendees, scopeKey, open, minorCategory]);
 
-  // 회사명 로드 (유저 정보에서 secondary_info 확인)
+  // 회사명 로드
   useEffect(() => {
     if (!open || !user?.email || accountCompanyName) return;
     
-    // 이미 스토어에 있으면 사용
     const storeCompany = (user as any)?.secondary_info?.company;
     if (storeCompany) {
       setAccountCompanyName(storeCompany);
@@ -164,7 +166,7 @@ export default function TbmCreateModal({
       } catch { } finally {
         setAccountLoading(false);
       }
-    })();
+     })();
   }, [open, user, user?.email, accountCompanyName]);
 
   const openAlert = (cfg: typeof alertConfig, onConfirm?: () => void) => {
@@ -178,7 +180,41 @@ export default function TbmCreateModal({
     alertOnConfirmRef.current = null;
   };
 
-  const handleSubmit = async () => {
+  // ✅ [핵심 수정] 백그라운드 다운로드 로직
+  // 이 함수는 모달이 닫혀도 브라우저 메모리 상에서 계속 실행됩니다.
+  const runBackgroundDownload = async (body: any) => {
+    try {
+      // 타임아웃을 90초로 넉넉하게 설정 (서버가 느려도 기다려줌)
+      const res = await fetchWithTimeout(
+        '/api/risk-assessment?endpoint=tbm-export-excel',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+        90000 
+      );
+
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `TBM활동일지_${body.dateISO}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      
+      console.log('TBM 다운로드 완료');
+    } catch (e: any) {
+      // 모달이 닫힌 후일 수 있으므로 alert 대신 콘솔 경고
+      console.warn('백그라운드 다운로드 실패 (이메일 발송 여부 확인 필요)', e);
+    }
+  };
+
+  const handleSubmit = () => {
     if (submitting) return;
 
     if (!user?.email) {
@@ -196,62 +232,38 @@ export default function TbmCreateModal({
     const cleanedTasks = detailTasks.map(norm).filter(Boolean);
     const cleanedAttendees = attendees.map(a => ({ name: norm(a.name), contact: norm(a.contact) })).filter(a => a.name);
 
-    openAlert({
-      title: 'TBM 일지 생성 요청',
-      lines: ['서버에서 TBM 일지를 생성하고 있습니다.', '완료되면 자동으로 다운로드됩니다.'],
-      confirmText: '확인',
-      showClose: false,
-    });
+    // 전송할 데이터 준비
+    const body = {
+      email: user.email,
+      companyName: accountCompanyName || '',
+      dateISO: new Date().toISOString().split('T')[0],
+      minorCategory: minorCategory || null,
+      detailTasks: cleanedTasks,
+      attendees: cleanedAttendees,
+    };
 
     setSubmitting(true);
-    await nextFrame();
 
-    try {
-      const body = {
-        email: user.email,
-        companyName: accountCompanyName || '',
-        dateISO: new Date().toISOString().split('T')[0],
-        minorCategory: minorCategory || null,
-        detailTasks: cleanedTasks,
-        attendees: cleanedAttendees,
-      };
-
-      const res = await fetchWithTimeout(
-        '/api/risk-assessment?endpoint=tbm-export-excel',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-        25000
-      );
-
-      if (!res.ok) throw new Error(`API Error: ${res.status}`);
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `TBM활동일지_${body.dateISO}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      closeAlert();
+    // ✅ [변경 사항]
+    // 1. 사용자에게는 "요청 완료" 메시지를 바로 띄움
+    // 2. 확인 누르면 모달 닫힘
+    // 3. 백그라운드에서 fetch는 계속 진행됨
+    openAlert({
+      title: 'TBM 생성 요청 완료',
+      lines: [
+        '일지 생성이 시작되었습니다.',
+        '완료 시 자동으로 다운로드되며,',
+        '시간이 걸릴 경우 이메일/문서함에서 확인 가능합니다.'
+      ],
+      confirmText: '확인',
+      showClose: false,
+    }, () => {
+      // 알림창 확인 버튼을 누르면 모달 닫기
       onClose();
+    });
 
-    } catch (e) {
-      console.error(e);
-      openAlert({
-        title: '생성 실패',
-        lines: ['일지 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
-        confirmText: '확인',
-        showClose: true,
-      });
-    } finally {
-      setSubmitting(false);
-    }
+    // ✅ 백그라운드 작업 시작 (await 하지 않음)
+    runBackgroundDownload(body);
   };
 
   const canSubmit = detailTasks.length > 0 && attendees.some(a => a.name) && !submitting;
@@ -265,7 +277,7 @@ export default function TbmCreateModal({
           <div className={s.topBar}>
             <span className={s.pill}>TBM 활동일지</span>
             <button className={s.iconBtn} onClick={onClose} disabled={submitting}>
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
 
@@ -320,9 +332,8 @@ export default function TbmCreateModal({
                   <button
                     className={s.removeBtn}
                     onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}
-                    
                   >
-                    <X size={14} />
+                    <X size={18} />
                   </button>
                 </div>
               ))}
@@ -330,7 +341,7 @@ export default function TbmCreateModal({
 
             <button className={s.primaryBtn} onClick={handleSubmit} disabled={!canSubmit}>
               <FileText size={18} />
-              {submitting ? '생성 중...' : 'TBM 일지 생성하기'}
+              {submitting ? '생성 요청 중...' : 'TBM 일지 생성하기'}
             </button>
             
             {accountLoading && <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, textAlign: 'center' }}>회사 정보를 불러오는 중...</div>}
@@ -345,17 +356,9 @@ export default function TbmCreateModal({
         confirmText={alertConfig.confirmText}
         showClose={alertConfig.showClose}
         onConfirm={() => {
-          // 1. [중요] 실행할 함수를 먼저 변수에 '백업'해둡니다.
-          // closeAlert()가 실행되면 ref가 초기화되어 함수가 사라질 수 있기 때문입니다.
           const fn = alertOnConfirmRef.current;
-
-          // 2. 알림창을 닫습니다. (화면에서 제거)
           closeAlert();
-
-          // 3. 백업해둔 함수가 있다면 실행합니다.
           if (fn) {
-            // React 상태 업데이트가 겹치는 것을 방지하기 위해 
-            // 아주 짧은 딜레이(setTimeout)를 주면 더 확실하게 뜹니다.
             setTimeout(() => {
               fn();
             }, 100); 

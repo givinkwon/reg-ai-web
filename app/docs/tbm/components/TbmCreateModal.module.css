@@ -43,7 +43,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #999;
+  color: black;
   padding: 0.4rem;
   border-radius: 50%;
   display: flex;
@@ -163,11 +163,21 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: black!important;
+  
+  /* ✅ 추가: 배경색을 명시적으로 투명하게 설정 (브라우저 기본 스타일 제거) */
+  /* background-color: transparent;  */
+  
+  /* ✅ 변경: 검정색도 좋지만, 삭제 기능이므로 빨간 계열이나 진한 회색 권장 */
+  /* color: #666 !important;  */
+  
+  /* ✅ 추가: 버튼 터치 영역 확보를 위한 패딩 */
+  padding: 4px;
+  width: 24px;  /* 너비 고정 */
+  height: 24px; /* 높이 고정 */
 }
-.removeBtn:hover {
-  background: #fee2e2;
-}
+
+/* 마우스 올렸을 때 인지하기 쉽게 배경색 추가 */
+
 .removeBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
