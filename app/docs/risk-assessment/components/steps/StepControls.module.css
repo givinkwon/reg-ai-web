@@ -68,7 +68,7 @@
 
 .loadingBadge {
   font-size: 0.8rem;
-  color: #6c5ce7;
+  color: #2388FF;
   font-weight: 600;
   background-color: #f3f0ff;
   padding: 0.2rem 0.6rem;
@@ -167,8 +167,8 @@
 
 .chipActive {
   background-color: #eef2ff;
-  border-color: #6c5ce7;
-  color: #6c5ce7;
+  border-color: #2388FF;
+  color: #2388FF;
   font-weight: 600;
 }
 
@@ -191,6 +191,6 @@
 }
 
 .textarea:focus {
-  border-color: #6c5ce7;
+  border-color: #2388FF;
   box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
 }

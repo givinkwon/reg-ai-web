@@ -45,7 +45,7 @@ export default function DocCreationModal({ type, onClose }: Props) {
             취소
           </button>
           <button 
-            className="px-5 py-2.5 rounded-lg bg-[#6c5ce7] text-white hover:bg-[#5b4bc4] font-medium shadow-md transition transform active:scale-95"
+            className="px-5 py-2.5 rounded-lg bg-[#2388FF] text-white hover:bg-[#5b4bc4] font-medium shadow-md transition transform active:scale-95"
           >
             작성 완료
           </button>

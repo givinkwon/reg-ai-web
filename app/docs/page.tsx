@@ -7,30 +7,30 @@ import s from './page.module.css'; // 이전 단계의 CSS 사용 (white theme)
 const MENU_ITEMS = [
   {
     id: 'tools',
-    title: '안전보건 도구함',
-    desc: '저장된 문서를 관리하고 다운로드하세요.',
+    title: '안전보건 문서함',
+    desc: '작성한 문서를 관리하고 다운로드하세요.',
     icon: <FolderOpen size={32} />,
-    href: '/docs/tools',
+    href: '/docs/docs-box',
     isPrimary: true,
   },
   {
     id: 'risk',
     title: '위험성평가',
-    desc: '유해·위험요인 파악 및 감소대책 수립',
+    desc: '유해·위험요인 파악부터 감소대책 수립까지, 업종별 AI 추천에 따라 자동화하세요!',
     icon: <AlertTriangle size={32} />,
     href: '/docs/risk-assessment',
   },
   {
     id: 'tbm',
     title: 'TBM (작업전점검)',
-    desc: '작업 전 10분 안전미팅 기록',
+    desc: '공정 입력만으로 오늘의 TBM을 한 번에 완성하세요.',
     icon: <Users size={32} />,
     href: '/docs/tbm',
   },
   {
     id: 'monthly',
     title: '월 순회점검표',
-    desc: '현장 정기 안전 점검 리포트',
+    desc: '한 번에 내 사업장 맞춤 순회 점검표를 생성하고, 점검 관리를 이행하세요!',
     icon: <CalendarCheck size={32} />,
     href: '/docs/monthly-inspection',
   },
@@ -41,9 +41,9 @@ export default function DashboardPage() {
     <div className={s.dashboardContainer}>
       {/* 히어로 섹션 */}
       <section className={s.heroSection}>
-        <h1 className={s.heroTitle}>안전관리 스마트 플랫폼</h1>
+        <h1 className={s.heroTitle}>스마트 안전관리 REG AI</h1>
         <p className={s.heroSubtitle}>
-          복잡한 과정 없이, 필요한 기능을 선택하여 바로 시작하세요.
+          복잡한 과정 없이 필요한 기능을 선택하여 바로 시작하세요.
         </p>
       </section>
 

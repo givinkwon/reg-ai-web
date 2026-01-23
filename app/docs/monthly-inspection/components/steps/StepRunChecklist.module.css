@@ -8,7 +8,7 @@
   display: flex;
   justify-content: flex-end;
   font-size: 0.9rem;
-  color: #6c5ce7;
+  color: #2388FF;
   font-weight: 700;
 }
 
@@ -84,7 +84,7 @@
   resize: vertical;
   min-height: 60px;
 }
-.note:focus { border-color: #6c5ce7; }
+.note:focus { border-color: #2388FF; }
 
 .footer {
   display: flex;
@@ -105,7 +105,7 @@
 
 .finishBtn {
   padding: 0.7rem 1.5rem;
-  background: #6c5ce7;
+  background: #2388FF;
   color: white;
   border: none;
   border-radius: 8px;

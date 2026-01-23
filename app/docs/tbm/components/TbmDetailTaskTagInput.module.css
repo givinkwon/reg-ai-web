@@ -17,7 +17,7 @@
   min-height: 42px;
 }
 .box:focus-within {
-  border-color: #6c5ce7;
+  border-color: #2388FF;
   background-color: #fff;
   box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
 }
@@ -84,5 +84,5 @@
 
 .optionActive, .option:hover {
   background-color: #f3f4f6;
-  color: #6c5ce7;
+  color: #2388FF;
 }

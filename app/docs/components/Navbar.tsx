@@ -13,10 +13,10 @@ export default function Navbar() {
 
   // 메뉴 정의
   const NAV_LINKS = [
-    { name: '도구함', href: '/docs/tools' },
+    { name: '문서함', href: '/docs/docs-box' },
     { name: '위험성평가', href: '/docs/risk-assessment' },
     { name: 'TBM', href: '/docs/tbm' },
-    { name: '순회점검', href: '/docs/monthly-inspection' },
+    { name: '순회점검표', href: '/docs/monthly-inspection' },
   ];
 
   const isActive = (path: string) => pathname === path;
@@ -49,7 +49,7 @@ export default function Navbar() {
             로그인
           </Button>
           <Button size="sm" className={s.trialBtn}>
-            무료 체험
+            가입하기
           </Button>
           
           {/* 모바일 햄버거 버튼 */}

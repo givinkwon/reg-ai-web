@@ -78,8 +78,8 @@
 }
 
 .tabActive {
-  color: #6c5ce7;
-  border-bottom-color: #6c5ce7;
+  color: #2388FF;
+  border-bottom-color: #2388FF;
   font-weight: 600;
 }
 
@@ -98,7 +98,7 @@
 }
 
 .tabActive .stepNum {
-  background-color: #6c5ce7;
+  background-color: #2388FF;
 }
 .tabPast .stepNum {
   background-color: #a5b4fc; /* 지나간 단계는 연한 보라 */
@@ -152,7 +152,7 @@
   padding: 0.8rem 2rem;
   border-radius: 8px;
   border: none;
-  background-color: #6c5ce7;
+  background-color: #2388FF;
   color: #fff;
   font-weight: 600;
   cursor: pointer;

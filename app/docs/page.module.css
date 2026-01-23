@@ -61,7 +61,7 @@
 /* 1. 상단 히어로 섹션 (보라색 포인트 배경 느낌) */
 .heroSection {
   width: 100%;
-  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); /* 보라색 그라데이션 */
+  background: linear-gradient(135deg, #2388FF 0%, #2388FF 100%); /* 보라색 그라데이션 */
   padding: 4rem 2rem 6rem; /* 하단 패딩을 넉넉히 주어 카드가 겹치도록 */
   text-align: center;
   color: #fff;
@@ -111,20 +111,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 220px;
+  min-height: 300px;
 }
 
 .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 12px 24px rgba(108, 92, 231, 0.2); /* 호버 시 보라색 그림자 */
-  border-color: #a29bfe;
+  border-color: #2388FF;
 }
 
 .cardIconBox {
   width: 70px;
   height: 70px;
   background-color: #f3f0ff; /* 연한 보라 배경 */
-  color: #6c5ce7; /* 아이콘 색상 */
+  color: #2388FF; /* 아이콘 색상 */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -133,9 +133,9 @@
   font-size: 1.5rem;
 }
 
-/* '도구함' 카드는 더 강조 */
+/* '문서함' 카드는 더 강조 */
 .cardPrimary .cardIconBox {
-  background-color: #6c5ce7;
+  background-color: #2388FF;
   color: #fff;
 }
 
@@ -177,7 +177,7 @@
 
 .infoIcon {
   margin-bottom: 1rem;
-  color: #6c5ce7;
+  color: #2388FF;
 }
 
 .infoTitle {

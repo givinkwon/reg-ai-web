@@ -90,7 +90,7 @@
   background: transparent;
   color: var(--text-main, #333);
 }
-.addInput:focus { border-color: #6c5ce7; }
+.addInput:focus { border-color: #2388FF; }
 
 .addBtn {
   background: #f3f4f6;
@@ -122,7 +122,7 @@
 
 .nextBtn {
   padding: 0.7rem 1.5rem;
-  background: #6c5ce7;
+  background: #2388FF;
   color: white;
   border: none;
   border-radius: 8px;

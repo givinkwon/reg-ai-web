@@ -51,7 +51,7 @@
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
   background-color: var(--bg-sub);
-  color: #6c5ce7;
+  color: #2388FF;
   border: 1px solid var(--border);
 }
 
@@ -95,7 +95,7 @@
 }
 
 .subDesc {
-  color: #6c5ce7;
+  color: #2388FF;
   font-weight: 600;
 }
 
@@ -115,7 +115,7 @@
 .primaryBtn {
   width: 100%;
   padding: 0.9rem;
-  background-color: #6c5ce7;
+  background-color: #2388FF;
   color: white;
   border: none;
   border-radius: 8px;

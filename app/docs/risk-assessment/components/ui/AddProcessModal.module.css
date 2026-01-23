@@ -98,7 +98,7 @@
   background-color: #f9f9f9;
 }
 .input:focus {
-  border-color: #6c5ce7;
+  border-color: #2388FF;
   background-color: #fff;
   box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
 }
@@ -196,7 +196,7 @@
 
 .createBtn {
   margin-top: 0.5rem;
-  color: #6c5ce7;
+  color: #2388FF;
   font-weight: 600;
   background: none;
   border: none;
@@ -236,7 +236,7 @@
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   border: none;
-  background-color: #6c5ce7; /* 메인 컬러 */
+  background-color: #2388FF; /* 메인 컬러 */
   color: white;
   font-size: 0.95rem;
   font-weight: 600;

@@ -28,7 +28,7 @@
 }
 
 .logoIcon {
-  color: #6c5ce7;
+  color: #2388FF;
 }
 
 .logoText {
@@ -53,12 +53,12 @@
 }
 
 .navLink:hover {
-  color: #6c5ce7;
+  color: #2388FF;
 }
 
 .navLink.active {
-  color: #6c5ce7;
-  border-bottom-color: #6c5ce7;
+  color: #2388FF;
+  border-bottom-color: #2388FF;
 }
 
 .actions {

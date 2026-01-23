@@ -1,0 +1,287 @@
+/* SafetyLink Theme Colors */
+:root {
+  --sl-primary: #3b82f6;      /* SafetyLink Blue */
+  --sl-primary-hover: #2563eb;
+  --sl-bg: #f8f9fa;           /* Light Gray Background */
+  --sl-text-main: #111827;
+  --sl-text-sub: #6b7280;
+  --sl-border: #e5e7eb;
+}
+
+.container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: 80vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+}
+
+/* --- Header --- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--sl-border);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--sl-text-main);
+  margin-bottom: 8px;
+}
+
+.desc {
+  color: var(--sl-text-sub);
+  font-size: 15px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  color: var(--sl-primary);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--sl-primary);
+  border-radius: 50%;
+}
+
+.refreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* --- Content --- */
+.content {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border: 1px solid var(--sl-border);
+}
+
+/* --- Desktop Table --- */
+.desktopView {
+  display: block;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background-color: #f9fafb;
+  color: var(--sl-text-sub);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--sl-border);
+}
+
+.table td {
+  padding: 16px;
+  font-size: 15px;
+  color: var(--sl-text-main);
+  border-bottom: 1px solid var(--sl-border);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover {
+  background-color: #f9fafb;
+}
+
+.docNameWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconBox {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  color: var(--sl-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.docName {
+  font-weight: 500;
+}
+
+.textCenter {
+  text-align: center;
+}
+
+.downloadBtn {
+  color: var(--sl-text-sub);
+  gap: 6px;
+}
+
+.downloadBtn:hover {
+  color: var(--sl-primary);
+  background-color: #eff6ff;
+}
+
+.emptyCell {
+  text-align: center;
+  padding: 60px !important;
+  color: var(--sl-text-sub);
+}
+
+/* --- Mobile List --- */
+.mobileView {
+  display: none;
+  padding: 16px;
+}
+
+.mobileCard {
+  background: #fff;
+  border: 1px solid var(--sl-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.mobileCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mobileDate {
+  font-size: 13px;
+  color: var(--sl-text-sub);
+}
+
+.mobileDocName {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.mobileDownloadBtn {
+  width: 100%;
+  gap: 8px;
+  border-color: var(--sl-primary);
+  color: var(--sl-primary);
+}
+
+/* --- Footer & Misc --- */
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--sl-text-sub);
+  font-size: 13px;
+}
+
+.errorBox {
+  padding: 16px;
+  background-color: #fef2f2;
+  color: #ef4444;
+  text-align: center;
+  font-size: 14px;
+  border-bottom: 1px solid #fee2e2;
+}
+
+/* --- Login Screen --- */
+.loginCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 60px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--sl-border);
+  text-align: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.loginIcon {
+  color: var(--sl-primary);
+  margin-bottom: 20px;
+}
+
+.loginTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.loginDesc {
+  color: var(--sl-text-sub);
+  margin-bottom: 30px;
+}
+
+.primaryBtn {
+  background-color: var(--sl-primary);
+  color: white;
+  padding: 0 40px;
+}
+
+.primaryBtn:hover {
+  background-color: var(--sl-primary-hover);
+}
+
+/* --- Responsive Media Queries --- */
+@media (max-width: 768px) {
+  .desktopView {
+    display: none;
+  }
+  
+  .mobileView {
+    display: block;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .headerActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .btnText {
+    display: none; /* 모바일에서 '새로고침' 텍스트 숨김 */
+  }
+}
