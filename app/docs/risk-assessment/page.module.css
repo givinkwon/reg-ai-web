@@ -1,4 +1,4 @@
-/* app/chat/components/ToolLayout.module.css */
+/* app/risk-assessment/page.module.css */
 
 .container {
   display: flex;
@@ -7,9 +7,10 @@
   width: 100%;
   background-color: #fff;
   min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* === 1. 액션 섹션 (상단 보라색 영역) === */
+/* === Hero Section === */
 .actionSection {
   width: 100%;
   background-color: #f8f9fa;
@@ -26,18 +27,17 @@
   border-radius: 20px;
   padding: 3.5rem 2rem;
   text-align: center;
-  color: white; /* 텍스트 흰색 */
-  box-shadow: 0 20px 40px rgba(108, 92, 231, 0.25);
+  color: white;
+  box-shadow: 0 20px 40px rgba(35, 136, 255, 0.25);
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: transform 0.3s ease;
 }
 
 .iconWrapper {
   background-color: rgba(255, 255, 255, 0.2);
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -47,14 +47,14 @@
 }
 
 .title {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 800;
   margin-bottom: 1rem;
   letter-spacing: -0.5px;
 }
 
 .desc {
-  font-size: 1.1rem;
+  font-size: 1rem;
   max-width: 600px;
   margin: 0 auto 2.5rem;
   line-height: 1.6;
@@ -63,176 +63,217 @@
 }
 
 .btnGroup {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  justify-content: center;
   margin-top: 1rem;
 }
 
-/* ✅ 버튼 스타일 수정 (가독성 UP) */
-
-/* 메인 버튼: 흰색 배경 + 보라색 글씨 */
 .whiteBtn {
   background-color: #ffffff !important;
-  color: white !important;
+  color: #2388FF !important;
   border: none !important;
   font-weight: 700 !important;
-  height: 56px !important;
+  height: 52px !important;
   padding: 0 2rem !important;
-  font-size: 1.1rem !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  font-size: 1.05rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   border-radius: 8px;
-  transition: transform 0.2s ease, background-color 0.2s;
+  transition: transform 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .whiteBtn:hover {
-  color: #2388FF !important;
-  background-color: #f8f9fa !important;
   transform: translateY(-2px);
+  background-color: #f1f3f5 !important;
 }
 
-/* 보조 버튼: 반투명 유리 효과 */
-.glassBtn {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  height: 56px !important;
-  padding: 0 1.5rem !important;
-  font-size: 1.05rem !important;
-  backdrop-filter: blur(4px);
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.glassBtn:hover {
-  background-color: rgba(255, 255, 255, 0.3) !important;
-}
-
-/* === 2. 하단 정보 섹션 (3단계 설명 등) === */
-.infoSection {
-  max-width: 1000px;
+/* === Features Section === */
+.featureSection {
+  max-width: 1100px;
   width: 100%;
   margin: 0 auto;
   padding: 5rem 1.5rem;
-  text-align: center;
 }
 
-.sectionTitle {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 3rem;
-}
-
-.grid {
+.featureGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 3rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
 }
 
-.card {
+.featureCard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
+  text-align: center;
 }
 
-.stepBadge {
-  width: 40px;
-  height: 40px;
-  background-color: #2388FF;
-  color: white;
-  border-radius: 12px;
+.featureIconBox {
+  margin-bottom: 1.5rem;
+}
+
+.featureTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2388FF;
+  margin-bottom: 1rem;
+}
+
+.featureDesc {
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* === Preview Section (Images) === */
+.previewSection {
+  width: 100%;
+  background-color: #F8FAFE;
+  padding: 6rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sectionHeader {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2388FF;
+  margin-bottom: 5rem;
+  text-align: center;
+}
+
+.previewRow {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
+  gap: 5rem;
+  max-width: 1100px;
+  width: 100%;
+  margin-bottom: 7rem;
+}
+
+/* 텍스트 왼쪽, 이미지 오른쪽 (지그재그) */
+.previewRow.reverse {
+  flex-direction: row-reverse;
+}
+
+.previewImageWrapper {
+  flex: 1.2; /* 이미지가 텍스트보다 조금 더 넓게 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 실제 이미지 스타일 */
+.previewImg {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12); /* 부드러운 그림자 */
+  border-radius: 12px;
+  background-color: #fff;
+}
+
+.caption {
+  margin-top: 1.5rem;
   font-size: 1.2rem;
-  margin-bottom: 1.2rem;
-  box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
-}
-
-.cardTitle {
-  font-size: 1.25rem;
+  color: #2388FF;
   font-weight: 700;
-  margin-bottom: 0.75rem;
-  color: #222;
 }
 
-.cardDesc {
+.previewContent {
+  flex: 1;
+  text-align: left;
+}
+
+.previewContent h3 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 1.2rem;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.previewContent p {
+  font-size: 1.15rem;
+  color: #555;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+/* === Guide Section === */
+.guideSection {
+  width: 100%;
+  background-color: #fff;
+  padding: 5rem 1.5rem 8rem;
+}
+
+.guideGrid {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+  row-gap: 5rem;
+}
+
+.guideItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.guideIcon {
+  color: #2388FF;
+  margin-bottom: 1.2rem;
+}
+
+.guideItem h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2388FF;
+  margin-bottom: 0.8rem;
+}
+
+.guideItem p {
+  font-size: 0.95rem;
   color: #666;
   line-height: 1.6;
-  font-size: 0.95rem;
+  word-break: keep-all;
 }
 
-/* === 3. FAQ 섹션 === */
-.faqSection {
-  width: 100%;
-  background-color: #f8f9fa;
-  padding: 4rem 1.5rem 6rem;
-  border-top: 1px solid #eee;
+/* === Responsive === */
+@media (max-width: 900px) {
+  .previewRow {
+    gap: 3rem;
+  }
 }
 
-.faqContainer {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.faqItem {
-  background-color: #fff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid #eee;
-}
-
-.faqQ {
-  font-weight: 700;
-  font-size: 1.05rem;
-  margin-bottom: 0.5rem;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.faqQ::before {
-  content: "Q.";
-  color: #2388FF;
-  font-size: 1.2rem;
-}
-
-.faqA {
-  color: #555;
-  line-height: 1.6;
-  padding-left: 2rem;
-}
-
-/* === 모바일 반응형 === */
 @media (max-width: 768px) {
   .title {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
-  .actionBox {
-    padding: 2.5rem 1.5rem;
-  }
-  .grid {
-    gap: 2rem;
+  .featureGrid, .guideGrid {
+    grid-template-columns: 1fr;
+    gap: 3rem;
   }
   
-  /* 모바일에서는 버튼을 꽉 차게 */
-  .btnGroup {
-    width: 100%;
+  .previewRow, .previewRow.reverse {
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 2rem;
+    margin-bottom: 5rem;
+    text-align: center;
   }
-  .whiteBtn, .glassBtn {
+  
+  .previewContent {
+    text-align: center;
+  }
+
+  .previewImageWrapper {
     width: 100%;
   }
 }
