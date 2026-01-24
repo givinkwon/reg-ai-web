@@ -3,14 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, ShieldCheck, User, LogOut, Loader2 } from 'lucide-react'; // Loader2 추가
+import { Menu, X, ShieldCheck, User, LogOut, Loader2, ChevronRight } from 'lucide-react';
 
 // ✅ UI 컴포넌트
 import { Button } from '@/app/components/ui/button'; 
 import s from './Navbar.module.css';
 
 // ✅ Store 임포트
-import { useUserStore, initUserStore } from '@/app/store/user'; // initUserStore 추가
+import { useUserStore, initUserStore } from '@/app/store/user';
 import { useChatStore } from '@/app/store/chat';
 
 // ✅ 로그인 모달
@@ -23,12 +23,12 @@ export default function Navbar() {
 
   // ✅ Store 상태 가져오기
   const user = useUserStore((state) => state.user);
-  const initialized = useUserStore((state) => state.initialized); // 초기화 완료 여부
+  const initialized = useUserStore((state) => state.initialized);
   const logout = useUserStore((state) => state.logout);
   
   const { showLoginModal, setShowLoginModal } = useChatStore();
 
-  // ✅ [중요] 페이지 로드(새로고침) 시 유저 스토어 초기화
+  // ✅ 페이지 로드 시 유저 스토어 초기화
   useEffect(() => {
     initUserStore();
   }, []);
@@ -48,6 +48,7 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
+      setMobileMenuOpen(false); // 로그아웃 시 메뉴 닫기
       router.push('/');
       router.refresh();
     } catch (error) {
@@ -80,15 +81,13 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* 우측 액션 버튼 영역 */}
+          {/* 우측 액션 버튼 영역 (데스크톱 전용) */}
           <div className={s.actions}>
             {!initialized ? (
-              // ✅ 초기 로딩 중 (새로고침 시 로그인 정보를 가져오는 짧은 순간)
               <div className={s.loadingBox}>
                 <Loader2 size={18} className="animate-spin text-gray-400" />
               </div>
             ) : user ? (
-              // ✅ 로그인 상태
               <div className={s.loggedInBox}>
                 <div className={s.userInfo} title={displayName}>
                   <User size={16} style={{ flexShrink: 0 }} />
@@ -105,8 +104,7 @@ export default function Navbar() {
                 </Button>
               </div>
             ) : (
-              // ✅ 로그아웃 상태
-              <>
+              <div className={s.loggedOutBox}>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -120,27 +118,71 @@ export default function Navbar() {
                     가입하기
                   </Button>
                 </Link>
-              </>
+              </div>
             )}
 
-            {/* 모바일 토글 */}
-            <button className={s.mobileToggle} onClick={toggleMobileMenu}>
+            {/* 모바일 토글 버튼 */}
+            <button className={s.mobileToggle} onClick={toggleMobileMenu} aria-label="메뉴 토글">
               {mobileMenuOpen ? <X /> : <Menu />}
             </button>
           </div>
         </div>
 
-        {/* 모바일 메뉴 생략 (데스크톱과 동일한 분기 로직 적용 권장) */}
+        {/* ✅ 모바일 메뉴 드롭다운 수정 */}
         {mobileMenuOpen && (
           <div className={s.mobileMenu}>
-             {/* ...기존 모바일 링크 생략... */}
-             <div className={s.mobileActions}>
-                {!initialized ? null : user ? (
-                   <Button onClick={handleLogout} variant="outline" className={s.mobileFullBtn}>로그아웃</Button>
-                ) : (
-                   <Button onClick={() => setShowLoginModal(true)} variant="outline" className={s.mobileFullBtn}>로그인</Button>
-                )}
-             </div>
+            <div className={s.mobileNavLinks}>
+              {NAV_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`${s.mobileLink} ${isActive(link.href) ? s.mobileActive : ''}`}
+                  onClick={() => setMobileMenuOpen(false)} // 클릭 시 메뉴 닫기
+                >
+                  {link.name}
+                  <ChevronRight size={16} className={s.mobileLinkIcon} />
+                </Link>
+              ))}
+            </div>
+
+            <div className={s.mobileActions}>
+              {!initialized ? (
+                <Loader2 size={24} className="animate-spin text-gray-400 mx-auto" />
+              ) : user ? (
+                <div className={s.mobileUserBox}>
+                  <div className={s.mobileUserInfo}>
+                    <User size={18} />
+                    <span>{displayName}님 반갑습니다.</span>
+                  </div>
+                  <Button 
+                    onClick={handleLogout} 
+                    variant="outline" 
+                    className={s.mobileFullBtn}
+                  >
+                    <LogOut size={16} className="mr-2" />
+                    로그아웃
+                  </Button>
+                </div>
+              ) : (
+                <div className={s.mobileGuestBox}>
+                  <Button 
+                    onClick={() => {
+                      setShowLoginModal(true);
+                      setMobileMenuOpen(false);
+                    }} 
+                    variant="outline" 
+                    className={s.mobileFullBtn}
+                  >
+                    로그인
+                  </Button>
+                  <Link href="/signup" onClick={() => setMobileMenuOpen(false)} style={{ width: '100%' }}>
+                    <Button className={`${s.mobileFullBtn} ${s.trialBtn}`}>
+                      무료로 시작하기
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </nav>

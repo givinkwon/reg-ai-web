@@ -1,13 +1,13 @@
 /* Navbar.module.css */
 
-/* --- 기본 네비게이션 컨테이너 --- */
+/* --- 1. 기본 네비게이션 컨테이너 --- */
 .nav {
   position: sticky;
   top: 0;
   z-index: 50;
   width: 100%;
   border-bottom: 1px solid #e5e7eb;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
 }
 
@@ -21,30 +21,30 @@
   padding: 0 20px;
 }
 
-/* --- 로고 --- */
+/* --- 2. 로고 --- */
 .logo {
   display: flex;
   align-items: center;
   gap: 8px;
   text-decoration: none;
   color: #111827;
-  flex-shrink: 0; /* 로고 찌그러짐 방지 */
+  flex-shrink: 0;
 }
 
 .logoIcon {
-  color: #3b82f6; /* RegAI Blue */
+  color: #3b82f6;
 }
 
 .logoText {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  white-space: nowrap; /* 텍스트 줄바꿈 방지 */
+  white-space: nowrap;
 }
 
-/* --- 데스크톱 메뉴 --- */
+/* --- 3. 데스크톱 메뉴 --- */
 .desktopMenu {
-  display: none;
+  display: none; /* 기본 모바일 우선 (숨김) */
   gap: 32px;
 }
 
@@ -66,12 +66,25 @@
   font-weight: 600;
 }
 
-/* --- 우측 액션 영역 --- */
+/* --- 4. 우측 액션 영역 --- */
 .actions {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0; /* 공간 부족해도 줄어들지 않음 */
+  flex-shrink: 0;
+}
+
+/* ✅ 모바일에서는 데스크톱 전용 버튼 숨기기 */
+@media (max-width: 767px) {
+  .actions .loggedInBox,
+  .actions .loggedOutBox {
+    display: none;
+  }
+}
+
+.loggedOutBox {
+  display: flex;
+  gap: 8px;
 }
 
 .loginBtn {
@@ -82,7 +95,7 @@
 
 .trialBtn {
   background-color: #3b82f6;
-  color: white;
+  color: white !important;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -91,7 +104,7 @@
   background-color: #2563eb;
 }
 
-/* --- 로그인 상태 (닉네임 깨짐 방지 핵심) --- */
+/* --- 5. 로그인 상태 (Ellipsis 적용) --- */
 .loggedInBox {
   display: flex;
   align-items: center;
@@ -108,23 +121,20 @@
   background-color: #f3f4f6;
   padding: 6px 12px;
   border-radius: 20px;
-
-  /* ✅ 핵심: 텍스트가 길어도 한 줄로 유지하고 말줄임표 처리 */
   white-space: nowrap;
-  max-width: 180px; /* 최대 너비 제한 */
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .userName {
-  /* 이름 부분도 넘치면 말줄임 */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .logoutBtn {
   color: #6b7280;
-  white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
+  white-space: nowrap;
 }
 
 .logoutBtn:hover {
@@ -132,7 +142,7 @@
   background-color: #fef2f2;
 }
 
-/* --- 모바일 햄버거 --- */
+/* --- 6. 모바일 햄버거 버튼 --- */
 .mobileToggle {
   display: flex;
   padding: 8px;
@@ -142,7 +152,7 @@
   cursor: pointer;
 }
 
-/* --- 모바일 메뉴 드롭다운 --- */
+/* --- 7. 모바일 메뉴 드롭다운 (핵심 보완) --- */
 .mobileMenu {
   position: absolute;
   top: 64px;
@@ -150,11 +160,10 @@
   width: 100%;
   background-color: white;
   border-bottom: 1px solid #e5e7eb;
-  padding: 16px 20px;
+  padding: 12px 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   animation: slideDown 0.2s ease-out;
   z-index: 49;
 }
@@ -164,17 +173,32 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 모바일 네비게이션 링크 리스트 */
+.mobileNavLinks {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
 .mobileLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 텍스트와 화살표 아이콘 분리 */
   font-size: 16px;
   font-weight: 500;
   color: #4b5563;
-  padding: 12px 8px;
+  padding: 14px 12px;
   text-decoration: none;
   border-radius: 8px;
+  transition: background 0.2s;
 }
 
-.mobileLink:hover {
-  background-color: #f9fafb;
+.mobileLinkIcon {
+  color: #d1d5db;
+}
+
+.mobileLink:active {
+  background-color: #f3f4f6;
 }
 
 .mobileActive {
@@ -183,42 +207,59 @@
   font-weight: 600;
 }
 
+.mobileActive .mobileLinkIcon {
+  color: #3b82f6;
+}
+
+/* 모바일 하단 액션 버튼 영역 */
 .mobileActions {
+  margin-top: 8px;
+  padding: 16px 12px 0;
+  border-top: 1px solid #f3f4f6;
+}
+
+.mobileGuestBox {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f3f4f6;
 }
 
 .mobileUserBox {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .mobileUserInfo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 15px;
   font-weight: 600;
   color: #111827;
-  padding: 0 4px;
 }
 
 .mobileFullBtn {
   width: 100%;
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  border-radius: 8px;
 }
 
-/* --- 반응형 미디어 쿼리 --- */
+/* --- 8. 반응형 미디어 쿼리 --- */
 @media (min-width: 768px) {
   .desktopMenu {
     display: flex;
   }
   .mobileToggle {
+    display: none;
+  }
+  /* 데스크톱에서는 모바일 메뉴 강제 숨김 */
+  .mobileMenu {
     display: none;
   }
 }
