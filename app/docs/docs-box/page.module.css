@@ -1,10 +1,10 @@
-/* SafetyLink Theme Colors 
+/* RegAI Theme Colors 
    CSS Module에서는 :root를 쓸 수 없으므로, 
    최상위 클래스(.container)에 변수를 선언하여 스코프를 제한합니다. 
 */
 .container {
   /* --- Local Variables --- */
-  --sl-primary: #3b82f6;      /* SafetyLink Blue */
+  --sl-primary: #3b82f6;      /* RegAI Blue */
   --sl-primary-hover: #2563eb;
   --sl-bg: #f8f9fa;           /* Light Gray Background */
   --sl-text-main: #111827;

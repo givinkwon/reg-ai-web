@@ -188,7 +188,7 @@ export default function DocsBoxPage() {
       <header className={s.header}>
         <div className={s.headerTitles}>
           <h1 className={s.title}>안전보건 문서함</h1>
-          <p className={s.desc}>SafetyLink에서 생성된 모든 안전 문서를 안전하게 보관하고 관리하세요.</p>
+          <p className={s.desc}>RegAI에서 생성된 모든 안전 문서를 안전하게 보관하고 관리하세요.</p>
         </div>
         
         <div className={s.headerActions}>

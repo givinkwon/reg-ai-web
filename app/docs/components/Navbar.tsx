@@ -64,7 +64,7 @@ export default function Navbar() {
           {/* 로고 */}
           <Link href="/" className={s.logo} onClick={() => setMobileMenuOpen(false)}>
             <ShieldCheck size={28} className={s.logoIcon} />
-            <span className={s.logoText}>SafetyLink</span>
+            <span className={s.logoText}>RegAI</span>
           </Link>
 
           {/* 데스크톱 메뉴 */}
