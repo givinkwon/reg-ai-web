@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import s from './StepControls.module.css';
 import type { RiskAssessmentDraft, Judgement } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
-import { RefreshCw } from 'lucide-react';
-import { useRiskWizardStore } from '@/app/store/docs'; // ✅ Zustand 스토어
+import { RefreshCw, Sparkles } from 'lucide-react'; // ✅ 아이콘 추가
+import { useRiskWizardStore } from '@/app/store/docs';
 
 // ✅ GA 추적
 import { track } from '@/app/lib/ga/ga';
@@ -21,30 +21,9 @@ type Props = {
 const JUDGEMENTS: Judgement[] = ['상', '중', '하'];
 const norm = (v?: string | null) => (v ?? '').trim();
 
-// === 유틸리티 함수 (기존과 동일) ===
+// === 유틸리티 함수 ===
 const CACHE_PREFIX = 'regai:risk:stepControls:v4';
 const TTL_MS = 1000 * 60 * 60 * 24 * 180;
-const RETRY_COOLDOWN_MS = 1000 * 20;
-
-function cacheKey(userEmail: string | null | undefined, processName: string, subProcess: string, riskSituation: string) {
-  const u = norm(userEmail) || 'guest';
-  return `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(norm(processName))}:${encodeURIComponent(norm(subProcess))}:${encodeURIComponent(norm(riskSituation))}`;
-}
-
-function readCache(key: string) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.ts || parsed.v !== 4) return null;
-    if (Date.now() - parsed.ts > TTL_MS) return null;
-    return parsed;
-  } catch { return null; }
-}
-
-function writeCache(key: string, payload: any) {
-  try { localStorage.setItem(key, JSON.stringify(payload)); } catch { }
-}
 
 function dedup(arr: any): string[] {
   if (!Array.isArray(arr)) return [];
@@ -66,7 +45,6 @@ export default function StepControls({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
   const userKey = norm(user?.email) || 'guest';
 
-  // ✅ 전역 분석 상태 제어 함수
   const setIsAnalyzing = useRiskWizardStore((state) => state.setIsAnalyzing);
 
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
@@ -130,7 +108,7 @@ export default function StepControls({ draft, setDraft }: Props) {
     }));
   };
 
-  // ✅ [수정] 자동 채움 및 강제 10초 대기 로직
+  // ✅ 자동 채움 및 강제 10초 대기 로직
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -138,25 +116,22 @@ export default function StepControls({ draft, setDraft }: Props) {
     const runAutoFill = async () => {
       const targetsToFetch = rows.filter(r => r.current_controls_items.length === 0 && !completedRef.current.has(r.rowKey));
 
-      // 🚀 [STEP 1] 무조건 로딩 시작 (버튼 잠금)
       setIsAnalyzing(true);
       setIsInitialAnalyzing(true);
 
-      // ⏱️ 10초 대기 Promise 생성
-      const minWaitTimer = new Promise(resolve => setTimeout(resolve, 15000));
+      const minWaitTimer = new Promise(resolve => setTimeout(resolve, 10000)); // 10초
 
       if (targetsToFetch.length === 0) {
-        // 이미 데이터가 다 있다면 15초만 기다렸다가 해제
-        await minWaitTimer;
+        // 이미 데이터가 있다면 짧게 대기 후 해제 (UX상 1.5초 정도)
+        await new Promise(resolve => setTimeout(resolve, 1500)); 
         setIsInitialAnalyzing(false);
         setIsAnalyzing(false);
         return;
       }
 
       try {
-        // 🚀 [STEP 2] API 호출과 15초 타이머를 동시에 실행
         await Promise.all([
-          minWaitTimer, // 15초 타이머
+          minWaitTimer, 
           ...targetsToFetch.map(async (target) => {
             if (signal.aborted) return;
             setLoadingMap(prev => ({ ...prev, [target.rowKey]: true }));
@@ -214,7 +189,6 @@ export default function StepControls({ draft, setDraft }: Props) {
       } catch (err) {
         console.error("AutoFill Error:", err);
       } finally {
-        // 🏁 [STEP 3] API가 다 끝나고 + 10초가 지났을 때만 해제
         setIsAnalyzing(false);
         setIsInitialAnalyzing(false);
       }
@@ -238,11 +212,25 @@ export default function StepControls({ draft, setDraft }: Props) {
 
   return (
     <div className={s.wrap}>
-      {/* 분석 중 알림 바 */}
+      
+      {/* ✅ [수정] 분석 중 팝업 (Overlay Modal) */}
       {isInitialAnalyzing && (
-        <div className={s.initialLoader}>
-          <RefreshCw size={20} className={s.spin} />
-          <span>AI가 최적의 위험 감소 대책을 분석하고 있습니다 (약 10초 소요)...</span>
+        <div className={s.loadingOverlay}>
+          <div className={s.loadingPopup}>
+            <div className={s.spinnerWrapper}>
+              <RefreshCw size={36} className={s.spin} />
+              <div className={s.aiBadge}>
+                <Sparkles size={14} fill="#fff" /> AI
+              </div>
+            </div>
+            <div className={s.loadingTexts}>
+              <h3 className={s.loadingTitle}>AI가 분석 중입니다</h3>
+              <p className={s.loadingDesc}>
+                최적의 위험 감소 대책을 도출하고 있습니다.<br/>
+                잠시만 기다려 주세요. (약 10초 소요)
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

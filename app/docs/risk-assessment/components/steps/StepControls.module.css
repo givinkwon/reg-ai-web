@@ -9,29 +9,124 @@
   padding-bottom: 3rem;
 }
 
+/* ✅ 팝업 오버레이 스타일 (배경) */
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.75); /* 밝은 반투명 배경 */
+  backdrop-filter: blur(5px); /* 블러 처리 */
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ✅ 팝업 박스 스타일 */
+.loadingPopup {
+  background-color: white;
+  padding: 2.5rem 3rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid rgba(0,0,0,0.05);
+  max-width: 90vw;
+  width: 400px;
+  text-align: center;
+  animation: popUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spinnerWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.spin {
+  color: #2388FF;
+  animation: spin 1s linear infinite;
+}
+
+/* AI 뱃지 */
+.aiBadge {
+  position: absolute;
+  bottom: -4px;
+  right: -8px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.loadingTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loadingTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+}
+
+.loadingDesc {
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 애니메이션 정의 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popUp {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* --- 기존 스타일 --- */
+
 .topNote {
   font-size: 0.95rem;
-  color: var(--text-sub);
-  background-color: var(--bg-sub);
+  color: #555;
+  background-color: #f8f9fa;
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid #eee;
 }
 
 .empty {
   padding: 3rem;
   text-align: center;
-  color: var(--text-sub);
+  color: #888;
   font-size: 1rem;
-  background-color: var(--bg-main);
+  background-color: #fff;
   border-radius: 12px;
-  border: 1px dashed var(--border);
+  border: 1px dashed #ddd;
 }
 
 /* 카드 스타일 */
 .card {
-  background-color: var(--bg-main);
-  border: 1px solid var(--border);
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -44,7 +139,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f3f4f6;
   padding-bottom: 0.8rem;
   margin-bottom: 0.5rem;
 }
@@ -57,20 +152,11 @@
   gap: 0.5rem;
 }
 
-.pathStrong {
-  font-weight: 600;
-  color: #333;
-}
-
-.pathSep {
-  color: #ccc;
-}
-
 .loadingBadge {
   font-size: 0.8rem;
   color: #2388FF;
   font-weight: 600;
-  background-color: #f3f0ff;
+  background-color: #eff6ff;
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
 }
@@ -84,10 +170,6 @@
   gap: 0.5rem;
 }
 
-.hazardIcon {
-  font-size: 1.2rem;
-}
-
 /* 섹션 스타일 */
 .section {
   display: flex;
@@ -98,7 +180,7 @@
 .sectionTitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #444;
+  color: #374151;
 }
 
 /* 위험성 판단 버튼 그룹 */
@@ -110,17 +192,17 @@
 .judgementBtn {
   flex: 1;
   padding: 0.6rem;
-  border: 1px solid #ddd;
+  border: 1px solid #e5e7eb;
   background-color: #fff;
   border-radius: 8px;
   font-weight: 600;
-  color: #666;
+  color: #6b7280;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .judgementBtn:hover {
-  background-color: #f9f9f9;
+  background-color: #f9fafb;
 }
 
 .high {
@@ -172,17 +254,11 @@
   font-weight: 600;
 }
 
-.hint {
-  font-size: 0.85rem;
-  color: #999;
-  margin-bottom: 0.5rem;
-}
-
 .textarea {
   width: 100%;
   min-height: 80px;
   padding: 0.8rem;
-  border: 1px solid #ddd;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 0.95rem;
   resize: vertical;
@@ -192,5 +268,5 @@
 
 .textarea:focus {
   border-color: #2388FF;
-  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
+  box-shadow: 0 0 0 3px rgba(35, 136, 255, 0.1);
 }
