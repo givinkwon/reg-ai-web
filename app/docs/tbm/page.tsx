@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react'; // ✅ useRef 추가
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { 
   Users, ClipboardList, 
@@ -37,10 +37,13 @@ export default function TBMPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking (1회만)
+  // ✅ GA: Page View Tracking (1회만 실행 보장)
   const viewTracked = useRef(false);
   useEffect(() => {
     if (viewTracked.current) return;
+    
+    // 유저 정보 로딩이 끝났거나(initialized), 혹은 이미 유저 정보가 있을 때 트래킹
+    // (여기서는 단순하게 마운트 시점 기준으로 하되, user정보가 있으면 함께 보냅니다)
     viewTracked.current = true;
 
     track(gaEvent(GA_CTX, 'View'), {
@@ -49,7 +52,7 @@ export default function TBMPage() {
     });
   }, [user?.email]);
 
-  // 유저 상태 확인 로직 (기존 유지)
+  // 유저 상태 확인 로직
   useEffect(() => {
     if (!initialized) return;
 
@@ -110,7 +113,7 @@ export default function TBMPage() {
           </p>
           
           <div className={s.btnGroup}>
-            <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 교체 */}
+            <Button className={s.whiteBtn} onClick={handleStartClick}>
               <ClipboardList size={20} className="mr-2" />
               오늘의 TBM 시작하기
             </Button>
@@ -118,7 +121,7 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* 2. 상단 특징 3가지 (기존 유지) */}
+      {/* 2. 상단 특징 3가지 */}
       <section className={s.featureSection}>
         <div className={s.featureGrid}>
           <div className={s.featureCard}>
@@ -151,7 +154,7 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* 3. 무엇을 할 수 있나요? (기존 유지) */}
+      {/* 3. 무엇을 할 수 있나요? */}
       <section className={s.previewSection}>
         <h2 className={s.sectionHeader}>무엇을 할 수 있나요?</h2>
         
@@ -191,7 +194,7 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* 4. 사용 방법 (기존 유지) */}
+      {/* 4. 사용 방법 */}
       <section className={s.guideSection}>
         <h2 className={s.sectionHeader}>사용 방법</h2>
         <div className={s.guideGrid}>
@@ -223,10 +226,10 @@ export default function TBMPage() {
         </div>
       </section>
 
+      {/* ✅ TBM 작성 모달 (닫기 이벤트 트래킹 추가) */}
       <TbmCreateModal
         open={isWriting}
         onClose={() => {
-          // ✅ GA: 모달 닫힘
           track(gaEvent(GA_CTX, 'CloseCreateModal'), {
             ui_id: gaUiId(GA_CTX, 'CloseCreateModal'),
           });
