@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // ✅ useRef 추가
 import Image from 'next/image';
 import { 
   CalendarCheck, ClipboardList, CheckSquare, Sparkles,
@@ -16,6 +16,13 @@ import SignupExtraInfoModal from '../components/SignupExtraInfoModal';
 import { useUserStore } from '@/app/store/user';
 import { useChatStore } from '@/app/store/chat';
 
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context
+const GA_CTX = { page: 'SafetyDocs', section: 'MonthlyInspection', area: 'Landing' } as const;
+
 export default function MonthlyPage() {
   const [isWriting, setIsWriting] = useState(false);
 
@@ -28,6 +35,18 @@ export default function MonthlyPage() {
 
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
+
+  // ✅ GA: Page View Tracking (1회만)
+  const viewTracked = useRef(false);
+  useEffect(() => {
+    if (viewTracked.current) return;
+    viewTracked.current = true;
+
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      is_logged_in: !!user?.email,
+    });
+  }, [user?.email]);
 
   useEffect(() => {
     if (!initialized) return;
@@ -61,6 +80,15 @@ export default function MonthlyPage() {
 
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
+  // ✅ GA: 시작 버튼 핸들러
+  const handleStartClick = () => {
+    track(gaEvent(GA_CTX, 'ClickStart'), {
+      ui_id: gaUiId(GA_CTX, 'ClickStart'),
+      is_logged_in: !!user?.email,
+    });
+    setIsWriting(true);
+  };
+
   return (
     <div className={s.container}>
       {!isWriting && (
@@ -78,7 +106,7 @@ export default function MonthlyPage() {
               </p>
               
               <div className={s.btnGroup}>
-                <Button className={s.whiteBtn} onClick={() => setIsWriting(true)}>
+                <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 교체 */}
                   점검표 생성하기
                 </Button>
               </div>
@@ -218,7 +246,13 @@ export default function MonthlyPage() {
 
       <MonthlyInspectionCreateModal
         open={isWriting}
-        onClose={() => setIsWriting(false)}
+        onClose={() => {
+            // ✅ GA: 모달 닫힘
+            track(gaEvent(GA_CTX, 'CloseCreateModal'), {
+                ui_id: gaUiId(GA_CTX, 'CloseCreateModal'),
+            });
+            setIsWriting(false);
+        }}
         onRequireLogin={() => setShowLoginModal(true)}
       />
 

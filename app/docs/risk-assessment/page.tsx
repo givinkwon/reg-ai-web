@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react'; // ✅ useRef 추가
 import Image from 'next/image';
 import { 
   AlertTriangle, Plus, 
@@ -16,6 +16,13 @@ import SignupExtraInfoModal from '../components/SignupExtraInfoModal';
 
 import { useUserStore } from '../../store/user';
 import { useChatStore } from '../../store/chat';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context
+const GA_CTX = { page: 'SafetyDocs', section: 'RiskAssessment', area: 'Landing' } as const;
 
 /* 유틸 함수 */
 function getFilenameFromDisposition(disposition: string | null) {
@@ -41,6 +48,18 @@ export default function RiskPage() {
   // 회원가입 추가정보 모달 상태
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
+
+  // ✅ GA: Page View Tracking (1회만)
+  const viewTracked = useRef(false);
+  useEffect(() => {
+    if (viewTracked.current) return;
+    viewTracked.current = true;
+
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      is_logged_in: !!user?.email,
+    });
+  }, [user?.email]);
 
   // 1. 유저 상태 확인
   useEffect(() => {
@@ -77,6 +96,12 @@ export default function RiskPage() {
   // 2. 엑셀 다운로드 핸들러
   const handleSubmit = useCallback(async (draft: RiskAssessmentDraft, opts?: { signal?: AbortSignal; userEmail?: string }) => {
     if (!opts?.userEmail) throw new Error('이메일 정보가 누락되었습니다.');
+
+    // ✅ GA: 제출 시작 트래킹
+    track(gaEvent(GA_CTX, 'SubmitRiskAssessment'), {
+        ui_id: gaUiId(GA_CTX, 'SubmitRiskAssessment'),
+        task_count: draft.tasks.length,
+    });
 
     const flattenedItems = draft.tasks.flatMap(task => 
       (task.processes || []).flatMap(process => 
@@ -131,6 +156,15 @@ export default function RiskPage() {
     window.URL.revokeObjectURL(url);
   }, []);
 
+  // ✅ GA: 시작 버튼 핸들러
+  const handleStartClick = () => {
+    track(gaEvent(GA_CTX, 'ClickStart'), {
+      ui_id: gaUiId(GA_CTX, 'ClickStart'),
+      is_logged_in: !!user?.email,
+    });
+    setIsWriting(true);
+  };
+
   return (
     <div className={s.container}>
       {!isWriting && (
@@ -148,7 +182,7 @@ export default function RiskPage() {
               </p>
               
               <div className={s.btnGroup}>
-                <Button className={s.whiteBtn} onClick={() => setIsWriting(true)}>
+                <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 교체 */}
                   <Plus size={20} className="mr-2" />
                   새 평가 작성하기
                 </Button>
@@ -309,7 +343,13 @@ export default function RiskPage() {
       {/* 모달 컴포넌트들 */}
       <RiskAssessmentWizard
         open={isWriting}
-        onClose={() => setIsWriting(false)}
+        onClose={() => {
+            // ✅ GA: 모달 닫힘
+            track(gaEvent(GA_CTX, 'CloseWizard'), {
+                ui_id: gaUiId(GA_CTX, 'CloseWizard'),
+            });
+            setIsWriting(false);
+        }}
         onSubmit={handleSubmit}
         onRequireLogin={() => setShowLoginModal(true)}
       />

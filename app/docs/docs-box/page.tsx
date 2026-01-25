@@ -11,7 +11,7 @@ import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 // ✅ 모달 및 스토어
-import LoginPromptModal from '@/app/chat/components/LoginPromptModal';
+import LoginPromptModal from '@/app/docs/components/LoginPromptModal';
 import { useChatStore } from '@/app/store/chat';
 import { useUserStore } from '@/app/store/user'; // User Store import
 
@@ -30,10 +30,11 @@ function formatDate(ts: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// ✅ GA Context
 const GA_CTX = {
-  page: 'DocsVault',
+  page: 'SafetyDocs', // 일관성을 위해 SafetyDocs로 통일 권장 (또는 기존 DocsVault 유지 가능)
   section: 'DocsVault',
-  component: 'DocsVault',
+  area: 'List',
 } as const;
 
 export default function DocsBoxPage() {
@@ -47,7 +48,7 @@ export default function DocsBoxPage() {
 
   const router = useRouter();
   
-  // 가입 미완료 로직 (필요 시 사용)
+  // 가입 미완료 로직
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const showExtraModal = forceExtraOpen && !!accountEmail;
@@ -61,7 +62,11 @@ export default function DocsBoxPage() {
 
   // --- 로그인 유도 핸들러 ---
   const handleRequireLogin = () => {
-    // 페이지 이동 대신 모달을 띄웁니다.
+    // ✅ GA: 로그인 버튼 클릭
+    track(gaEvent(GA_CTX, 'ClickLogin'), {
+      ui_id: gaUiId(GA_CTX, 'ClickLogin'),
+      reason: 'require_auth_page',
+    });
     setShowLoginModal(true);
   };
 
@@ -131,7 +136,7 @@ export default function DocsBoxPage() {
       
       const msg = e?.message ?? '문서 목록을 불러오지 못했습니다.';
       setError(msg);
-      setDocs([]); // 에러 시 목록 비움 (더미 데이터 제거됨)
+      setDocs([]); 
     } finally {
       setLoading(false);
     }
@@ -150,10 +155,18 @@ export default function DocsBoxPage() {
 
   // --- 다운로드 핸들러 ---
   const handleDownload = async (doc: DocItem, source: 'desktop' | 'mobile') => {
+    // ✅ GA: 다운로드 클릭
+    track(gaEvent(GA_CTX, 'ClickDownload'), {
+      ui_id: gaUiId(GA_CTX, 'ClickDownload'),
+      doc_id: doc.id,
+      doc_name: doc.name,
+      doc_kind: doc.kind || 'unknown',
+      source_view: source,
+    });
+
     if (!userEmail) return handleRequireLogin();
 
-    // 여기에 기존 다운로드 로직(fetch API 호출 등)을 유지하세요.
-    // userEmail을 헤더에 넣어 보내는 것 잊지 마세요.
+    // 여기에 기존 다운로드 로직 유지
     alert(`'${doc.name}' 다운로드를 준비 중입니다.`);
   };
 

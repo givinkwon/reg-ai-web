@@ -1,8 +1,16 @@
 'use client';
 
+import React, { useEffect } from 'react'; // ✅ React Hook 추가
 import Link from 'next/link';
 import { FolderOpen, AlertTriangle, Users, CalendarCheck, ArrowRight } from 'lucide-react';
-import s from './page.module.css'; // 이전 단계의 CSS 사용 (white theme)
+import s from './page.module.css';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context 정의
+const GA_CTX = { page: 'SafetyDocs', section: 'Dashboard', area: 'MenuGrid' } as const;
 
 const MENU_ITEMS = [
   {
@@ -37,6 +45,24 @@ const MENU_ITEMS = [
 ];
 
 export default function DashboardPage() {
+  // ✅ GA: Page View Tracking
+  useEffect(() => {
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      total_menus: MENU_ITEMS.length,
+    });
+  }, []);
+
+  // ✅ GA: Menu Click Handler
+  const handleClickMenu = (item: typeof MENU_ITEMS[0]) => {
+    track(gaEvent(GA_CTX, 'ClickMenu'), {
+      ui_id: gaUiId(GA_CTX, 'ClickMenu'),
+      menu_id: item.id,
+      menu_title: item.title,
+      target_url: item.href,
+    });
+  };
+
   return (
     <div className={s.dashboardContainer}>
       {/* 히어로 섹션 */}
@@ -51,7 +77,17 @@ export default function DashboardPage() {
       <section className={s.gridContainer}>
         <div className={s.cardGrid}>
           {MENU_ITEMS.map((item) => (
-            <Link key={item.id} href={item.href} className={s.linkWrapper}>
+            <Link
+              key={item.id}
+              href={item.href}
+              className={s.linkWrapper}
+              onClick={() => handleClickMenu(item)} // ✅ 클릭 이벤트 연결
+              // (선택 사항) HTML 속성으로도 남기고 싶다면 아래 주석 해제
+              /* data-ga-event={gaEvent(GA_CTX, 'ClickMenu')}
+              data-ga-id={gaUiId(GA_CTX, 'ClickMenu')}
+              data-ga-text={item.title}
+              */
+            >
               <div className={`${s.card} ${item.isPrimary ? s.cardPrimary : ''}`}>
                 <div className={s.cardIconBox}>{item.icon}</div>
                 <h3 className={s.cardTitle}>{item.title}</h3>
@@ -64,7 +100,7 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
-      
+
       {/* 하단 설명 섹션 (생략 가능 또는 유지) */}
     </div>
   );

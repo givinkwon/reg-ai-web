@@ -1,28 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image'; // ✅ 이미지 컴포넌트 추가
+import { useState, useEffect, useRef } from 'react'; // ✅ useRef 추가
+import Image from 'next/image';
 import { 
   Users, ClipboardList, 
-  Clock, FileSignature, Sparkles, // 상단 특징 아이콘
-  MousePointerClick, Building2, Settings, Bell, Download // 하단 가이드 아이콘
+  Clock, FileSignature, Sparkles, 
+  MousePointerClick, Building2, Settings, Bell, Download 
 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import s from './page.module.css';
 
-// ✅ 컴포넌트 임포트
 import TbmCreateModal from './components/TbmCreateModal';
 import LoginPromptModal from '../components/LoginPromptModal';
 import SignupExtraInfoModal from '../components/SignupExtraInfoModal';
 
-// ✅ Store
 import { useUserStore } from '../../store/user';
 import { useChatStore } from '../../store/chat';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context
+const GA_CTX = { page: 'SafetyDocs', section: 'TBM', area: 'Landing' } as const;
 
 export default function TBMPage() {
   const [isWriting, setIsWriting] = useState(false);
 
-  // Store 상태
   const user = useUserStore((st) => st.user);
   const initialized = useUserStore((st) => st.initialized);
   const refreshSignupStatus = useUserStore((st) => st.refreshSignupStatus);
@@ -30,11 +34,22 @@ export default function TBMPage() {
   
   const { showLoginModal, setShowLoginModal } = useChatStore();
 
-  // 회원가입 추가정보 모달 상태
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // 1. 유저 상태 확인
+  // ✅ GA: Page View Tracking (1회만)
+  const viewTracked = useRef(false);
+  useEffect(() => {
+    if (viewTracked.current) return;
+    viewTracked.current = true;
+
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      is_logged_in: !!user?.email,
+    });
+  }, [user?.email]);
+
+  // 유저 상태 확인 로직 (기존 유지)
   useEffect(() => {
     if (!initialized) return;
 
@@ -71,6 +86,15 @@ export default function TBMPage() {
 
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
+  // ✅ GA: TBM 시작 버튼 핸들러
+  const handleStartClick = () => {
+    track(gaEvent(GA_CTX, 'ClickStart'), {
+      ui_id: gaUiId(GA_CTX, 'ClickStart'),
+      is_logged_in: !!user?.email,
+    });
+    setIsWriting(true);
+  };
+
   return (
     <div className={s.container}>
       {/* 1. 상단 액션 섹션 (Hero) */}
@@ -86,7 +110,7 @@ export default function TBMPage() {
           </p>
           
           <div className={s.btnGroup}>
-            <Button className={s.whiteBtn} onClick={() => setIsWriting(true)}>
+            <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 교체 */}
               <ClipboardList size={20} className="mr-2" />
               오늘의 TBM 시작하기
             </Button>
@@ -94,7 +118,7 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* 2. 상단 특징 3가지 */}
+      {/* 2. 상단 특징 3가지 (기존 유지) */}
       <section className={s.featureSection}>
         <div className={s.featureGrid}>
           <div className={s.featureCard}>
@@ -127,11 +151,10 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* 3. 무엇을 할 수 있나요? (Preview) */}
+      {/* 3. 무엇을 할 수 있나요? (기존 유지) */}
       <section className={s.previewSection}>
         <h2 className={s.sectionHeader}>무엇을 할 수 있나요?</h2>
         
-        {/* Row 1: TBM 회의록 */}
         <div className={s.previewRow}>
           <div className={s.previewImageWrapper}>
             <Image 
@@ -145,12 +168,11 @@ export default function TBMPage() {
             <div className={s.caption}>1. TBM 회의록</div>
           </div>
           <div className={s.previewContent}>
-            <h3>내 업체 정보와<br/>작업 인원<br/>금일 작업<br/>위험 요소<br/>안전 준수 사항 까지</h3>
-            <p>반영된 TBM 일지가 자동으로 생성됩니다.</p>
+            <h3>업체 정보부터 금일 작업, 위험 요소, 안전 준수 사항까지</h3>
+            <p>오늘의 TBM 일지가 자동으로 생성됩니다.</p>
           </div>
         </div>
 
-        {/* Row 2: 자동 발송 및 서명 (Reverse Layout) */}
         <div className={`${s.previewRow} ${s.reverse}`}>
           <div className={s.previewImageWrapper}>
             <Image 
@@ -169,7 +191,7 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* 4. 사용 방법 (Grid) */}
+      {/* 4. 사용 방법 (기존 유지) */}
       <section className={s.guideSection}>
         <h2 className={s.sectionHeader}>사용 방법</h2>
         <div className={s.guideGrid}>
@@ -193,11 +215,6 @@ export default function TBMPage() {
             <h4>4. 알림 기다리기</h4>
             <p>서명이 완료되면 등록된 연락처로 알림이 발송됩니다.</p>
           </div>
-          {/* 5번은 디자인상 비어있거나 통합된 경우도 있으나, 6번(다운로드)와 균형을 위해 배치하거나, 
-              디자인 시안에 5번이 없다면 생략 가능. 여기서는 시안의 6.문서 다운로드를 5번째 슬롯에 배치하거나 Grid 유지 */}
-           {/* <div className={s.guideItem} style={{ visibility: 'hidden' }}> */}
-             {/* 빈 공간 (레이아웃 유지용) */}
-          {/* </div> */}
           <div className={s.guideItem}>
             <div className={s.guideIcon}><Download size={32} /></div>
             <h4>5. 문서 다운로드</h4>
@@ -206,21 +223,24 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* ✅ TBM 작성 모달 */}
       <TbmCreateModal
         open={isWriting}
-        onClose={() => setIsWriting(false)}
+        onClose={() => {
+          // ✅ GA: 모달 닫힘
+          track(gaEvent(GA_CTX, 'CloseCreateModal'), {
+            ui_id: gaUiId(GA_CTX, 'CloseCreateModal'),
+          });
+          setIsWriting(false);
+        }}
         onRequireLogin={() => setShowLoginModal(true)}
         userEmail={user?.email}
         companyName={(user as any)?.secondary_info?.company}
       />
 
-      {/* ✅ 로그인 모달 */}
       {showLoginModal && !showExtraModal && (
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
 
-      {/* ✅ 회원가입 추가정보 모달 */}
       {showExtraModal && accountEmail && (
         <SignupExtraInfoModal
           email={accountEmail}

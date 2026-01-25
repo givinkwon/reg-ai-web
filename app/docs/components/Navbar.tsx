@@ -14,7 +14,7 @@ import { useUserStore, initUserStore } from '@/app/store/user';
 import { useChatStore } from '@/app/store/chat';
 
 // ✅ 로그인 모달
-import LoginPromptModal from '@/app/chat/components/LoginPromptModal';
+import LoginPromptModal from '@/app/docs/components/LoginPromptModal';
 
 export default function Navbar() {
   const pathname = usePathname();
