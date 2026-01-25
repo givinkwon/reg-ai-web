@@ -1,7 +1,7 @@
 // app/chat/components/LoginPromptModal.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react'; // useRef 추가
 import s from './LoginPromptModal.module.css';
 import { signInWithGoogle } from '@/app/lib/firebase';
 import { useUserStore } from '@/app/store/user';
@@ -9,6 +9,15 @@ import SignupExtraInfoModal from './SignupExtraInfoModal';
 
 type LoginPromptModalProps = {
   onClose: () => void;
+};
+
+// ✅ 슬랙 전송 유틸 함수 (내부 정의)
+const sendSlackMessage = (text: string) => {
+  fetch('/api/slack', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text.slice(0, 3500) }),
+  }).catch((err) => console.error('[LoginPromptModal] Slack send failed:', err));
 };
 
 export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
@@ -20,6 +29,21 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
 
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
+
+  // ✅ 중복 전송 방지를 위한 Ref
+  const slackSentRef = useRef(false);
+
+  // ✅ (NEW) 모달이 열릴 때 슬랙 알림 전송 (1회만)
+  useEffect(() => {
+    if (slackSentRef.current) return;
+    
+    // 모달이 렌더링되었다는 것은 로그인 시도가 있다는 의미
+    // (만약 showExtraModal 상태가 아니라면 로그인 프롬프트가 뜬 것)
+    if (!showExtraModal) {
+      sendSlackMessage('👀 [LoginPromptModal] 로그인 유도 팝업이 열렸습니다.');
+      slackSentRef.current = true;
+    }
+  }, [showExtraModal]);
 
   // ✅ (1) 새로고침/복원된 user가 "가입 미완료"면 자동으로 추가정보 모달 오픈
   useEffect(() => {
@@ -48,6 +72,9 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
   }, [initialized, user, showExtraModal, loading, onClose]);
 
   const handleGoogleLogin = async () => {
+    // ✅ 슬랙 알림: 버튼 클릭 시
+    sendSlackMessage('👉 [LoginPromptModal] 구글 로그인 버튼 클릭');
+
     try {
       setLoading(true);
 
@@ -90,14 +117,17 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
       });
 
       if (needExtra) {
+        sendSlackMessage(`✅ [LoginPromptModal] 구글 1차 성공 → 추가정보 입력 필요 (${fbUser.email})`);
         setAccountEmail(fbUser.email);
         setShowExtraModal(true);
       } else {
+        sendSlackMessage(`🎉 [LoginPromptModal] 구글 로그인 완료 (${fbUser.email})`);
         // useEffect가 onClose 처리
         onClose();
       }
     } catch (err) {
       console.error('[LoginPromptModal] Google login error:', err);
+      sendSlackMessage(`❌ [LoginPromptModal] 구글 로그인 에러 발생`);
       alert('구글 로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setLoading(false);
@@ -108,6 +138,9 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
    * Kakao 로그인
    * ========================= */
   const handleKakaoLogin = () => {
+    // ✅ 슬랙 알림: 버튼 클릭 시
+    sendSlackMessage('👉 [LoginPromptModal] 카카오 로그인 버튼 클릭');
+
     if (typeof window === 'undefined' || !window.Kakao) {
       alert('카카오 SDK 로딩 중입니다. 잠시 후 다시 시도해 주세요.');
       return;
@@ -186,13 +219,16 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
           });
 
           if (needExtra) {
+            sendSlackMessage(`✅ [LoginPromptModal] 카카오 1차 성공 → 추가정보 입력 필요 (${email})`);
             setAccountEmail(email);
             setShowExtraModal(true);
           } else {
+            sendSlackMessage(`🎉 [LoginPromptModal] 카카오 로그인 완료 (${email})`);
             onClose(); // useEffect가 처리해도 되지만 즉시 닫아도 OK
           }
         } catch (err) {
           console.error('[LoginPromptModal] Kakao login error:', err);
+          sendSlackMessage(`❌ [LoginPromptModal] 카카오 로그인 처리 중 에러`);
           alert('카카오 로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
         } finally {
           setLoading(false);
@@ -200,6 +236,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
       },
       fail: (err: any) => {
         console.error('[LoginPromptModal] Kakao login fail:', err);
+        sendSlackMessage(`❌ [LoginPromptModal] 카카오 로그인 실패 (SDK fail)`);
         alert('카카오 로그인에 실패했습니다.');
         setLoading(false);
       },
@@ -207,6 +244,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
   };
 
   const handleExtraComplete = () => {
+    sendSlackMessage(`🎉 [LoginPromptModal] 추가 정보 입력 완료`);
     setShowExtraModal(false);
     onClose(); // 온보딩 끝났으니 메인으로
   };
