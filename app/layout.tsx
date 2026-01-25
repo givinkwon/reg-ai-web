@@ -3,6 +3,7 @@ import "./globals.css";
 import Script from "next/script";
 import type { Metadata } from "next";
 import GAEventBridge from "./components/analytics/GAEventBridge";
+import Navbar from "./docs/components/Navbar"; // ✅ Navbar 컴포넌트 임포트
 
 export const metadata: Metadata = {
   title: "reg-ai-web",
@@ -132,7 +133,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* ✅ 전역 GA 브릿지도 GA_DISABLED면 렌더링 안 함 */}
         {!GA_DISABLED && <GAEventBridge />}
 
-        {children}
+        {/* ✅ Navbar 및 레이아웃 구조 복구 */}
+        <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
+          <Navbar />
+          <main className="flex-1 flex flex-col relative">
+            {children}
+          </main>
+        </div>
+        
       </body>
     </html>
   );

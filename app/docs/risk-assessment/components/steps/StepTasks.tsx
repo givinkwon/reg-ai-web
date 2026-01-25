@@ -289,13 +289,6 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
       <div className={s.header}>
         <div>
           <h3 className={s.title}>작업 선택</h3>
-          <div className={s.desc}>
-            {norm(minorCategory) ? (
-              <>소분류 <b className="text-purple-600 font-semibold">{minorCategory}</b> 기준으로 작업을 자동 추천해 드렸습니다.</>
-            ) : (
-              '진행할 작업을 선택하세요. 관련된 공정 데이터를 자동으로 불러옵니다.'
-            )}
-          </div>
         </div>
         <Button 
           variant="outline" 
@@ -304,6 +297,36 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         >
           <Search size={16} className="mr-2" /> 직접 검색/추가
         </Button>
+      </div>
+
+      {/* 하단 선택 요약 (칩) */}
+      <div className={s.summary}>
+        <span className={s.summaryLabel}>선택된 작업 ({draft.tasks.length})</span>
+        <div className={s.chipList}>
+          {draft.tasks.length === 0 ? (
+            <span className={s.emptyText}>선택된 작업이 없습니다.</span>
+          ) : (
+            draft.tasks.map(t => (
+              <span key={t.id} className={s.chip}>
+                {t.title}
+                <button 
+                  className={s.chipRemove} 
+                  onClick={(e) => { e.stopPropagation(); toggleSelect(t.title); }}
+                >
+                  ×
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className={s.desc}>
+        {norm(minorCategory) ? (
+          <>소분류 <b className="text-purple-600 font-semibold">{minorCategory}</b> 기준으로 작업을 자동 추천해 드렸습니다.</>
+        ) : (
+          '진행할 작업을 선택하세요. 관련된 공정 데이터를 자동으로 불러옵니다.'
+        )}
       </div>
 
       {/* 로딩 상태 */}
@@ -347,28 +370,6 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
           <span>추천 작업이 없습니다. 직접 추가해주세요.</span>
         </div>
       )}
-
-      {/* 하단 선택 요약 (칩) */}
-      <div className={s.summary}>
-        <span className={s.summaryLabel}>선택된 작업 ({draft.tasks.length})</span>
-        <div className={s.chipList}>
-          {draft.tasks.length === 0 ? (
-            <span className={s.emptyText}>선택된 작업이 없습니다.</span>
-          ) : (
-            draft.tasks.map(t => (
-              <span key={t.id} className={s.chip}>
-                {t.title}
-                <button 
-                  className={s.chipRemove} 
-                  onClick={(e) => { e.stopPropagation(); toggleSelect(t.title); }}
-                >
-                  ×
-                </button>
-              </span>
-            ))
-          )}
-        </div>
-      </div>
 
       <AddDetailTaskModal 
         open={addOpen} 

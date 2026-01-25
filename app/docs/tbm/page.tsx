@@ -81,7 +81,7 @@ export default function TBMPage() {
           </div>
           <h1 className={s.title}>TBM (작업전 안전점검)</h1>
           <p className={s.desc}>
-            작업 시작 전 10분! 근로자와 함께 위험요인을 공유하고 기록하세요.<br />
+            작업 시작 전 1분! 근로자와 함께 위험요인을 공유하고 기록하세요.<br />
             PC/모바일 어디서든 간편하게 작성하고 서명까지 완료할 수 있습니다.
           </p>
           

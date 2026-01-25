@@ -68,8 +68,8 @@
 }
 
 .whiteBtn {
-  background-color: #ffffff !important;
-  /* color: #2388FF !important; */
+  background: #ffffff !important;
+  color: #2388FF !important;
   border: none !important;
   font-weight: 700 !important;
   height: 52px !important;
