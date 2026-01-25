@@ -84,28 +84,42 @@
   font-size: 0.95rem;
 }
 
-/* 체크 표시 UI */
+/* 체크 표시 UI - 기본 상태 */
 .checkCircle {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--border);
-  background-color: white;
+  border: 2px solid #cbd5e1; /* 더 명확한 회색 테두리 */
+  background-color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
-.active .checkCircle {
-  border-color: var(--primary);
+/* ✅ 카드가 활성화(active) 되었을 때 */
+.card.active .checkCircle {
+  background-color: #2388FF; /* 배경을 파란색으로 꽉 채움 */
+  border-color: #2388FF;
+  box-shadow: 0 0 0 3px rgba(35, 136, 255, 0.2); /* 외곽에 은은한 후광 */
 }
 
+/* 안쪽의 점(Dot) */
 .checkDot {
-  width: 10px;
+  width: 10px; /* 점 크기 확대 */
   height: 10px;
   border-radius: 50%;
-  background-color: var(--primary);
+  background-color: transparent; /* 평소엔 안 보임 */
+  transform: scale(0);
+  transition: all 0.25s ease;
+}
+
+/* ✅ 활성화 되었을 때 안쪽 점을 흰색으로 강조 */
+.card.active .checkDot {
+  background-color: #ffffff;
+  transform: scale(1); /* 팝업되면서 나타나는 효과 */
 }
 
 /* 하단 요약 */
@@ -146,14 +160,35 @@
 }
 
 .chipRemove {
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  width: 18px; /* 크기를 약간 줄여서 텍스트와 균형을 맞춤 */
+  height: 18px;
+  padding: 0;
+  
+  /* 배경은 투명하게, 글자색은 연한 회색으로 시작 */
+  background-color: transparent; 
+  border: none;
+  border-radius: 4px; /* 원형보다 약간 각진 게 요즘 스타일 */
+  color: #94a3b8; 
+  
+  cursor: pointer;
+  font-size: 14px;
   line-height: 1;
+  transition: all 0.2s ease;
+  margin-left: 4px; /* 텍스트와의 간격 */
+}
+
+/* 마우스를 올렸을 때만 삭제 느낌이 나도록 변경 */
+.chipRemove:hover {
+  background-color: #fee2e2; /* 매우 연한 빨간색 배경 */
+  color: #ef4444; /* 명확한 삭제를 의미하는 빨간색 */
+}
+
+/* 클릭했을 때 살짝 작아지는 효과 */
+.chipRemove:active {
+  transform: scale(0.9);
 }
 
 .emptyText {

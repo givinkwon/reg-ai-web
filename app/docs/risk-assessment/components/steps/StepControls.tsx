@@ -97,7 +97,7 @@ export default function StepControls({ draft, setDraft }: Props) {
             process_name: norm(t.title),
             sub_process: norm(p.title),
             risk_situation_result: norm(h.title),
-            judgement: (h.judgement as Judgement) ?? '중',
+            judgement: (h.judgement as Judgement) ?? '하',
             current_controls_items: h.current_controls_items ?? [],
             current_control_text: h.current_control_text ?? '',
             mitigation_items: h.mitigation_items ?? [],
@@ -195,7 +195,7 @@ export default function StepControls({ draft, setDraft }: Props) {
                             current_control_text: h.current_control_text || controls[0] || '',
                             mitigation_items: mitigations,
                             mitigation_text: h.mitigation_text || mitigations[0] || '',
-                            judgement: h.judgement || '중'
+                            judgement: h.judgement || '하'
                           } : h)
                         };
                       })

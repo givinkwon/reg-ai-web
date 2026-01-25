@@ -1,12 +1,10 @@
-/* components/risk-assessment/RiskAssessmentWizard.module.css */
-
 .wrap {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* 전체 화면 */
+  height: 100vh;
   background-color: #fff;
   color: #333;
-  overflow: hidden; /* 내부 스크롤 사용 */
+  overflow: hidden;
 }
 
 /* 헤더 */
@@ -26,17 +24,36 @@
 }
 
 .closeBtn {
-  font-size: 0.95rem;
-  color: #666;
-  background: none;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b; /* 차분한 슬레이트 그레이 */
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0; /* 연한 테두리 추가 */
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 8px; /* 약간 둥글게 */
+  transition: all 0.2s ease; /* 부드러운 전환 효과 */
 }
+
 .closeBtn:hover {
-  background-color: #f5f5f5;
-  color: #333;
+  background-color: #f8fafc; /* 호버 시 아주 연한 하늘색 배경 */
+  color: #0f172a; /* 글자색은 더 진하게 */
+  border-color: #cbd5e1; /* 테두리도 약간 진하게 */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* 미세한 그림자 */
+}
+
+.closeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 클릭했을 때 살짝 눌리는 효과 */
+.closeBtn:active {
+  transform: translateY(1px);
+  background-color: #f1f5f9;
 }
 
 .title {
@@ -51,158 +68,163 @@
   font-weight: 500;
 }
 
-/* 탭 (단계 표시) */
+/* ✅ 탭 영역 (개선됨) */
 .tabs {
   display: flex;
+  align-items: center;
   background-color: #f9fafb;
   border-bottom: 1px solid #eee;
-  padding: 0 1.5rem;
-  gap: 2rem;
+  padding: 0.7rem 1.5rem;
+  gap: 0.5rem;
   overflow-x: auto;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 1rem 0;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
-  margin-left: 2vw;
-  padding: 2vw;
-  
-  /* ▼▼▼ [수정된 부분] 버튼 기본 스타일 초기화 ▼▼▼ */
-  background: none;        /* 배경색 제거 (투명하게) */
-  background-color: transparent; 
-  border: none;            /* 기본 테두리 제거 */
-  outline: none;           /* 포커스 라인 제거 (선택사항) */
-  font-family: inherit;    /* 폰트 상속 */
-  font-size: 1rem;         /* 글자 크기 명시 (필요시) */
-  /* ▲▲▲ --------------------------------- ▲▲▲ */
-
-  color: #999;
-  border-bottom: 2px solid transparent; /* 밑줄 디자인 유지를 위해 필수 */
-  transition: all 0.2s;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #888;
+  border-radius: 50px; /* 캡슐형 */
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
-.tab:hover {
-  color: white;
+/* 호버 시 글자색 사라짐 방지 및 시각적 피드백 */
+.tab:hover:not(:disabled) {
+  background-color: #f0f3f5;
+  color: #555;
 }
 
-.tabPast {
-  color: #666;
-}
-
+/* ✅ 활성 상태 (강조) */
 .tabActive {
-  color: #2388FF;
-  border-bottom-color: #2388FF;
-  font-weight: 600;
+  color: #2388FF !important;
+  background-color: #eaf4ff !important;
+  font-weight: 700;
 }
 
+/* 지나간 단계 */
+.tabPast {
+  color: #555;
+}
+
+/* ✅ 단계 숫자 원형 인디케이터 */
 .stepNum {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background-color: #e5e7eb;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 11px;
   font-weight: 700;
-  transition: background-color 0.2s;
+  flex-shrink: 0;
 }
 
 .tabActive .stepNum {
   background-color: #2388FF;
 }
-.tabPast .stepNum {
-  background-color: #a5b4fc; /* 지나간 단계는 연한 보라 */
-}
 
-/* 도움말 */
-.helperBox {
-  background-color: #f0fdf4; /* 연한 초록 */
-  border-bottom: 1px solid #dcfce7;
-  padding: 0.8rem 1.5rem;
-  font-size: 0.9rem;
-  color: #166534;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.tabPast .stepNum {
+  background-color: #94a3b8;
 }
 
 /* 컨텐츠 영역 */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem;
   background-color: #fff;
 }
 
 /* 푸터 */
 .footer {
-  padding: 1.2rem 1.5rem;
+  padding: 1rem 1.5rem;
   border-top: 1px solid #eee;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   background-color: #fff;
 }
 
+.footerBtns {
+  display: flex;
+  gap: 0.75rem;
+}
+
 .navBtn {
-  padding: 0.8rem 1.5rem;
+  padding: 0.7rem 1.2rem;
   border-radius: 8px;
   border: 1px solid #ddd;
   background-color: #fff;
-  margin-right: 2vw;
   color: #555;
   font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
 }
+
+.navBtn:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
 .navBtn:disabled {
-  color: #ccc;
+  color: #cbd5e1;
   cursor: not-allowed;
-}
-.navBtn:hover {
-  color: white;
 }
 
 .navBtnPrimary {
-  padding: 0.8rem 2rem;
+  padding: 0.7rem 1.5rem;
   border-radius: 8px;
   border: none;
   background-color: #2388FF;
   color: #fff;
   font-weight: 600;
   cursor: pointer;
-  font-size: 1rem;
   transition: background-color 0.2s;
 }
-.navBtnPrimary:hover {
-  background-color: #5b4bc4;
+
+.navBtnPrimary:hover:not(:disabled) {
+  background-color: #1b6cd9; /* ✅ 오타 수정된 컬러 */
 }
+
 .navBtnPrimary:disabled {
-  background-color: #d1d5db;
+  background-color: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
 .submitBtn {
-  padding: 0.8rem 2rem;
+  padding: 0.7rem 1.5rem;
   border-radius: 8px;
   border: none;
-  background-color: #2388FF; /* Green */
+  background-color: #2388FF;
   color: #fff;
   font-weight: 700;
   cursor: pointer;
-  font-size: 1rem;
-  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 4px 6px rgba(35, 136, 255, 0.2);
 }
-.submitBtn:hover {
-  background-color: #059669;
+
+.submitBtn:hover:not(:disabled) {
+  background-color: #1b6cd9;
 }
+
 .submitBtn:disabled {
-  background-color: #d1d5db;
+  background-color: #e2e8f0;
+  color: #94a3b8;
   box-shadow: none;
   cursor: not-allowed;
+}
+
+.loadingText {
+  font-size: 0.9rem;
+  color: #2388FF;
+  font-weight: 500;
 }

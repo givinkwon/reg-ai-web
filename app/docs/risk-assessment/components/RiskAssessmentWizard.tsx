@@ -58,10 +58,10 @@ const INITIAL_DRAFT: RiskAssessmentDraft = {
 };
 
 const TAB_LABELS: { id: StepId; label: string; helper: string }[] = [
-  { id: 'tasks', label: '1. 작업 파악', helper: '평가할 작업 단위를 먼저 정리합니다.' },
-  { id: 'processes', label: '2. 공정 파악', helper: '작업별 세부 공정을 정의합니다.' },
-  { id: 'hazards', label: '3. 위험요인', helper: '공정별 유해·위험요인을 찾습니다.' },
-  { id: 'controls', label: '4. 대책 수립', helper: '위험성을 판단하고 감소 대책을 수립합니다.' },
+  { id: 'tasks', label: '작업 파악', helper: '평가할 작업 단위를 먼저 정리합니다.' },
+  { id: 'processes', label: '공정 파악', helper: '작업별 세부 공정을 정의합니다.' },
+  { id: 'hazards', label: '위험요인', helper: '공정별 유해·위험요인을 찾습니다.' },
+  { id: 'controls', label: '대책 수립', helper: '위험성을 판단하고 감소 대책을 수립합니다.' },
 ];
 
 function todayISOClient() {
@@ -82,7 +82,6 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   const [minor, setMinor] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   
-  // ✅ 전역 분석 상태 (Zustand)
   const isAnalyzing = useRiskWizardStore((state) => state.isAnalyzing);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -129,7 +128,6 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
 
   const handleSubmit = async () => {
     if (submitting || isAnalyzing) return;
-
     if (!userEmail) {
       openAlert({
         title: '로그인이 필요합니다',
@@ -140,7 +138,6 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
       return;
     }
 
-    // 1) 즉시 알림 표시
     openAlert({
       title: '위험성 평가 생성 요청',
       lines: ['위험성 평가 보고서 생성이 요청되었습니다!', '완료되면 문서함/이메일에서 확인 가능합니다.'],
@@ -149,13 +146,12 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
 
     setSubmitting(true);
     await nextFrame();
-    onClose?.(); // 위자드 닫기
+    onClose?.();
 
     const ac = new AbortController();
     abortRef.current = ac;
 
     try {
-      // 2) 부모에게 제출 위임
       await onSubmit(draft, { signal: ac.signal, userEmail });
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
@@ -173,6 +169,8 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
 
   if (!open && !alertOpen) return null;
 
+  const currentIdx = TAB_LABELS.findIndex(t => t.id === step);
+
   return (
     <>
       {open && (
@@ -184,20 +182,25 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
               )}
               <h2 className={s.title}>위험성평가 작성</h2>
             </div>
-            <div className={s.progressText}>{TAB_LABELS.findIndex(t => t.id === step) + 1} / 4 단계</div>
+            <div className={s.progressText}>{currentIdx + 1} / 4 단계</div>
           </div>
 
           <div className={s.tabs}>
-            {TAB_LABELS.map((t, i) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`${s.tab} ${step === t.id ? s.tabActive : ''}`}
-                onClick={() => !submitting && !isAnalyzing && setStep(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
+            {TAB_LABELS.map((t, i) => {
+              const isActive = step === t.id;
+              const isPast = currentIdx > i;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`${s.tab} ${isActive ? s.tabActive : ''} ${isPast ? s.tabPast : ''}`}
+                  onClick={() => !submitting && !isAnalyzing && setStep(t.id)}
+                >
+                  <span className={s.stepNum}>{i + 1}</span>
+                  <span className={s.tabLabel}>{t.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className={s.content}>
@@ -212,9 +215,21 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
               {isAnalyzing && <span className={s.loadingText}>⚙️ 데이터를 분석하고 있습니다...</span>}
             </div>
             <div className={s.footerBtns}>
-              <button className={s.navBtn} onClick={() => setStep(TAB_LABELS[TAB_LABELS.findIndex(x => x.id === step) - 1].id)} disabled={step === 'tasks' || submitting}>이전</button>
+              <button 
+                className={s.navBtn} 
+                onClick={() => setStep(TAB_LABELS[currentIdx - 1].id)} 
+                disabled={step === 'tasks' || submitting}
+              >
+                이전
+              </button>
               {step !== 'controls' ? (
-                <button className={s.navBtnPrimary} onClick={() => setStep(TAB_LABELS[TAB_LABELS.findIndex(x => x.id === step) + 1].id)} disabled={!canGoNext || submitting}>다음 단계</button>
+                <button 
+                  className={s.navBtnPrimary} 
+                  onClick={() => setStep(TAB_LABELS[currentIdx + 1].id)} 
+                  disabled={!canGoNext || submitting}
+                >
+                  다음 단계
+                </button>
               ) : (
                 <button 
                   className={s.submitBtn} 
