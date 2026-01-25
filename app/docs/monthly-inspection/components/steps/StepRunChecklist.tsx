@@ -93,12 +93,12 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
         ))}
       </div>
 
-      <div className={s.footer}>
+      {/* <div className={s.footer}>
         <button className={s.backBtn} onClick={onBack}>이전</button>
         <button className={s.finishBtn} onClick={onFinish} disabled={finishDisabled}>
           점검 완료
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }
