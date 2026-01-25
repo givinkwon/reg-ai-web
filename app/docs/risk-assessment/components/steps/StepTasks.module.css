@@ -78,6 +78,8 @@
   height: auto; /* 내용에 따라 늘어나도록 설정 */
   padding: 16px;
   border-radius: 12px;
+
+  padding-right: 25px;
   
   cursor: pointer;
   transition: all 0.2s ease;
