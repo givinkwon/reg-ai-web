@@ -25,60 +25,74 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
 
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
+  
+  // ✅ [추가] 클라이언트 캐시 (키워드: 결과배열)
+  const cacheRef = useRef<Map<string, string[]>>(new Map());
 
-  // ❌ [삭제] 1글자 이상일 때만 검색하던 조건 제거
-  // const canSearch = useMemo(() => norm(q).length >= 1, [q]);
-
-  // API 검색 (Debounce 적용)
+  // API 검색 (Debounce + Caching + Immediate Loading 적용)
   useEffect(() => {
     if (!open) return;
 
-    // ❌ [삭제] 검색어 없으면 리턴하던 로직 제거 -> 검색어 없어도 API 호출 진행
-    /* if (!canSearch) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-    */
+    const keyword = norm(q);
 
+    // 기존 타이머 클리어
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
-    debounceRef.current = window.setTimeout(async () => {
-      setLoading(true);
-      setError(null);
+    // 1. 캐시 확인: 이미 검색한 키워드라면 서버 요청 없이 즉시 보여줌
+    if (cacheRef.current.has(keyword)) {
+      // 진행 중이던 요청이 있다면 취소 (레이스 컨디션 방지)
+      abortRef.current?.abort();
       
+      setItems(cacheRef.current.get(keyword) || []);
+      setLoading(false);
+      setError(null);
+      return; 
+    }
+
+    // 2. 캐시에 없으면 '즉시' 로딩 상태로 전환 (사용자에게 반응성 제공)
+    setLoading(true);
+    setError(null);
+
+    // 3. 실제 API 호출은 0.25초 뒤에 수행 (Debounce)
+    debounceRef.current = window.setTimeout(async () => {
+      // 이전 요청 취소
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
 
       try {
-        // ✅ q가 빈 문자열이어도 그대로 서버에 전송됨 (endpoint=detail-tasks&q=&limit=50)
-        // 백엔드에서 q가 비어있으면 전체 목록을 반환하도록 처리되어 있어야 합니다.
-        const qs = new URLSearchParams({ endpoint: 'detail-tasks', q: norm(q), limit: '50' });
+        const qs = new URLSearchParams({ endpoint: 'detail-tasks', q: keyword, limit: '50' });
         // if (minorCategory) qs.set('minor', minorCategory); 
 
         const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
           method: 'GET',
           signal: ac.signal,
-          cache: 'no-store',
+          // cache: 'no-store', // 브라우저 캐시 정책은 유지하되, 위에서 메모리 캐시로 먼저 방어함
         });
 
         if (!res.ok) throw new Error('검색 실패');
 
         const data = await res.json();
         const next = Array.from<string>(new Set((data.items ?? []).map(norm).filter(Boolean)));
+        
+        // ✅ [추가] 성공한 결과는 캐시에 저장
+        cacheRef.current.set(keyword, next);
+
         setItems(next);
       } catch (e: any) {
         if (e.name !== 'AbortError') setError('검색 중 오류가 발생했습니다.');
       } finally {
-        setLoading(false);
+        // 성공하든 실패하든 로딩 종료 (단, AbortError는 무시)
+        if (!ac.signal.aborted) {
+             setLoading(false);
+        }
       }
-    }, 250); // 0.25초 딜레이 (첫 진입 시에도 아주 살짝 딜레이 후 로딩됨)
+    }, 250);
 
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [q, open, minorCategory]); // deps에서 canSearch 제거
+  }, [q, open, minorCategory]);
 
   const toggleSelect = (title: string) => {
     const v = norm(title);
@@ -99,7 +113,6 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
     onClose();
   };
 
-  // 조건부 렌더링 (닫히면 Unmount -> State 초기화됨)
   if (!open) return null;
 
   return (
@@ -155,7 +168,13 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
 
         {/* 결과 리스트 */}
         <div className={s.list}>
-          {loading && <div className={s.empty}>목록을 불러오는 중...</div>}
+          {loading && (
+            <div className={s.empty}>
+              {/* 로딩 스피너나 텍스트를 좀 더 부드럽게 표현 가능 */}
+              <div className="animate-pulse">목록을 불러오는 중...</div>
+            </div>
+          )}
+          
           {!loading && error && <div className={s.empty}>{error}</div>}
           
           {!loading && !error && items.length > 0 && (
@@ -182,7 +201,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
             </>
           )}
 
-          {/* 결과 없음: 직접 추가 버튼 (검색어가 있을 때만 표시) */}
+          {/* 결과 없음: 직접 추가 버튼 */}
           {!loading && !error && items.length === 0 && (
             <div className={s.empty}>
               {q ? (

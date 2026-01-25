@@ -26,6 +26,9 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
+  // ✅ [추가] 클라이언트 캐시 (키워드: 결과배열)
+  const cacheRef = useRef<Map<string, string[]>>(new Map());
+
   // 1. 모달이 열릴 때 상태 초기화
   useEffect(() => {
     if (!open) return;
@@ -33,20 +36,37 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
     setItems([]);
     setError(null);
     setSelected([]);
-  }, [open]);
 
-  // 2. 검색 API 호출 (진입 시 즉시 호출 + 검색어 변경 시 호출)
+    // ✅ [중요] 작업(task)이나 공정(process)이 바뀌면 이전 캐시는 무효하므로 초기화
+    cacheRef.current.clear();
+  }, [open, taskTitle, processTitle]);
+
+  // 2. 검색 API 호출 (캐싱 + 즉시 로딩 적용)
   useEffect(() => {
     if (!open) return;
 
-    // ✅ canSearch 체크를 제거하여 q가 빈 문자열일 때도 진입 즉시 검색을 시작합니다.
+    const keyword = norm(q);
+
+    // 기존 타이머 클리어
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
-    debounceRef.current = window.setTimeout(async () => {
-      setLoading(true);
+    // ✅ [1단계] 캐시 확인: 이미 검색한 키워드면 API 호출 없이 즉시 표시
+    if (cacheRef.current.has(keyword)) {
+      abortRef.current?.abort(); // 진행 중인 요청 취소
+      setItems(cacheRef.current.get(keyword) || []);
+      setLoading(false);
       setError(null);
+      return;
+    }
+
+    // ✅ [2단계] 캐시에 없으면, 타이핑 즉시 로딩 상태로 전환 (반응성 향상)
+    setLoading(true);
+    setError(null);
+
+    // ✅ [3단계] 실제 API 호출은 0.25초 뒤에 (Debounce)
+    debounceRef.current = window.setTimeout(async () => {
       
-      // 이전 요청이 있다면 취소하여 레이스 컨디션 방지
+      // 이전 요청 취소
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
@@ -56,14 +76,14 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
           endpoint: 'risk-situations',
           process_name: norm(taskTitle),
           sub_process: norm(processTitle),
-          q: norm(q), 
+          q: keyword, 
           limit: '50' 
         });
 
         const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
           method: 'GET',
           signal: ac.signal,
-          cache: 'no-store',
+          // cache: 'no-store', // 메모리 캐시로 대체
         });
 
         if (!res.ok) throw new Error('데이터 요청 실패');
@@ -74,6 +94,10 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
         const next = Array.from<string>(
           new Set((data.items ?? []).map((x: any) => x.title || x).map(norm).filter(Boolean))
         );
+        
+        // ✅ [4단계] 결과 캐시에 저장
+        cacheRef.current.set(keyword, next);
+        
         setItems(next);
 
       } catch (e: any) {
@@ -81,7 +105,10 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
           setError('목록을 불러오는 중 오류가 발생했습니다.');
         }
       } finally {
-        setLoading(false);
+        // Abort가 아닌 정상 종료/에러 시에만 로딩 끔
+        if (!ac.signal.aborted) {
+            setLoading(false);
+        }
       }
     }, 250);
 
@@ -102,7 +129,7 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
   };
 
   const handleConfirm = (e: React.MouseEvent) => {
-    e.preventDefault(); // ✅ 폼 제출 방지
+    e.preventDefault(); 
     const uniq = Array.from(new Set(selected.map(norm).filter(Boolean)));
     if (uniq.length === 0) return;
     uniq.forEach(t => onAdd(t));
@@ -123,7 +150,7 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
             </div>
           </div>
           <button 
-            type="button" // ✅ 폼 제출 방지
+            type="button" 
             className={s.closeBtn} 
             onClick={(e) => { e.preventDefault(); onClose(); }} 
             aria-label="닫기"
@@ -150,7 +177,7 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
             {selected.map(t => (
               <button 
                 key={t} 
-                type="button" // ✅ 폼 제출 방지
+                type="button" 
                 className={s.selectedChip} 
                 onClick={(e) => {
                   e.preventDefault();
@@ -165,7 +192,13 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
 
         {/* 결과 리스트 영역 */}
         <div className={s.list}>
-          {loading && <div className={s.empty}>데이터를 불러오는 중...</div>}
+          {loading && (
+            <div className={s.empty}>
+               {/* 부드러운 로딩 피드백 */}
+               <div className="animate-pulse">데이터를 불러오는 중...</div>
+            </div>
+          )}
+          
           {!loading && error && <div className={s.empty}>{error}</div>}
           
           {!loading && !error && items.length > 0 && (
@@ -176,7 +209,7 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
                 return (
                   <button
                     key={v}
-                    type="button" // ✅ 클릭 시 깜빡임(Submit) 방지
+                    type="button"
                     className={`${s.item} ${isSelected ? s.itemSelected : ''}`}
                     onClick={(e) => {
                         e.preventDefault();
