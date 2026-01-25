@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react'; // ✅ 로딩 아이콘 추가
 import s from './TbmDetailTaskTagInput.module.css';
+
+// ✅ GA
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'TbmDetailTaskInput' } as const;
 
 type Props = {
   value: string[];
@@ -19,6 +25,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false); // ✅ 로딩 상태 추가
   
   // 포탈 위치 상태
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -26,15 +33,13 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // ✅ [중요 변경] 복잡한 외부 클릭 감지(document listener) 제거!
-  // 대신 onBlur로 처리합니다.
-
-  // 위치 계산 (Fixed Position)
+  // 위치 계산
   useEffect(() => {
     if (isOpen && wrapperRef.current) {
         const updateCoords = () => {
@@ -56,49 +61,101 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
     }
   }, [isOpen]);
 
-  // 검색 API
-  useEffect(() => {
-    if (!input.trim()) {
-      setSuggestions([]);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      try {
-        const qs = new URLSearchParams({
-          endpoint,
-          q: input,
-          limit: '10',
-          ...(minorCategory ? { minor: minorCategory } : {}),
-        });
-        const res = await fetch(`/api/risk-assessment?${qs.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          const items = (data.items || []).map(norm).filter(Boolean);
-          const filtered = items.filter((item: string) => !value.includes(item));
-          setSuggestions(filtered);
-          if (filtered.length > 0) setIsOpen(true);
-          setActiveIndex(0);
+  // ✅ 데이터 페칭 함수 분리
+  const fetchSuggestions = useCallback(async (query: string, isInitial = false) => {
+    setIsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        endpoint,
+        q: query,
+        limit: '10',
+        ...(minorCategory ? { minor: minorCategory } : {}),
+      });
+
+      const res = await fetch(`/api/risk-assessment?${qs.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const items = (data.items || []).map(norm).filter(Boolean);
+        // 이미 선택된 태그 제외
+        const filtered = items.filter((item: string) => !value.includes(item));
+        
+        setSuggestions(filtered);
+        
+        // 검색어가 있거나, 결과가 있으면 오픈 (초기 진입 시에는 오픈하지 않고 데이터만 로드)
+        if (!isInitial && (query || filtered.length > 0)) {
+            setIsOpen(true);
         }
-      } catch (e) { console.error(e); }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [input, minorCategory, endpoint, value]);
+
+        // ✅ GA: 검색 결과 로드
+        if (!isInitial && query) {
+            track(gaEvent(GA_CTX, 'SearchTasks'), {
+                ui_id: gaUiId(GA_CTX, 'SearchTasks'),
+                query,
+                count: filtered.length,
+                minor: minorCategory || 'all'
+            });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [endpoint, minorCategory, value]);
+
+  // ✅ [수정] 초기 진입 시 자동 검색 (빈 쿼리로 호출하여 추천 목록 확보)
+  useEffect(() => {
+    fetchSuggestions('', true); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minorCategory]); // 카테고리가 바뀌면 다시 로드
+
+  // ✅ [수정] 입력어 변경 시 검색 (Debounce)
+  useEffect(() => {
+    // 입력어가 없으면(지웠으면) 기본 목록(빈 쿼리) 다시 로드
+    if (!input.trim()) {
+        if (isOpen) fetchSuggestions('', false);
+        return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchSuggestions(input, false);
+    }, 300); // 300ms 딜레이
+
+    return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [input, fetchSuggestions, isOpen]);
+
 
   const addTag = (tag: string) => {
     if (!tag.trim()) return;
     if (!value.includes(tag)) {
       onChange([...value, tag]);
+      
+      // ✅ GA: 태그 추가
+      track(gaEvent(GA_CTX, 'AddTag'), {
+        ui_id: gaUiId(GA_CTX, 'AddTag'),
+        tag_name: tag,
+      });
     }
     setInput('');       
-    setSuggestions([]); 
-    setIsOpen(false);   
+    // 태그 추가 후에는 다시 기본 추천 목록을 불러옴 (선택된 거 제외됨)
+    fetchSuggestions('', false);
     
     // 포커스 유지
     inputRef.current?.focus(); 
   };
 
   const removeTag = (idx: number) => {
+    const target = value[idx];
     onChange(value.filter((_, i) => i !== idx));
+
+    // ✅ GA: 태그 삭제
+    track(gaEvent(GA_CTX, 'RemoveTag'), {
+        ui_id: gaUiId(GA_CTX, 'RemoveTag'),
+        tag_name: target,
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -120,10 +177,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
     }
   };
 
-  // ✅ [핵심 1] 입력창에서 포커스가 빠져나가면 닫는다.
   const handleBlur = () => {
-    // 잠깐 딜레이를 주어 클릭 이벤트가 먼저 처리될 수 있는 여유를 줌 (안전장치)
-    // 하지만 아래 onMouseDown preventDefault가 있으면 이 딜레이 없이도 안전함
     setTimeout(() => {
         setIsOpen(false);
     }, 150);
@@ -145,14 +199,26 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
         maxHeight: '240px',
         overflowY: 'auto',
       }}
-      // 🚨 [핵심 2] 여기가 제일 중요합니다!
-      // 드롭다운 영역을 누를 때 "포커스 잃음(Blur)" 이벤트를 아예 발생시키지 않도록 막습니다.
-      // 이렇게 하면 목록을 클릭해도 Input은 여전히 포커스를 가지고 있다고 착각합니다.
       onMouseDown={(e) => {
         e.preventDefault(); 
       }}
     >
-      {suggestions.map((item, i) => (
+      {/* ✅ 로딩 애니메이션 표시 */}
+      {isLoading && (
+        <div style={{ padding: '1rem', textAlign: 'center', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem' }}>
+            <Loader2 size={16} className={s.spin} />
+            검색 중...
+        </div>
+      )}
+
+      {/* 목록 표시 (로딩 중이어도 이전 목록 보여주거나, 로딩 끝나면 보여줌) */}
+      {!isLoading && suggestions.length === 0 && (
+          <div style={{ padding: '0.8rem', textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
+              검색 결과가 없습니다.
+          </div>
+      )}
+
+      {!isLoading && suggestions.map((item, i) => (
         <button
           key={item}
           type="button"
@@ -168,7 +234,6 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
              cursor: 'pointer',
              fontSize: '0.95rem'
           }}
-          // ✅ 이제 마음 편하게 클릭 이벤트만 쓰면 됩니다.
           onClick={() => addTag(item)}
           onMouseEnter={() => setActiveIndex(i)}
         >
@@ -184,8 +249,10 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
         className={s.box} 
         onClick={() => {
           inputRef.current?.focus();
-          // 이미 내용이 있으면 다시 열기
-          if (suggestions.length > 0) setIsOpen(true);
+          // 클릭 시 추천 목록이 있거나 입력어가 있으면 엽니다.
+          if (suggestions.length > 0 || input) setIsOpen(true);
+          // 만약 비어있는데 닫혀있었다면 기본 목록 로드 시도
+          if (suggestions.length === 0 && !input) fetchSuggestions('', false);
         }}
       >
         {value.map((tag, i) => (
@@ -194,7 +261,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
             <button 
               type="button" 
               className={s.tagX} 
-              onMouseDown={(e) => e.preventDefault()} // 삭제 버튼 눌러도 포커스 유지
+              onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => { 
                 e.stopPropagation();
                 removeTag(i); 
@@ -210,16 +277,17 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          // ✅ 여기서 포커스 잃음을 감지
           onBlur={handleBlur}
           onFocus={() => {
+             // 포커스 시에도 목록이 있으면 엽니다.
              if (suggestions.length > 0) setIsOpen(true);
+             else fetchSuggestions('', false);
           }}
           placeholder={value.length === 0 ? "작업을 입력하세요" : ""}
         />
       </div>
 
-      {mounted && isOpen && suggestions.length > 0 && createPortal(dropdownContent, document.body)}
+      {mounted && isOpen && createPortal(dropdownContent, document.body)}
     </div>
   );
 }
