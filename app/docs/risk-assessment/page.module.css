@@ -14,7 +14,7 @@
 .actionSection {
   width: 100%;
   background-color: #f8f9fa;
-  padding: 4rem 1.5rem;
+  padding: 4rem 1.5rem; /* 좌우 패딩 1.5rem -> 약 24px */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -23,7 +23,8 @@
 .actionBox {
   background: linear-gradient(135deg, #2388FF 0%, #2388FF 100%);
   width: 100%;
-  max-width: 900px;
+  /* Navbar(1200px)보다 좁게 가져가 디자인적 집중도 향상 */
+  max-width: 900px; 
   border-radius: 20px;
   padding: 3.5rem 2rem;
   text-align: center;
@@ -89,10 +90,11 @@
 
 /* === Features Section === */
 .featureSection {
-  max-width: 1100px;
+  /* ✅ 중앙 정렬 표준화: Navbar와 동일하게 1200px로 설정 */
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 5rem 1.5rem;
+  padding: 5rem 20px; /* Navbar padding과 동일하게 20px로 수정 */
 }
 
 .featureGrid {
@@ -130,7 +132,7 @@
 .previewSection {
   width: 100%;
   background-color: #F8FAFE;
-  padding: 6rem 1.5rem;
+  padding: 6rem 20px; /* Navbar padding 일치 */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,7 +151,8 @@
   align-items: center;
   justify-content: center;
   gap: 5rem;
-  max-width: 1100px;
+  /* ✅ 중앙 정렬 표준화: Navbar와 동일하게 1200px로 설정 */
+  max-width: 1200px;
   width: 100%;
   margin-bottom: 7rem;
 }
@@ -160,19 +163,30 @@
 }
 
 .previewImageWrapper {
-  flex: 1.2; /* 이미지가 텍스트보다 조금 더 넓게 */
+  flex: 1.2;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* 실제 이미지 스타일 */
+/* 실제 이미지 스타일 (가로형) */
 .previewImg {
   width: 100%;
   height: auto;
   object-fit: contain;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12); /* 부드러운 그림자 */
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   border-radius: 12px;
+  background-color: #fff;
+}
+
+/* ✅ 세로형 이미지 스타일 (크기 제한) */
+.previewImgVertical {
+  width: 100%; /* 부모 컨테이너(Next Image의 width prop)에 맞춤 */
+  max-width: 300px; /* 강제 최대 너비 제한으로 3/5 느낌 강조 */
+  height: auto;
+  object-fit: contain;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  border-radius: 8px; /* 세로형은 조금 더 둥글게 */
   background-color: #fff;
 }
 
@@ -208,11 +222,12 @@
 .guideSection {
   width: 100%;
   background-color: #fff;
-  padding: 5rem 1.5rem 8rem;
+  padding: 5rem 20px 8rem; /* Navbar padding 일치 */
 }
 
 .guideGrid {
-  max-width: 1100px;
+  /* ✅ 중앙 정렬 표준화: Navbar와 동일하게 1200px로 설정 */
+  max-width: 1200px; 
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -275,5 +290,10 @@
 
   .previewImageWrapper {
     width: 100%;
+  }
+  
+  /* 모바일에서는 세로형 이미지 제한을 조금 풂 */
+  .previewImgVertical {
+    max-width: 240px; 
   }
 }

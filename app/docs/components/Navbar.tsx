@@ -61,6 +61,7 @@ export default function Navbar() {
   return (
     <>
       <nav className={s.nav}>
+        {/* ✅ container: max-width 1200px 중앙 정렬 적용 대상 */}
         <div className={s.container}>
           {/* 로고 */}
           <Link href="/" className={s.logo} onClick={() => setMobileMenuOpen(false)}>
@@ -128,7 +129,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ✅ 모바일 메뉴 드롭다운 수정 */}
+        {/* ✅ 모바일 메뉴 드롭다운 */}
         {mobileMenuOpen && (
           <div className={s.mobileMenu}>
             <div className={s.mobileNavLinks}>

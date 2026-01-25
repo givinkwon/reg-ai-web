@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import Image from 'next/image'; // ✅ 이미지 컴포넌트 추가
+import Image from 'next/image';
 import { 
   AlertTriangle, Plus, 
   Clock, FileText, Sparkles, 
@@ -122,7 +122,10 @@ export default function RiskPage() {
     const filename = getFilenameFromDisposition(cd) || `위험성평가_${draft.meta.dateISO}.xlsx`;
 
     a.download = filename;
-    document.body.appendChild(a);
+    
+    // ✅ 수정된 부분: a.document -> document
+    document.body.appendChild(a); 
+    
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
@@ -186,30 +189,30 @@ export default function RiskPage() {
             </div>
           </section>
 
-          {/* === 3. Preview Section (Images from /docs) === */}
+          {/* === 3. Preview Section === */}
           <section className={s.previewSection}>
             <h2 className={s.sectionHeader}>무엇이 만들어 지나요?</h2>
             
-            {/* 1. 표지 */}
+            {/* 1. 표지 (세로 문서: 사이즈 축소) */}
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
                   src="/docs/표지.png" 
                   alt="위험성 평가 보고서 표지" 
-                  width={500} 
-                  height={700}
-                  className={s.previewImg}
+                  width={300} 
+                  height={420} 
+                  className={s.previewImgVertical}
                   priority
                 />
                 <div className={s.caption}>1. 표지</div>
               </div>
               <div className={s.previewContent}>
-                <h3>사업장과 평가자, 위험성 평가 대상에 맞는 작업까지</h3>
-                <p>자동으로 기입된 표지가 만들어집니다.</p>
+                <h3>맞춤 표지 자동 생성</h3>
+                <p>사업장과 평가자, 평가 공정 작업까지<br/>자동으로 기입됩니다.</p>
               </div>
             </div>
 
-            {/* 2. 리스트 (Reverse Layout) */}
+            {/* 2. 리스트 (가로 문서) */}
             <div className={`${s.previewRow} ${s.reverse}`}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -222,20 +225,20 @@ export default function RiskPage() {
                 <div className={s.caption}>2. 위험성 평가 리스트</div>
               </div>
               <div className={s.previewContent}>
-                <h3>위험성 평가를 진행한 모든 공정과<br/>공정 별 유해위험요인</h3>
-                <p>현재 조치와 개선 대책까지<br/>한 눈에 확인 가능합니다.</p>
+                <h3>전체 위험성 평가 리스트 제공</h3>
+                <p>위험성 평가를 진행한 모든 공정에 대해<br/>현재 조치와 개선 대책까지<br/>한 눈에 확인할 수 있습니다.</p>
               </div>
             </div>
 
-            {/* 3. 상세 보고서 */}
+            {/* 3. 상세 보고서 (세로 문서: 사이즈 축소) */}
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
                   src="/docs/상세.png" 
                   alt="위험요인 별 상세 보고서" 
-                  width={800} 
-                  height={500}
-                  className={s.previewImg} 
+                  width={300} 
+                  height={420}
+                  className={s.previewImgVertical} 
                 />
                 <div className={s.caption}>3. 위험요인 별 상세 보고서</div>
               </div>
@@ -245,7 +248,7 @@ export default function RiskPage() {
               </div>
             </div>
 
-             {/* 4. 이행 관리 (Reverse Layout) */}
+             {/* 4. 이행 관리 */}
              <div className={`${s.previewRow} ${s.reverse}`}>
               <div className={s.previewImageWrapper}>
                 <Image 
