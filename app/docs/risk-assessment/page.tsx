@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react'; // ✅ useRef 추가
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { 
   AlertTriangle, Plus, 
@@ -49,10 +49,11 @@ export default function RiskPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking (1회만)
+  // ✅ GA: Page View Tracking (1회만 실행 보장)
   const viewTracked = useRef(false);
   useEffect(() => {
     if (viewTracked.current) return;
+    // 유저 정보가 로드되었거나, 로드 시도 중일 때 트래킹 (로그인 여부 포함)
     viewTracked.current = true;
 
     track(gaEvent(GA_CTX, 'View'), {
@@ -97,7 +98,7 @@ export default function RiskPage() {
   const handleSubmit = useCallback(async (draft: RiskAssessmentDraft, opts?: { signal?: AbortSignal; userEmail?: string }) => {
     if (!opts?.userEmail) throw new Error('이메일 정보가 누락되었습니다.');
 
-    // ✅ GA: 제출 시작 트래킹
+    // ✅ GA: 제출 시작 트래킹 (작업 개수 포함)
     track(gaEvent(GA_CTX, 'SubmitRiskAssessment'), {
         ui_id: gaUiId(GA_CTX, 'SubmitRiskAssessment'),
         task_count: draft.tasks.length,
@@ -148,7 +149,6 @@ export default function RiskPage() {
 
     a.download = filename;
     
-    // ✅ 수정된 부분: a.document -> document
     document.body.appendChild(a); 
     
     a.click();
@@ -182,7 +182,7 @@ export default function RiskPage() {
               </p>
               
               <div className={s.btnGroup}>
-                <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 교체 */}
+                <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 연결 */}
                   <Plus size={20} className="mr-2" />
                   새 평가 작성하기
                 </Button>
@@ -227,7 +227,7 @@ export default function RiskPage() {
           <section className={s.previewSection}>
             <h2 className={s.sectionHeader}>무엇이 만들어 지나요?</h2>
             
-            {/* 1. 표지 (세로 문서: 사이즈 축소) */}
+            {/* 1. 표지 */}
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -246,7 +246,7 @@ export default function RiskPage() {
               </div>
             </div>
 
-            {/* 2. 리스트 (가로 문서) */}
+            {/* 2. 리스트 */}
             <div className={`${s.previewRow} ${s.reverse}`}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -264,7 +264,7 @@ export default function RiskPage() {
               </div>
             </div>
 
-            {/* 3. 상세 보고서 (세로 문서: 사이즈 축소) */}
+            {/* 3. 상세 보고서 */}
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -344,7 +344,7 @@ export default function RiskPage() {
       <RiskAssessmentWizard
         open={isWriting}
         onClose={() => {
-            // ✅ GA: 모달 닫힘
+            // ✅ GA: 모달 닫힘 트래킹
             track(gaEvent(GA_CTX, 'CloseWizard'), {
                 ui_id: gaUiId(GA_CTX, 'CloseWizard'),
             });

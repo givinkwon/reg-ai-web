@@ -18,13 +18,13 @@
 .title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text-main);
+  color: #111; /* 명확한 블랙 */
   margin-bottom: 0.5rem;
 }
 
 .desc {
   font-size: 0.95rem;
-  color: var(--text-sub);
+  color: #666;
   line-height: 1.5;
 }
 
@@ -40,144 +40,167 @@
   justify-content: center;
   padding: 3rem;
   gap: 1rem;
-  color: var(--text-sub);
-  background-color: var(--bg-main);
-  border: 1px dashed var(--border);
+  color: #888;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
   border-radius: 12px;
 }
 
 /* 그리드 레이아웃 */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  /* 카드가 너무 좁아지지 않도록 최소 너비 240px로 확보 */
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
 }
 
-/* 선택 카드 */
+/* 선택 카드 (버튼 초기화 및 레이아웃) */
 .card {
+  /* 버튼 기본 스타일 리셋 */
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 0; /* 내부 패딩은 아래에서 정의 */
+  margin: 0;
+  font-family: inherit;
+  
+  /* Flex 레이아웃 */
   display: flex;
+  flex-direction: row;
   align-items: center; /* 수직 중앙 정렬 */
-  gap: 0.75rem;
-  padding: 1rem;
-  background-color: var(--bg-main);
-  border: 1px solid var(--border);
+  justify-content: flex-start; /* 왼쪽 정렬 (중요) */
+  gap: 12px;
+  
+  /* 크기 및 여백 */
+  width: 100%;
+  min-height: 60px; /* 넉넉한 높이 */
+  height: auto; /* 내용에 따라 늘어나도록 설정 */
+  padding: 16px;
   border-radius: 12px;
+  
   cursor: pointer;
   transition: all 0.2s ease;
+  
+  /* 텍스트 줄바꿈 설정 (중요) */
+  white-space: normal;
   text-align: left;
-  min-height: 56px; /* 최소 높이 보장 */
 }
 
 .card:hover {
-  border-color: var(--primary);
-  background-color: var(--bg-sub);
+  border-color: #2388FF;
+  background-color: #f0f9ff;
 }
 
+/* 활성화 상태 */
 .card.active {
-  border-color: var(--primary);
-  background-color: var(--primary-light);
-  box-shadow: 0 0 0 1px var(--primary);
+  border-color: #2388FF;
+  background-color: #e6f4ff; /* 더 명확한 활성 배경색 */
+  box-shadow: 0 0 0 1px #2388FF;
 }
 
+/* 카드 내부 텍스트 */
 .cardText {
-  font-weight: 500;
-  color: black;
-  font-size: 0.95rem;
-  line-height: 1.4; /* 텍스트 줄 간격 확보 */
-  word-break: break-word; /* 긴 단어 줄바꿈 */
   flex: 1; /* 남은 공간 모두 차지 */
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.5; /* 줄 간격 넉넉하게 */
+  
+  /* 줄바꿈 처리 */
+  word-break: keep-all; /* 한글 단어 끊김 방지 */
+  word-wrap: break-word; /* 긴 영문 강제 줄바꿈 */
+  overflow-wrap: break-word;
 }
 
-/* 체크 표시 UI - 기본 상태 */
+/* 체크 아이콘 (원) */
 .checkCircle {
-  width: 22px;
-  height: 22px;
+  flex-shrink: 0; /* 텍스트가 길어도 찌그러짐 방지 (중요) */
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 2px solid #cbd5e1;
-  background-color: #ffffff;
+  background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; /* 아이콘 크기 줄어듦 방지 */
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  transition: all 0.2s ease;
 }
 
 .card.active .checkCircle {
   background-color: #2388FF;
   border-color: #2388FF;
-  box-shadow: 0 0 0 3px rgba(35, 136, 255, 0.2);
 }
 
+/* 체크 아이콘 내부 점 */
 .checkDot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: transparent;
+  background-color: white;
   transform: scale(0);
-  transition: all 0.25s ease;
+  transition: transform 0.2s ease;
 }
 
 .card.active .checkDot {
-  background-color: #ffffff;
   transform: scale(1);
 }
 
-/* 하단 요약 */
+/* --- 하단 요약 (Chips) --- */
 .summary {
   margin-top: 1rem;
-  padding: 1rem;
-  background-color: var(--bg-sub);
+  padding: 1.2rem;
+  background-color: #f8fafc;
   border-radius: 12px;
-  border: 1px solid var(--border);
+  border: 1px solid #e2e8f0;
 }
 
 .summaryLabel {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: var(--text-sub);
+  color: #475569;
   margin-bottom: 0.8rem;
 }
 
 .chipList {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-wrap: wrap; /* 여러 줄로 자연스럽게 넘어가도록 */
+  gap: 8px;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.8rem; /* 패딩을 살짝 늘려 텍스트 공간 확보 */
-  background-color: white;
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
   font-size: 0.9rem;
-  color: var(--primary);
-  font-weight: 500;
+  color: #2388FF;
+  font-weight: 600;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  line-height: 1.2; /* 줄 높이 조정 */
-  height: auto; /* 고정 높이 제거 */
+  
+  /* 칩 내부 텍스트 보호 */
+  max-width: 100%;
+  height: auto;
+  white-space: normal;
+  word-break: break-all;
 }
 
 .chipRemove {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px; /* 클릭 영역 조금 확대 */
+  width: 20px;
   height: 20px;
   padding: 0;
-  background-color: transparent; 
+  background: none;
   border: none;
-  border-radius: 50%; /* 원형 버튼 */
-  color: #94a3b8; 
+  border-radius: 50%;
+  color: #94a3b8;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  transition: all 0.2s ease;
-  margin-left: 2px;
   flex-shrink: 0; /* 버튼 찌그러짐 방지 */
 }
 
@@ -186,21 +209,21 @@
   color: #ef4444;
 }
 
-.chipRemove:active {
-  transform: scale(0.9);
-}
-
 .emptyText {
-  color: var(--text-sub);
+  color: #94a3b8;
   font-size: 0.9rem;
-  padding: 0.5rem 0;
 }
 
+/* 모바일 대응 */
 @media (max-width: 600px) {
   .header {
     flex-direction: column;
+    align-items: flex-start;
   }
   .addBtn {
     width: 100%;
+  }
+  .grid {
+    grid-template-columns: 1fr; /* 모바일에서는 1열로 보기 좋게 */
   }
 }
