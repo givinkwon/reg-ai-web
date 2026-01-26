@@ -22,7 +22,7 @@ import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 // ✅ GA Context
-const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: '' } as const;
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'Landing' } as const;
 
 /* 유틸 함수 */
 function getFilenameFromDisposition(disposition: string | null) {
