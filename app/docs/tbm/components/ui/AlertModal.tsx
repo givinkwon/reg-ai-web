@@ -1,8 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { CheckCircle2, X } from 'lucide-react';
 import s from './AlertModal.module.css';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context: 공통 UI 컴포넌트이므로 'Shared' 섹션으로 정의
+const GA_CTX = { page: 'Docs', section: 'TBM', area: 'AlertModal' } as const;
 
 type Props = {
   open: boolean;
@@ -31,6 +38,26 @@ export default function CenteredAlertModal({
 }: Props) {
   const btnRef = useRef<HTMLButtonElement | null>(null);
 
+  // ✅ GA 트래킹을 포함한 내부 핸들러 (Confirm)
+  const handleConfirm = useCallback(() => {
+    track(gaEvent(GA_CTX, 'ClickConfirm'), {
+      ui_id: gaUiId(GA_CTX, 'ClickConfirm'),
+      modal_title: title, // 어떤 알림창에서 눌렀는지 식별
+    });
+    onConfirm();
+  }, [onConfirm, title]);
+
+  // ✅ GA 트래킹을 포함한 내부 핸들러 (Close)
+  const handleClose = useCallback(() => {
+    if (onClose) {
+      track(gaEvent(GA_CTX, 'ClickClose'), {
+        ui_id: gaUiId(GA_CTX, 'ClickClose'),
+        modal_title: title,
+      });
+      onClose();
+    }
+  }, [onClose, title]);
+
   useEffect(() => {
     if (!open) return;
     // 열릴 때 버튼에 포커스 (접근성 및 편의성)
@@ -39,11 +66,14 @@ export default function CenteredAlertModal({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Escape는 close가 있으면 close, 없으면 confirm으로 처리
-        if (showClose && onClose) onClose();
-        else onConfirm();
+        if (showClose && onClose) {
+            handleClose(); // ✅ 트래킹 포함된 핸들러 호출
+        } else {
+            handleConfirm(); // ✅ 트래킹 포함된 핸들러 호출
+        }
       }
       if (e.key === 'Enter') {
-        onConfirm();
+        handleConfirm(); // ✅ 트래킹 포함된 핸들러 호출
       }
     };
 
@@ -52,7 +82,7 @@ export default function CenteredAlertModal({
       window.clearTimeout(t);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, onConfirm, onClose, showClose]);
+  }, [open, showClose, onClose, handleConfirm, handleClose]);
 
   // 모달이 열려있을 때 백그라운드 스크롤 방지
   useEffect(() => {
@@ -79,12 +109,16 @@ export default function CenteredAlertModal({
           </div>
 
           {showClose && (
+            // ✅ GA: 닫기 버튼 식별
             <button
               type="button"
               className={s.closeBtn}
-              onClick={onClose}
+              onClick={handleClose}
               aria-label="닫기"
               disabled={disabled}
+              data-ga-event="ClickClose"
+              data-ga-id={gaUiId(GA_CTX, 'ClickClose')}
+              data-ga-label={title}
             >
               <X size={18} />
             </button>
@@ -100,12 +134,16 @@ export default function CenteredAlertModal({
         </div>
 
         <div className={s.footer}>
+          {/* ✅ GA: 확인 버튼 식별 */}
           <button
             ref={btnRef}
             type="button"
             className={s.confirmBtn}
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={disabled}
+            data-ga-event="ClickConfirm"
+            data-ga-id={gaUiId(GA_CTX, 'ClickConfirm')}
+            data-ga-label={title}
           >
             {confirmText}
           </button>

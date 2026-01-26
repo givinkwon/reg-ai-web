@@ -16,6 +16,13 @@ import { useChatStore } from '@/app/store/chat';
 // ✅ 로그인 모달
 import LoginPromptModal from '@/app/docs/components/LoginPromptModal';
 
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context: 전역 헤더이므로 'Shared' 페이지로 분류
+const GA_CTX = { page: 'Shared', section: 'Header', area: 'Navigation' } as const;
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -45,10 +52,16 @@ export default function Navbar() {
 
   const isActive = (path: string) => pathname === path;
 
+  // ✅ GA: 로그아웃 핸들러
   const handleLogout = async () => {
+    track(gaEvent(GA_CTX, 'ClickLogout'), {
+      ui_id: gaUiId(GA_CTX, 'ClickLogout'),
+      user_email: user?.email
+    });
+
     try {
       await logout();
-      setMobileMenuOpen(false); // 로그아웃 시 메뉴 닫기
+      setMobileMenuOpen(false); 
       router.push('/');
       router.refresh();
     } catch (error) {
@@ -56,15 +69,60 @@ export default function Navbar() {
     }
   };
 
-  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+  // ✅ GA: 모바일 메뉴 토글 핸들러
+  const toggleMobileMenu = () => {
+    const nextState = !mobileMenuOpen;
+    track(gaEvent(GA_CTX, 'ToggleMobileMenu'), {
+      ui_id: gaUiId(GA_CTX, 'ToggleMobileMenu'),
+      state: nextState ? 'open' : 'close'
+    });
+    setMobileMenuOpen(nextState);
+  };
+
+  // ✅ GA: 메뉴 클릭 핸들러 (공통)
+  const handleMenuClick = (name: string, href: string, isMobile: boolean) => {
+    track(gaEvent(GA_CTX, 'ClickMenu'), {
+      ui_id: gaUiId(GA_CTX, 'ClickMenu'),
+      menu_name: name,
+      link_url: href,
+      device_type: isMobile ? 'mobile' : 'desktop'
+    });
+
+    if (isMobile) setMobileMenuOpen(false);
+  };
+
+  // ✅ GA: 로그인 버튼 핸들러
+  const handleLoginClick = (source: 'desktop' | 'mobile') => {
+    track(gaEvent(GA_CTX, 'ClickLogin'), {
+      ui_id: gaUiId(GA_CTX, 'ClickLogin'),
+      source_view: source
+    });
+    setShowLoginModal(true);
+    if (source === 'mobile') setMobileMenuOpen(false);
+  };
+
+  // ✅ GA: 회원가입 버튼 핸들러
+  const handleSignupClick = (source: 'desktop' | 'mobile') => {
+    track(gaEvent(GA_CTX, 'ClickSignup'), {
+      ui_id: gaUiId(GA_CTX, 'ClickSignup'),
+      source_view: source
+    });
+    if (source === 'mobile') setMobileMenuOpen(false);
+  };
 
   return (
     <>
       <nav className={s.nav}>
-        {/* ✅ container: max-width 1200px 중앙 정렬 적용 대상 */}
         <div className={s.container}>
           {/* 로고 */}
-          <Link href="/" className={s.logo} onClick={() => setMobileMenuOpen(false)}>
+          <Link 
+            href="/" 
+            className={s.logo} 
+            onClick={() => {
+                track(gaEvent(GA_CTX, 'ClickLogo'), { ui_id: gaUiId(GA_CTX, 'ClickLogo') });
+                setMobileMenuOpen(false);
+            }}
+          >
             <ShieldCheck size={28} className={s.logoIcon} />
             <span className={s.logoText}>RegAI</span>
           </Link>
@@ -76,6 +134,9 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`${s.navLink} ${isActive(link.href) ? s.active : ''}`}
+                onClick={() => handleMenuClick(link.name, link.href, false)}
+                data-ga-event="ClickMenu"
+                data-ga-label={link.name}
               >
                 {link.name}
               </Link>
@@ -99,6 +160,7 @@ export default function Navbar() {
                   size="sm" 
                   className={s.logoutBtn} 
                   onClick={handleLogout}
+                  data-ga-event="ClickLogout"
                 >
                   <LogOut size={16} className="mr-1" style={{ flexShrink: 0 }} />
                   로그아웃
@@ -110,12 +172,13 @@ export default function Navbar() {
                   variant="ghost" 
                   size="sm" 
                   className={s.loginBtn}
-                  onClick={() => setShowLoginModal(true)}
+                  onClick={() => handleLoginClick('desktop')}
+                  data-ga-event="ClickLogin"
                 >
                   로그인
                 </Button>
-                <Link href="/signup">
-                  <Button size="sm" className={s.trialBtn}>
+                <Link href="/signup" onClick={() => handleSignupClick('desktop')}>
+                  <Button size="sm" className={s.trialBtn} data-ga-event="ClickSignup">
                     가입하기
                   </Button>
                 </Link>
@@ -123,7 +186,12 @@ export default function Navbar() {
             )}
 
             {/* 모바일 토글 버튼 */}
-            <button className={s.mobileToggle} onClick={toggleMobileMenu} aria-label="메뉴 토글">
+            <button 
+                className={s.mobileToggle} 
+                onClick={toggleMobileMenu} 
+                aria-label="메뉴 토글"
+                data-ga-event="ToggleMobileMenu"
+            >
               {mobileMenuOpen ? <X /> : <Menu />}
             </button>
           </div>
@@ -138,7 +206,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`${s.mobileLink} ${isActive(link.href) ? s.mobileActive : ''}`}
-                  onClick={() => setMobileMenuOpen(false)} // 클릭 시 메뉴 닫기
+                  onClick={() => handleMenuClick(link.name, link.href, true)}
                 >
                   {link.name}
                   <ChevronRight size={16} className={s.mobileLinkIcon} />
@@ -167,16 +235,17 @@ export default function Navbar() {
               ) : (
                 <div className={s.mobileGuestBox}>
                   <Button 
-                    onClick={() => {
-                      setShowLoginModal(true);
-                      setMobileMenuOpen(false);
-                    }} 
+                    onClick={() => handleLoginClick('mobile')}
                     variant="outline" 
                     className={s.mobileFullBtn}
                   >
                     로그인
                   </Button>
-                  <Link href="/signup" onClick={() => setMobileMenuOpen(false)} style={{ width: '100%' }}>
+                  <Link 
+                    href="/signup" 
+                    onClick={() => handleSignupClick('mobile')} 
+                    style={{ width: '100%' }}
+                  >
                     <Button className={`${s.mobileFullBtn} ${s.trialBtn}`}>
                       무료로 시작하기
                     </Button>

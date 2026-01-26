@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react'; // ✅ useRef 추가
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { 
   CalendarCheck, ClipboardList, CheckSquare, Sparkles,
@@ -20,8 +20,8 @@ import { useChatStore } from '@/app/store/chat';
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ GA Context
-const GA_CTX = { page: 'SafetyDocs', section: 'MonthlyInspection', area: 'Landing' } as const;
+// ✅ GA Context: 섹션과 영역을 명확히 정의
+const GA_CTX = { page: 'Docs', section: 'MonthlyInspection', area: 'Landing' } as const;
 
 export default function MonthlyPage() {
   const [isWriting, setIsWriting] = useState(false);
@@ -36,17 +36,20 @@ export default function MonthlyPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking (1회만)
+  // ✅ GA: Page View Tracking
+  // 수정사항: initialized가 true가 될 때까지 기다렸다가 추적하여 'is_logged_in' 값을 정확하게 보장합니다.
   const viewTracked = useRef(false);
+  
   useEffect(() => {
-    if (viewTracked.current) return;
+    if (!initialized || viewTracked.current) return;
+    
     viewTracked.current = true;
 
     track(gaEvent(GA_CTX, 'View'), {
       ui_id: gaUiId(GA_CTX, 'View'),
       is_logged_in: !!user?.email,
     });
-  }, [user?.email]);
+  }, [initialized, user?.email]);
 
   useEffect(() => {
     if (!initialized) return;
@@ -81,9 +84,11 @@ export default function MonthlyPage() {
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
   // ✅ GA: 시작 버튼 핸들러
+  // 수정사항: 어떤 버튼인지 명확히 식별하기 위해 Payload에 정보를 추가했습니다.
   const handleStartClick = () => {
     track(gaEvent(GA_CTX, 'ClickStart'), {
       ui_id: gaUiId(GA_CTX, 'ClickStart'),
+      button_label: '점검표 생성하기', // 추가된 식별 정보
       is_logged_in: !!user?.email,
     });
     setIsWriting(true);
@@ -106,7 +111,13 @@ export default function MonthlyPage() {
               </p>
               
               <div className={s.btnGroup}>
-                <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 교체 */}
+                {/* ✅ DOM 레벨에서도 식별되도록 data-ga 속성을 추가했습니다 (선택사항이지만 권장) */}
+                <Button 
+                  className={s.whiteBtn} 
+                  onClick={handleStartClick}
+                  data-ga-event="ClickStart"
+                  data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
+                > 
                   점검표 생성하기
                 </Button>
               </div>
@@ -247,7 +258,7 @@ export default function MonthlyPage() {
       <MonthlyInspectionCreateModal
         open={isWriting}
         onClose={() => {
-            // ✅ GA: 모달 닫힘
+            // ✅ GA: 모달 닫힘 추적
             track(gaEvent(GA_CTX, 'CloseCreateModal'), {
                 ui_id: gaUiId(GA_CTX, 'CloseCreateModal'),
             });

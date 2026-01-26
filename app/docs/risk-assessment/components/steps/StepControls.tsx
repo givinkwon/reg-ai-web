@@ -4,14 +4,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import s from './StepControls.module.css';
 import type { RiskAssessmentDraft, Judgement } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
-import { RefreshCw, Sparkles } from 'lucide-react'; // ✅ 아이콘 추가
+import { RefreshCw, Sparkles } from 'lucide-react';
 import { useRiskWizardStore } from '@/app/store/docs';
 
-// ✅ GA 추적
+// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessmentControls' } as const;
+// ✅ GA Context 정의
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'StepControls' } as const;
 
 type Props = {
   draft: RiskAssessmentDraft;
@@ -108,7 +109,29 @@ export default function StepControls({ draft, setDraft }: Props) {
     }));
   };
 
-  // ✅ 자동 채움 및 강제 10초 대기 로직
+  // ✅ GA: 위험성 판단 변경 핸들러
+  const handleChangeJudgement = (r: any, val: Judgement) => {
+    track(gaEvent(GA_CTX, 'ChangeJudgement'), {
+        ui_id: gaUiId(GA_CTX, 'ChangeJudgement'),
+        hazard_title: r.risk_situation_result,
+        old_value: r.judgement,
+        new_value: val
+    });
+    updateHazard(r.taskId, r.processId, r.hazardId, { judgement: val });
+  };
+
+  // ✅ GA: 추천 문구 선택 핸들러
+  const handleSelectRecommendation = (r: any, field: 'current_control_text' | 'mitigation_text', val: string) => {
+    track(gaEvent(GA_CTX, 'SelectRecommendation'), {
+        ui_id: gaUiId(GA_CTX, 'SelectRecommendation'),
+        field,
+        selected_text: val
+    });
+    updateHazard(r.taskId, r.processId, r.hazardId, { [field]: val });
+  };
+
+
+  // ✅ 자동 채움 및 강제 10초 대기 로직 (기존 유지)
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -119,10 +142,9 @@ export default function StepControls({ draft, setDraft }: Props) {
       setIsAnalyzing(true);
       setIsInitialAnalyzing(true);
 
-      const minWaitTimer = new Promise(resolve => setTimeout(resolve, 10000)); // 10초
+      const minWaitTimer = new Promise(resolve => setTimeout(resolve, 10000)); 
 
       if (targetsToFetch.length === 0) {
-        // 이미 데이터가 있다면 짧게 대기 후 해제 (UX상 1.5초 정도)
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         setIsInitialAnalyzing(false);
         setIsAnalyzing(false);
@@ -213,7 +235,7 @@ export default function StepControls({ draft, setDraft }: Props) {
   return (
     <div className={s.wrap}>
       
-      {/* ✅ [수정] 분석 중 팝업 (Overlay Modal) */}
+      {/* 분석 중 팝업 */}
       {isInitialAnalyzing && (
         <div className={s.loadingOverlay}>
           <div className={s.loadingPopup}>
@@ -253,11 +275,15 @@ export default function StepControls({ draft, setDraft }: Props) {
               <div className={s.sectionTitle}>위험성 판단</div>
               <div className={s.judgementGroup}>
                 {JUDGEMENTS.map((j) => (
+                  // ✅ GA: 판단 버튼 식별
                   <button
                     key={j}
                     type="button"
                     className={`${s.judgementBtn} ${r.judgement === j ? s[j === '상' ? 'high' : j === '중' ? 'mid' : 'low'] : ''}`}
-                    onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { judgement: j })}
+                    onClick={() => handleChangeJudgement(r, j)}
+                    data-ga-event="ChangeJudgement"
+                    data-ga-id={gaUiId(GA_CTX, 'ChangeJudgement')}
+                    data-ga-label={j}
                   >
                     {j}
                   </button>
@@ -271,11 +297,15 @@ export default function StepControls({ draft, setDraft }: Props) {
               {r.current_controls_items.length > 0 && (
                 <div className={s.chipRow}>
                   {r.current_controls_items.map((x: string) => (
+                    // ✅ GA: 추천 칩 선택 식별
                     <button
                       key={x}
                       type="button"
                       className={`${s.chip} ${norm(r.current_control_text) === norm(x) ? s.chipActive : ''}`}
-                      onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { current_control_text: x })}
+                      onClick={() => handleSelectRecommendation(r, 'current_control_text', x)}
+                      data-ga-event="SelectRecommendation"
+                      data-ga-id={gaUiId(GA_CTX, 'SelectRecommendation')}
+                      data-ga-label={x}
                     >
                       {x}
                     </button>
@@ -296,11 +326,15 @@ export default function StepControls({ draft, setDraft }: Props) {
               {r.mitigation_items.length > 0 && (
                 <div className={s.chipRow}>
                   {r.mitigation_items.map((x: string) => (
+                    // ✅ GA: 추천 칩 선택 식별
                     <button
                       key={x}
                       type="button"
                       className={`${s.chip} ${norm(r.mitigation_text) === norm(x) ? s.chipActive : ''}`}
-                      onClick={() => updateHazard(r.taskId, r.processId, r.hazardId, { mitigation_text: x })}
+                      onClick={() => handleSelectRecommendation(r, 'mitigation_text', x)}
+                      data-ga-event="SelectRecommendation"
+                      data-ga-id={gaUiId(GA_CTX, 'SelectRecommendation')}
+                      data-ga-label={x}
                     >
                       {x}
                     </button>

@@ -4,6 +4,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import s from './AddHazardModal.module.css';
 
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context: 위험요인 검색 모달
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'SearchHazardModal' } as const;
+
 type Props = {
   open: boolean;
   taskTitle: string;
@@ -26,18 +33,26 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
-  // ✅ [추가] 클라이언트 캐시 (키워드: 결과배열)
+  // ✅ 클라이언트 캐시 (키워드: 결과배열)
   const cacheRef = useRef<Map<string, string[]>>(new Map());
 
-  // 1. 모달이 열릴 때 상태 초기화
+  // 1. 모달이 열릴 때 상태 초기화 & GA View
   useEffect(() => {
     if (!open) return;
+
+    // ✅ GA: View 이벤트
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      task_title: taskTitle,
+      process_title: processTitle
+    });
+
     setQ('');
     setItems([]);
     setError(null);
     setSelected([]);
 
-    // ✅ [중요] 작업(task)이나 공정(process)이 바뀌면 이전 캐시는 무효하므로 초기화
+    // 작업이나 공정이 바뀌면 이전 캐시는 무효하므로 초기화
     cacheRef.current.clear();
   }, [open, taskTitle, processTitle]);
 
@@ -47,26 +62,24 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
 
     const keyword = norm(q);
 
-    // 기존 타이머 클리어
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
-    // ✅ [1단계] 캐시 확인: 이미 검색한 키워드면 API 호출 없이 즉시 표시
+    // [1단계] 캐시 확인
     if (cacheRef.current.has(keyword)) {
-      abortRef.current?.abort(); // 진행 중인 요청 취소
+      abortRef.current?.abort();
       setItems(cacheRef.current.get(keyword) || []);
       setLoading(false);
       setError(null);
       return;
     }
 
-    // ✅ [2단계] 캐시에 없으면, 타이핑 즉시 로딩 상태로 전환 (반응성 향상)
+    // [2단계] 즉시 로딩
     setLoading(true);
     setError(null);
 
-    // ✅ [3단계] 실제 API 호출은 0.25초 뒤에 (Debounce)
+    // [3단계] Debounce API 호출
     debounceRef.current = window.setTimeout(async () => {
       
-      // 이전 요청 취소
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
@@ -83,29 +96,36 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
         const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
           method: 'GET',
           signal: ac.signal,
-          // cache: 'no-store', // 메모리 캐시로 대체
         });
 
         if (!res.ok) throw new Error('데이터 요청 실패');
 
         const data = await res.json();
         
-        // 데이터 정규화 및 중복 제거
         const next = Array.from<string>(
           new Set((data.items ?? []).map((x: any) => x.title || x).map(norm).filter(Boolean))
         );
         
-        // ✅ [4단계] 결과 캐시에 저장
+        // [4단계] 캐시 저장
         cacheRef.current.set(keyword, next);
         
         setItems(next);
+
+        // ✅ GA: 검색 결과 로드 추적
+        if (keyword) {
+            track(gaEvent(GA_CTX, 'Search'), {
+                ui_id: gaUiId(GA_CTX, 'Search'),
+                query: keyword,
+                result_count: next.length,
+                process_title: processTitle
+            });
+        }
 
       } catch (e: any) {
         if (e.name !== 'AbortError') {
           setError('목록을 불러오는 중 오류가 발생했습니다.');
         }
       } finally {
-        // Abort가 아닌 정상 종료/에러 시에만 로딩 끔
         if (!ac.signal.aborted) {
             setLoading(false);
         }
@@ -123,7 +143,16 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
 
     setSelected(prev => {
       const set = new Set(prev.map(norm));
+      // 해제
       if (set.has(v)) return prev.filter(x => norm(x) !== v);
+      
+      // 선택
+      // ✅ GA: 아이템 선택 추적
+      track(gaEvent(GA_CTX, 'SelectItem'), {
+        ui_id: gaUiId(GA_CTX, 'SelectItem'),
+        item_title: v,
+        process_title: processTitle
+      });
       return [...prev, v];
     });
   };
@@ -132,7 +161,27 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
     e.preventDefault(); 
     const uniq = Array.from(new Set(selected.map(norm).filter(Boolean)));
     if (uniq.length === 0) return;
+
+    // ✅ GA: 확인 버튼 추적
+    track(gaEvent(GA_CTX, 'ClickConfirm'), {
+        ui_id: gaUiId(GA_CTX, 'ClickConfirm'),
+        selected_count: uniq.length,
+        process_title: processTitle
+    });
+
     uniq.forEach(t => onAdd(t));
+    onClose();
+  };
+
+  // ✅ GA: 직접 추가 핸들러
+  const handleManualAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    track(gaEvent(GA_CTX, 'ClickManualAdd'), {
+        ui_id: gaUiId(GA_CTX, 'ClickManualAdd'),
+        query: q,
+        process_title: processTitle
+    });
+    onAdd(q);
     onClose();
   };
 
@@ -149,11 +198,18 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
               <span className="text-purple-600 font-bold">{processTitle}</span> 공정의 위험요인을 선택하세요.
             </div>
           </div>
+          {/* ✅ GA: 닫기 버튼 */}
           <button 
             type="button" 
             className={s.closeBtn} 
-            onClick={(e) => { e.preventDefault(); onClose(); }} 
+            onClick={(e) => { 
+                e.preventDefault(); 
+                track(gaEvent(GA_CTX, 'Close'), { ui_id: gaUiId(GA_CTX, 'Close') });
+                onClose(); 
+            }} 
             aria-label="닫기"
+            data-ga-event="Close"
+            data-ga-id={gaUiId(GA_CTX, 'Close')}
           >
             <X size={20} />
           </button>
@@ -194,7 +250,6 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
         <div className={s.list}>
           {loading && (
             <div className={s.empty}>
-               {/* 부드러운 로딩 피드백 */}
                <div className="animate-pulse">데이터를 불러오는 중...</div>
             </div>
           )}
@@ -215,6 +270,9 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
                         e.preventDefault();
                         toggleSelect(v);
                     }}
+                    data-ga-event={isSelected ? 'DeselectItem' : 'SelectItem'}
+                    data-ga-id={gaUiId(GA_CTX, isSelected ? 'DeselectItem' : 'SelectItem')}
+                    data-ga-label={v}
                   >
                     <span className={s.itemText}>{v}</span>
                     {isSelected && <span className={s.pick}>선택됨</span>}
@@ -233,11 +291,9 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
                   <button 
                     type="button"
                     className={s.createBtn}
-                    onClick={(e) => { 
-                        e.preventDefault();
-                        onAdd(q); 
-                        onClose(); 
-                    }}
+                    onClick={handleManualAdd}
+                    data-ga-event="ClickManualAdd"
+                    data-ga-id={gaUiId(GA_CTX, 'ClickManualAdd')}
                   >
                     '{q}' 직접 추가하기
                   </button>
@@ -263,6 +319,8 @@ export default function AddHazardModal({ open, taskTitle, processTitle, onClose,
             className={s.confirm} 
             onClick={handleConfirm} 
             disabled={selected.length === 0}
+            data-ga-event="ClickConfirm"
+            data-ga-id={gaUiId(GA_CTX, 'ClickConfirm')}
           >
             확인 {selected.length > 0 && `(${selected.length})`}
           </button>

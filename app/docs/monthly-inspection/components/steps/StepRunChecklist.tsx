@@ -1,8 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import s from './StepRunChecklist.module.css';
 import type { ChecklistItem, Rating } from '../MonthlyInspectionCreateModal';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context: 점검 실시 단계
+const GA_CTX = { page: 'Docs', section: 'MonthlyInspection', area: 'StepRunChecklist' } as const;
 
 type Props = {
   detailTasks: string[];
@@ -21,6 +28,17 @@ const RATINGS: { key: Rating; label: string }[] = [
 
 export default function StepRunChecklist({ items, onChangeItems, onBack, onFinish, finishDisabled }: Props) {
   
+  // ✅ GA: View 이벤트 (진입 시 진행 상황 추적)
+  useEffect(() => {
+    const doneCount = items.filter(it => !!it.rating).length;
+    track(gaEvent(GA_CTX, 'View'), {
+      ui_id: gaUiId(GA_CTX, 'View'),
+      total_items: items.length,
+      initial_done: doneCount,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 1회만
+
   const grouped = useMemo(() => {
     const m = new Map<string, ChecklistItem[]>();
     items.forEach(it => {
@@ -66,14 +84,24 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
                 
                 <div className={s.ratingRow}>
                   {RATINGS.map(r => {
-                    // ✅ rating 비교 시 안전하게 처리 (it.rating이 undefined면 선택 안 됨)
                     const isActive = it.rating === r.key;
                     return (
                       <button
                         key={r.key}
                         type="button"
                         className={`${s.rateBtn} ${isActive ? getRatingClass(r.key) : ''}`}
-                        onClick={() => updateItem(it.id, { rating: r.key })}
+                        onClick={() => {
+                            // ✅ GA: 등급 선택 추적
+                            track(gaEvent(GA_CTX, 'SelectRating'), {
+                                ui_id: gaUiId(GA_CTX, 'SelectRating'),
+                                rating: r.key,
+                                category: cat
+                            });
+                            updateItem(it.id, { rating: r.key });
+                        }}
+                        data-ga-event="SelectRating"
+                        data-ga-id={gaUiId(GA_CTX, 'SelectRating')}
+                        data-ga-label={r.label}
                       >
                         <span className={s.mark}>{r.key}</span> {r.label}
                       </button>
@@ -98,7 +126,8 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
         <button className={s.finishBtn} onClick={onFinish} disabled={finishDisabled}>
           점검 완료
         </button>
-      </div> */}
+      </div> 
+      */}
     </div>
   );
 }

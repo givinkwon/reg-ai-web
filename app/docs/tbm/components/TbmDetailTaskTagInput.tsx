@@ -2,14 +2,15 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2 } from 'lucide-react'; // ✅ 로딩 아이콘 추가
+import { X, Loader2 } from 'lucide-react';
 import s from './TbmDetailTaskTagInput.module.css';
 
-// ✅ GA
+// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'TbmDetailTaskInput' } as const;
+// ✅ GA Context: 상위 모달(TBM)과 일관성 유지
+const GA_CTX = { page: 'Docs', section: 'TBM', area: 'TaskInput' } as const;
 
 type Props = {
   value: string[];
@@ -25,7 +26,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(false); // ✅ 로딩 상태 추가
+  const [isLoading, setIsLoading] = useState(false);
   
   // 포탈 위치 상태
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -61,7 +62,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
     }
   }, [isOpen]);
 
-  // ✅ 데이터 페칭 함수 분리
+  // ✅ 데이터 페칭
   const fetchSuggestions = useCallback(async (query: string, isInitial = false) => {
     setIsLoading(true);
     try {
@@ -81,17 +82,16 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
         
         setSuggestions(filtered);
         
-        // 검색어가 있거나, 결과가 있으면 오픈 (초기 진입 시에는 오픈하지 않고 데이터만 로드)
         if (!isInitial && (query || filtered.length > 0)) {
             setIsOpen(true);
         }
 
-        // ✅ GA: 검색 결과 로드
+        // ✅ GA: 검색 결과 로드 추적
         if (!isInitial && query) {
             track(gaEvent(GA_CTX, 'SearchTasks'), {
                 ui_id: gaUiId(GA_CTX, 'SearchTasks'),
                 query,
-                count: filtered.length,
+                result_count: filtered.length,
                 minor: minorCategory || 'all'
             });
         }
@@ -103,15 +103,14 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
     }
   }, [endpoint, minorCategory, value]);
 
-  // ✅ [수정] 초기 진입 시 자동 검색 (빈 쿼리로 호출하여 추천 목록 확보)
+  // 초기 진입 시 로드
   useEffect(() => {
     fetchSuggestions('', true); 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minorCategory]); // 카테고리가 바뀌면 다시 로드
+  }, [minorCategory]);
 
-  // ✅ [수정] 입력어 변경 시 검색 (Debounce)
+  // 입력어 변경 시 검색 (Debounce)
   useEffect(() => {
-    // 입력어가 없으면(지웠으면) 기본 목록(빈 쿼리) 다시 로드
     if (!input.trim()) {
         if (isOpen) fetchSuggestions('', false);
         return;
@@ -120,30 +119,26 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       fetchSuggestions(input, false);
-    }, 300); // 300ms 딜레이
+    }, 300);
 
     return () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [input, fetchSuggestions, isOpen]);
 
-
   const addTag = (tag: string) => {
     if (!tag.trim()) return;
     if (!value.includes(tag)) {
       onChange([...value, tag]);
       
-      // ✅ GA: 태그 추가
+      // ✅ GA: 태그 추가 (함수 호출 시점 추적)
       track(gaEvent(GA_CTX, 'AddTag'), {
         ui_id: gaUiId(GA_CTX, 'AddTag'),
         tag_name: tag,
       });
     }
     setInput('');       
-    // 태그 추가 후에는 다시 기본 추천 목록을 불러옴 (선택된 거 제외됨)
     fetchSuggestions('', false);
-    
-    // 포커스 유지
     inputRef.current?.focus(); 
   };
 
@@ -151,7 +146,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
     const target = value[idx];
     onChange(value.filter((_, i) => i !== idx));
 
-    // ✅ GA: 태그 삭제
+    // ✅ GA: 태그 삭제 (함수 호출 시점 추적)
     track(gaEvent(GA_CTX, 'RemoveTag'), {
         ui_id: gaUiId(GA_CTX, 'RemoveTag'),
         tag_name: target,
@@ -203,7 +198,6 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
         e.preventDefault(); 
       }}
     >
-      {/* ✅ 로딩 애니메이션 표시 */}
       {isLoading && (
         <div style={{ padding: '1rem', textAlign: 'center', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem' }}>
             <Loader2 size={16} className={s.spin} />
@@ -211,7 +205,6 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
         </div>
       )}
 
-      {/* 목록 표시 (로딩 중이어도 이전 목록 보여주거나, 로딩 끝나면 보여줌) */}
       {!isLoading && suggestions.length === 0 && (
           <div style={{ padding: '0.8rem', textAlign: 'center', color: '#999', fontSize: '0.9rem' }}>
               검색 결과가 없습니다.
@@ -236,6 +229,10 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
           }}
           onClick={() => addTag(item)}
           onMouseEnter={() => setActiveIndex(i)}
+          // ✅ GA: 추천 검색어 클릭 시 식별
+          data-ga-event="AddTag"
+          data-ga-id={gaUiId(GA_CTX, 'AddTag')}
+          data-ga-label={item}
         >
           {item}
         </button>
@@ -249,15 +246,14 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
         className={s.box} 
         onClick={() => {
           inputRef.current?.focus();
-          // 클릭 시 추천 목록이 있거나 입력어가 있으면 엽니다.
           if (suggestions.length > 0 || input) setIsOpen(true);
-          // 만약 비어있는데 닫혀있었다면 기본 목록 로드 시도
           if (suggestions.length === 0 && !input) fetchSuggestions('', false);
         }}
       >
         {value.map((tag, i) => (
           <span key={i} className={s.tag}>
             {tag}
+            {/* ✅ GA: 태그 삭제 버튼 식별 */}
             <button 
               type="button" 
               className={s.tagX} 
@@ -266,6 +262,8 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
                 e.stopPropagation();
                 removeTag(i); 
               }}
+              data-ga-event="RemoveTag"
+              data-ga-id={gaUiId(GA_CTX, 'RemoveTag')}
             >
               <X size={14} />
             </button>
@@ -279,7 +277,6 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           onFocus={() => {
-             // 포커스 시에도 목록이 있으면 엽니다.
              if (suggestions.length > 0) setIsOpen(true);
              else fetchSuggestions('', false);
           }}

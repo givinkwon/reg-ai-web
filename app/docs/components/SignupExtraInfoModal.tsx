@@ -1,9 +1,15 @@
-// app/chat/components/SignupExtraInfoModal.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './SignupExtraInfoModal.module.css';
 import { useUserStore } from '@/app/store/user';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context: 추가 정보 입력 모달
+const GA_CTX = { page: 'Shared', section: 'Auth', area: 'SignupExtraModal' } as const;
 
 type Props = {
   email: string;
@@ -24,7 +30,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
   const [website, setWebsite] = useState('');
   const [representativeName, setRepresentativeName] = useState('');
 
-  // ✅ 소분류 자동완성
+  // 소분류 자동완성
   const [subcategoryInput, setSubcategoryInput] = useState('');
   const [subcategorySelected, setSubcategorySelected] =
     useState<SubcategoryItem | null>(null);
@@ -41,19 +47,23 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
+  // ✅ GA View 추적 (1회)
+  useEffect(() => {
+    track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View') });
+  }, []);
+
   const canSearch = useMemo(
     () => subcategoryInput.trim().length >= 1,
     [subcategoryInput],
   );
 
-  // ✅ “선택 강제” 유효성
   const isSubcategoryValid = useMemo(() => {
     return !!subcategorySelected;
   }, [subcategorySelected]);
 
   const showSubcategoryError = subcategoryTouched && !isSubcategoryValid;
 
-  // ✅ 입력값 변경 시 DB 검색 (debounce + abort)
+  // 입력값 변경 시 DB 검색
   useEffect(() => {
     if (!subcategoryOpen) return;
 
@@ -85,14 +95,19 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
         }
 
         const data = (await res.json()) as { items: string[] };
-
         const items = (data.items ?? []).slice(0, 50);
+        
         setSubcategoryList(
-          items.map((name) => ({
-            id: name,
-            name,
-          })),
+          items.map((name) => ({ id: name, name })),
         );
+
+        // ✅ GA: 검색 추적
+        track(gaEvent(GA_CTX, 'SearchSubcategory'), {
+            ui_id: gaUiId(GA_CTX, 'SearchSubcategory'),
+            query: q,
+            result_count: items.length
+        });
+
       } catch (e: any) {
         if (e?.name !== 'AbortError') console.error(e);
       } finally {
@@ -133,6 +148,13 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
 
     if (!subcategorySelected) return;
 
+    // ✅ GA: 제출 시도
+    track(gaEvent(GA_CTX, 'ClickSubmit'), {
+        ui_id: gaUiId(GA_CTX, 'ClickSubmit'),
+        company_len: company.length,
+        subcategory: subcategorySelected.name
+    });
+
     try {
       setLoading(true);
 
@@ -161,11 +183,10 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
 
       if (!res.ok) {
         console.error('update-secondary error', res.status);
-        alert('정보 저장 중 오류가 발생했습니다. 다시 시도해 주세요.');
-        return;
+        throw new Error('update failed');
       }
 
-      // 2) 서버에서 계정 다시 읽어서 store 갱신 (✅ user가 이미 있어도 갱신해야 함)
+      // 2) 서버에서 계정 다시 읽어서 store 갱신
       try {
         const res2 = await fetch('/api/accounts/find-by-email', {
           method: 'POST',
@@ -181,7 +202,6 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             ? 'kakao'
             : 'local';
 
-          // ✅ 기존 uid 유지가 더 안전(특히 firebase uid 형식 google:xxx)
           const nextUid =
             user?.uid ??
             (acc.google_id
@@ -196,31 +216,36 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             name: acc.name ?? null,
             photoUrl: acc.picture ?? null,
             provider,
-            isSignupComplete: true, // ✅ 완료로 확정
+            isSignupComplete: true, 
           } as const);
         } else {
-          // fallback: 최소한 현재 user를 완료로 마킹
           if (user) {
-            setUser({
-              ...user,
-              isSignupComplete: true,
-            });
+            setUser({ ...user, isSignupComplete: true });
           }
         }
       } catch (e) {
         console.error('[SignupExtraInfoModal] refresh user error:', e);
-        // fallback: 최소한 현재 user를 완료로 마킹
         if (user) {
-          setUser({
-            ...user,
-            isSignupComplete: true,
-          });
+          setUser({ ...user, isSignupComplete: true });
         }
       }
 
+      // ✅ GA: 가입 완료(성공)
+      track(gaEvent(GA_CTX, 'SignupComplete'), {
+          ui_id: gaUiId(GA_CTX, 'SignupComplete'),
+          subcategory: subcategorySelected.name
+      });
+
       onComplete();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      
+      // ✅ GA: 가입 에러
+      track(gaEvent(GA_CTX, 'SignupError'), {
+          ui_id: gaUiId(GA_CTX, 'SignupError'),
+          error_msg: err.message || 'unknown'
+      });
+
       alert('정보 저장 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
@@ -283,7 +308,6 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             />
           </label>
 
-          {/* ✅ 소분류(선택 강제) */}
           <label className={styles.field}>
             <span>소분류 *</span>
 
@@ -371,11 +395,14 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             />
           </label>
 
+          {/* ✅ GA: 제출 버튼 (식별자 추가) */}
           <button
             type="submit"
             className={styles.submit}
             disabled={loading || !formValid}
             title={!formValid ? '필수 항목과 소분류 선택을 완료해 주세요.' : undefined}
+            data-ga-event="ClickSubmit"
+            data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
           >
             {loading ? '제출 중...' : '제출하기'}
           </button>

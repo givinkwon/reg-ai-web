@@ -12,11 +12,12 @@ import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 import { useRiskWizardStore } from '@/app/store/docs'; 
 
-// ✅ GA
+// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessment' } as const;
+// ✅ GA Context 정의
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'Wizard' } as const;
 
 // --- 타입 정의 ---
 export type RiskLevel = 1 | 2 | 3 | 4 | 5;
@@ -96,6 +97,17 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   const user = useUserStore((st) => st.user);
   const userEmail = (user?.email || '').trim();
 
+  // ✅ GA: Wizard 열림 추적
+  useEffect(() => {
+    if (open) {
+        track(gaEvent(GA_CTX, 'View'), {
+            ui_id: gaUiId(GA_CTX, 'View'),
+            step: step,
+            is_logged_in: !!userEmail,
+        });
+    }
+  }, [open]);
+
   const openAlert = (opts: any) => {
     setAlertTitle(opts.title ?? '안내');
     setAlertLines(opts.lines);
@@ -138,6 +150,13 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
       return;
     }
 
+    // ✅ GA: 제출 버튼 추적
+    track(gaEvent(GA_CTX, 'ClickSubmit'), {
+        ui_id: gaUiId(GA_CTX, 'ClickSubmit'),
+        task_count: draft.tasks.length,
+        is_logged_in: true,
+    });
+
     openAlert({
       title: '위험성 평가 생성 요청',
       lines: ['위험성 평가 보고서 생성이 요청되었습니다!', '완료되면 문서함/이메일에서 확인 가능합니다.'],
@@ -167,6 +186,35 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
     }
   };
 
+  // ✅ GA: 탭 변경 핸들러
+  const handleTabClick = (targetStep: StepId) => {
+    if (submitting || isAnalyzing) return;
+    
+    track(gaEvent(GA_CTX, 'ClickTab'), {
+        ui_id: gaUiId(GA_CTX, 'ClickTab'),
+        target_step: targetStep,
+        current_step: step,
+    });
+    setStep(targetStep);
+  };
+
+  // ✅ GA: 이전/다음 버튼 핸들러
+  const handlePrev = () => {
+    const prevStep = TAB_LABELS[currentIdx - 1]?.id;
+    if (prevStep) {
+        track(gaEvent(GA_CTX, 'ClickPrev'), { ui_id: gaUiId(GA_CTX, 'ClickPrev'), from: step, to: prevStep });
+        setStep(prevStep);
+    }
+  };
+
+  const handleNext = () => {
+    const nextStep = TAB_LABELS[currentIdx + 1]?.id;
+    if (nextStep) {
+        track(gaEvent(GA_CTX, 'ClickNext'), { ui_id: gaUiId(GA_CTX, 'ClickNext'), from: step, to: nextStep });
+        setStep(nextStep);
+    }
+  };
+
   if (!open && !alertOpen) return null;
 
   const currentIdx = TAB_LABELS.findIndex(t => t.id === step);
@@ -174,11 +222,23 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   return (
     <>
       {open && (
-        <div className={s.wrap} data-ga-event={gaEvent(GA_CTX, 'View')} data-ga-id={gaUiId(GA_CTX, 'View')}>
+        <div className={s.wrap}>
           <div className={s.header}>
             <div className={s.headerLeft}>
               {onClose && (
-                <button className={s.closeBtn} onClick={onClose} disabled={submitting}>← 나가기</button>
+                // ✅ GA: 닫기(나가기) 버튼 식별
+                <button 
+                    className={s.closeBtn} 
+                    onClick={() => {
+                        track(gaEvent(GA_CTX, 'Close'), { ui_id: gaUiId(GA_CTX, 'Close') });
+                        onClose();
+                    }} 
+                    disabled={submitting}
+                    data-ga-event="Close"
+                    data-ga-id={gaUiId(GA_CTX, 'Close')}
+                >
+                  ← 나가기
+                </button>
               )}
               <h2 className={s.title}>위험성평가 작성</h2>
             </div>
@@ -194,7 +254,10 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                   key={t.id}
                   type="button"
                   className={`${s.tab} ${isActive ? s.tabActive : ''} ${isPast ? s.tabPast : ''}`}
-                  onClick={() => !submitting && !isAnalyzing && setStep(t.id)}
+                  onClick={() => handleTabClick(t.id)}
+                  data-ga-event="ClickTab"
+                  data-ga-id={gaUiId(GA_CTX, 'ClickTab')}
+                  data-ga-label={t.label}
                 >
                   <span className={s.stepNum}>{i + 1}</span>
                   <span className={s.tabLabel}>{t.label}</span>
@@ -217,16 +280,20 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
             <div className={s.footerBtns}>
               <button 
                 className={s.navBtn} 
-                onClick={() => setStep(TAB_LABELS[currentIdx - 1].id)} 
+                onClick={handlePrev} 
                 disabled={step === 'tasks' || submitting}
+                data-ga-event="ClickPrev"
+                data-ga-id={gaUiId(GA_CTX, 'ClickPrev')}
               >
                 이전
               </button>
               {step !== 'controls' ? (
                 <button 
                   className={s.navBtnPrimary} 
-                  onClick={() => setStep(TAB_LABELS[currentIdx + 1].id)} 
+                  onClick={handleNext} 
                   disabled={!canGoNext || submitting}
+                  data-ga-event="ClickNext"
+                  data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
                 >
                   다음 단계
                 </button>
@@ -235,6 +302,8 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                   className={s.submitBtn} 
                   onClick={handleSubmit} 
                   disabled={submitting || isAnalyzing || !canGoNext}
+                  data-ga-event="ClickSubmit"
+                  data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
                 >
                   {submitting ? '요청 중...' : isAnalyzing ? '데이터 분석 중' : '보고서 생성 완료'}
                 </button>

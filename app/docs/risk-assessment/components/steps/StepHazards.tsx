@@ -7,13 +7,14 @@ import AddHazardModal from '../ui/AddHazardModal';
 import type { RiskAssessmentDraft, RiskLevel } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 import { Button } from '@/app/components/ui/button';
-import { useRiskWizardStore } from '@/app/store/docs'; // ✅ 전역 스토어 임포트
+import { useRiskWizardStore } from '@/app/store/docs'; 
 
-// ✅ GA
+// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessmentHazards' } as const;
+// ✅ GA Context 정의
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'StepHazards' } as const;
 
 type Props = {
   draft: RiskAssessmentDraft;
@@ -27,7 +28,7 @@ const DEFAULT_L: RiskLevel = 2;
 const DEFAULT_S: RiskLevel = 2;
 
 // =========================
-// ✅ Cache Logic
+// ✅ Cache Logic (기존 유지)
 // =========================
 const CACHE_PREFIX = 'regai:risk:stepHazards:v2';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180;
@@ -85,7 +86,7 @@ function extractItems(payload: any): string[] {
 export default function StepHazards({ draft, setDraft }: Props) {
   const user = useUserStore((st) => st.user);
   
-  // ✅ 전역 로딩 상태 함수 가져오기
+  // ✅ 전역 로딩 상태 함수
   const setIsAnalyzing = useRiskWizardStore((st) => st.setIsAnalyzing);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -116,14 +117,29 @@ export default function StepHazards({ draft, setDraft }: Props) {
     });
   }, [tasks.length]);
 
-  const openModal = (taskId: string, processId: string) => {
+  // ✅ GA: 모달 열기 핸들러
+  const openModal = (taskId: string, processId: string, processTitle?: string) => {
+    track(gaEvent(GA_CTX, 'OpenHazardModal'), {
+        ui_id: gaUiId(GA_CTX, 'OpenHazardModal'),
+        task_id: taskId,
+        process_id: processId,
+        process_title: processTitle
+    });
     setTarget({ taskId, processId });
     setModalOpen(true);
   };
 
+  // ✅ GA: 위험요인 추가 핸들러
   const addHazard = (title: string) => {
     const v = norm(title);
     if (!v || !target) return;
+
+    track(gaEvent(GA_CTX, 'AddHazard'), {
+        ui_id: gaUiId(GA_CTX, 'AddHazard'),
+        task_id: target.taskId,
+        process_id: target.processId,
+        hazard_title: v
+    });
 
     setDraft((prev) => ({
       ...prev,
@@ -145,7 +161,15 @@ export default function StepHazards({ draft, setDraft }: Props) {
     }));
   };
 
-  const removeChip = (taskId: string, processId: string, hazardId: string) => {
+  // ✅ GA: 위험요인 삭제 핸들러
+  const removeChip = (taskId: string, processId: string, hazardId: string, hazardTitle: string) => {
+    track(gaEvent(GA_CTX, 'RemoveHazard'), {
+        ui_id: gaUiId(GA_CTX, 'RemoveHazard'),
+        task_id: taskId,
+        process_id: processId,
+        hazard_title: hazardTitle
+    });
+
     setDraft((prev) => ({
       ...prev,
       tasks: (prev.tasks ?? []).map((t) => {
@@ -161,7 +185,9 @@ export default function StepHazards({ draft, setDraft }: Props) {
     }));
   };
 
-  // ✅ [최종 수정 로직] 전역 로딩(setIsAnalyzing) 연동
+  // =======================================================
+  // ✅ [로직 유지] 전역 로딩(setIsAnalyzing) 연동
+  // =======================================================
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
@@ -236,7 +262,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
       if (targetsToFetch.length === 0) {
         if (!signal.aborted) {
           setAutoLoadingIds({});
-          setIsAnalyzing(false); // ✅ 가져올 게 없으면 로딩 해제
+          setIsAnalyzing(false); 
         }
         return;
       }
@@ -268,7 +294,6 @@ export default function StepHazards({ draft, setDraft }: Props) {
               const items = extractItems(raw);
 
               if (items.length > 0) {
-                // 개별 데이터 즉시 반영
                 if (!signal.aborted) {
                   setDraft((prev) => ({
                     ...prev,
@@ -319,7 +344,7 @@ export default function StepHazards({ draft, setDraft }: Props) {
 
     return () => {
       controller.abort();
-      setIsAnalyzing(false); // ✅ 언마운트 시 초기화
+      setIsAnalyzing(false); 
       activeScopeKeys.forEach(key => {
         fetchSet.current.delete(key);
         attemptRef.current.delete(key);
@@ -347,11 +372,15 @@ export default function StepHazards({ draft, setDraft }: Props) {
                 <div key={p.id} className={s.procBlock}>
                   <div className={s.procHead}>
                     <div className={s.procTitle}>{p.title}</div>
+                    {/* ✅ GA: 위험요인 추가 모달 버튼 */}
                     <Button 
                       size="sm" 
                       variant="outline" 
                       className={s.addBtn}
-                      onClick={() => openModal(t.id, p.id)}
+                      onClick={() => openModal(t.id, p.id, p.title)}
+                      data-ga-event="OpenHazardModal"
+                      data-ga-id={gaUiId(GA_CTX, 'OpenHazardModal')}
+                      data-ga-label={p.title}
                     >
                       <Plus size={14} className="mr-1" /> 위험요인 추가
                     </Button>
@@ -375,9 +404,13 @@ export default function StepHazards({ draft, setDraft }: Props) {
                       <div key={h.id} className={s.chip}>
                         <AlertTriangle size={14} className="text-red-500 mr-1.5" />
                         {h.title}
+                        {/* ✅ GA: 위험요인 삭제 버튼 */}
                         <button 
                           className={s.removeBtn}
-                          onClick={() => removeChip(t.id, p.id, h.id)}
+                          onClick={() => removeChip(t.id, p.id, h.id, h.title)}
+                          data-ga-event="RemoveHazard"
+                          data-ga-id={gaUiId(GA_CTX, 'RemoveHazard')}
+                          data-ga-label={h.title}
                         >
                           <X size={12} />
                         </button>

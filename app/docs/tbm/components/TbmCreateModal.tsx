@@ -2,11 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Plus, FileText } from 'lucide-react';
-import s from './TbmCreateModal.module.css'; // ✅ CSS 모듈
+import s from './TbmCreateModal.module.css';
 
 import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
 import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
+
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context 정의
+const GA_CTX = { page: 'Docs', section: 'TBM', area: 'CreateModal' } as const;
 
 export type TbmAttendee = {
   name: string;
@@ -71,7 +78,6 @@ function safeWriteFormCache(key: string, payload: TbmFormCache) {
   } catch {}
 }
 
-// ✅ [수정됨] 타임아웃 에러 핸들링
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), timeoutMs);
@@ -180,11 +186,8 @@ export default function TbmCreateModal({
     alertOnConfirmRef.current = null;
   };
 
-  // ✅ [핵심 수정] 백그라운드 다운로드 로직
-  // 이 함수는 모달이 닫혀도 브라우저 메모리 상에서 계속 실행됩니다.
   const runBackgroundDownload = async (body: any) => {
     try {
-      // 타임아웃을 90초로 넉넉하게 설정 (서버가 느려도 기다려줌)
       const res = await fetchWithTimeout(
         '/api/risk-assessment?endpoint=tbm-export-excel',
         {
@@ -209,7 +212,6 @@ export default function TbmCreateModal({
       
       console.log('TBM 다운로드 완료');
     } catch (e: any) {
-      // 모달이 닫힌 후일 수 있으므로 alert 대신 콘솔 경고
       console.warn('백그라운드 다운로드 실패 (이메일 발송 여부 확인 필요)', e);
     }
   };
@@ -232,7 +234,14 @@ export default function TbmCreateModal({
     const cleanedTasks = detailTasks.map(norm).filter(Boolean);
     const cleanedAttendees = attendees.map(a => ({ name: norm(a.name), contact: norm(a.contact) })).filter(a => a.name);
 
-    // 전송할 데이터 준비
+    // ✅ GA: 제출 시작 트래킹 (작업 개수, 참석자 수 포함)
+    track(gaEvent(GA_CTX, 'ClickSubmit'), {
+        ui_id: gaUiId(GA_CTX, 'ClickSubmit'),
+        task_count: cleanedTasks.length,
+        attendee_count: cleanedAttendees.length,
+        is_logged_in: !!user.email,
+    });
+
     const body = {
       email: user.email,
       companyName: accountCompanyName || '',
@@ -244,10 +253,6 @@ export default function TbmCreateModal({
 
     setSubmitting(true);
 
-    // ✅ [변경 사항]
-    // 1. 사용자에게는 "요청 완료" 메시지를 바로 띄움
-    // 2. 확인 누르면 모달 닫힘
-    // 3. 백그라운드에서 fetch는 계속 진행됨
     openAlert({
       title: 'TBM 생성 요청 완료',
       lines: [
@@ -258,11 +263,9 @@ export default function TbmCreateModal({
       confirmText: '확인',
       showClose: false,
     }, () => {
-      // 알림창 확인 버튼을 누르면 모달 닫기
       onClose();
     });
 
-    // ✅ 백그라운드 작업 시작 (await 하지 않음)
     runBackgroundDownload(body);
   };
 
@@ -276,7 +279,17 @@ export default function TbmCreateModal({
         <div className={s.modal}>
           <div className={s.topBar}>
             <span className={s.pill}>TBM 활동일지</span>
-            <button className={s.iconBtn} onClick={onClose} disabled={submitting}>
+            {/* ✅ GA: 닫기 버튼 추적 */}
+            <button 
+                className={s.iconBtn} 
+                onClick={() => {
+                    track(gaEvent(GA_CTX, 'Close'), { ui_id: gaUiId(GA_CTX, 'Close') });
+                    onClose();
+                }} 
+                disabled={submitting}
+                data-ga-event="Close"
+                data-ga-id={gaUiId(GA_CTX, 'Close')}
+            >
               <X size={20} />
             </button>
           </div>
@@ -296,7 +309,16 @@ export default function TbmCreateModal({
 
             <div className={s.sectionRow}>
               <span className={s.sectionTitle}>참석자 명단</span>
-              <button className={s.addBtn} onClick={() => setAttendees(p => [...p, { name: '', contact: '' }])}>
+              {/* ✅ GA: 참석자 추가 버튼 추적 */}
+              <button 
+                className={s.addBtn} 
+                onClick={() => {
+                    track(gaEvent(GA_CTX, 'AddAttendee'), { ui_id: gaUiId(GA_CTX, 'AddAttendee') });
+                    setAttendees(p => [...p, { name: '', contact: '' }]);
+                }}
+                data-ga-event="AddAttendee"
+                data-ga-id={gaUiId(GA_CTX, 'AddAttendee')}
+              >
                 <Plus size={16} /> 추가
               </button>
             </div>
@@ -329,9 +351,15 @@ export default function TbmCreateModal({
                       setAttendees(newAtt);
                     }}
                   />
+                  {/* ✅ GA: 참석자 삭제 버튼 추적 */}
                   <button
                     className={s.removeBtn}
-                    onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}
+                    onClick={() => {
+                        track(gaEvent(GA_CTX, 'RemoveAttendee'), { ui_id: gaUiId(GA_CTX, 'RemoveAttendee') });
+                        setAttendees(p => p.filter((_, idx) => idx !== i));
+                    }}
+                    data-ga-event="RemoveAttendee"
+                    data-ga-id={gaUiId(GA_CTX, 'RemoveAttendee')}
                   >
                     <X size={18} />
                   </button>
@@ -339,7 +367,14 @@ export default function TbmCreateModal({
               ))}
             </div>
 
-            <button className={s.primaryBtn} onClick={handleSubmit} disabled={!canSubmit}>
+            {/* ✅ GA: 제출 버튼 (핸들러 내부에서 track 호출) */}
+            <button 
+                className={s.primaryBtn} 
+                onClick={handleSubmit} 
+                disabled={!canSubmit}
+                data-ga-event="ClickSubmit"
+                data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
+            >
               <FileText size={18} />
               {submitting ? '생성 요청 중...' : 'TBM 일지 생성하기'}
             </button>

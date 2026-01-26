@@ -22,7 +22,7 @@ import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 // ✅ GA Context
-const GA_CTX = { page: 'SafetyDocs', section: 'RiskAssessment', area: 'Landing' } as const;
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: '' } as const;
 
 /* 유틸 함수 */
 function getFilenameFromDisposition(disposition: string | null) {
@@ -49,20 +49,22 @@ export default function RiskPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking (1회만 실행 보장)
+  // ✅ GA: Page View Tracking
+  // 수정: 스토어 초기화(initialized) 완료 후 추적하여 로그인 상태 정확도 보장
   const viewTracked = useRef(false);
+  
   useEffect(() => {
-    if (viewTracked.current) return;
-    // 유저 정보가 로드되었거나, 로드 시도 중일 때 트래킹 (로그인 여부 포함)
+    if (!initialized || viewTracked.current) return;
+    
     viewTracked.current = true;
 
     track(gaEvent(GA_CTX, 'View'), {
       ui_id: gaUiId(GA_CTX, 'View'),
       is_logged_in: !!user?.email,
     });
-  }, [user?.email]);
+  }, [initialized, user?.email]);
 
-  // 1. 유저 상태 확인
+  // 1. 유저 상태 확인 및 추가정보 모달 로직
   useEffect(() => {
     if (!initialized) return;
 
@@ -98,7 +100,7 @@ export default function RiskPage() {
   const handleSubmit = useCallback(async (draft: RiskAssessmentDraft, opts?: { signal?: AbortSignal; userEmail?: string }) => {
     if (!opts?.userEmail) throw new Error('이메일 정보가 누락되었습니다.');
 
-    // ✅ GA: 제출 시작 트래킹 (작업 개수 포함)
+    // ✅ GA: 제출 시작 트래킹
     track(gaEvent(GA_CTX, 'SubmitRiskAssessment'), {
         ui_id: gaUiId(GA_CTX, 'SubmitRiskAssessment'),
         task_count: draft.tasks.length,
@@ -157,9 +159,11 @@ export default function RiskPage() {
   }, []);
 
   // ✅ GA: 시작 버튼 핸들러
+  // 수정: 버튼 라벨 정보 추가하여 식별력 강화
   const handleStartClick = () => {
     track(gaEvent(GA_CTX, 'ClickStart'), {
       ui_id: gaUiId(GA_CTX, 'ClickStart'),
+      button_label: '새 평가 작성하기',
       is_logged_in: !!user?.email,
     });
     setIsWriting(true);
@@ -182,7 +186,13 @@ export default function RiskPage() {
               </p>
               
               <div className={s.btnGroup}>
-                <Button className={s.whiteBtn} onClick={handleStartClick}> {/* ✅ 핸들러 연결 */}
+                {/* ✅ DOM 레벨 식별을 위한 data-ga 속성 추가 */}
+                <Button 
+                  className={s.whiteBtn} 
+                  onClick={handleStartClick}
+                  data-ga-event="ClickStart"
+                  data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
+                >
                   <Plus size={20} className="mr-2" />
                   새 평가 작성하기
                 </Button>

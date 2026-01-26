@@ -6,13 +6,14 @@ import s from './StepTasks.module.css';
 import AddDetailTaskModal from '../ui/AddDetailTaskModal';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
+import { Button } from '@/app/components/ui/button'; // ✅ Button 컴포넌트 경로 확인 필요
 
-// ✅ GA
+// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
-import Button from '@/app/components/ui/button';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessmentTasks' } as const;
+// ✅ GA Context 정의
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'StepTasks' } as const;
 
 type Props = {
   draft: RiskAssessmentDraft;
@@ -102,7 +103,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
   const currentMinorNorm = norm(minorCategory) || 'ALL';
   const scope = `${norm(userEmail) || 'guest'}|${currentMinorNorm}`;
 
-  // ✅ 1. 소분류 폴백 (유저 계정 조회)
+  // ✅ 1. 소분류 폴백
   useEffect(() => {
     if (overrideMinor) return;
     if (minorCategory) return;
@@ -134,11 +135,9 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const userId = norm(uEmail) || 'guest';
     let currentMinor = norm(minorCategory) || 'ALL';
 
-    // 스코프 변경 체크
     const s = `${userId}|${currentMinor}`;
     if (cacheCheckedRef.current === s) return;
     
-    // 스코프 변경시 초기화
     if (prevScopeRef.current && prevScopeRef.current !== s) {
       setRecommended([]);
       setRecoError(null);
@@ -151,7 +150,6 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     let key = cacheKey(uEmail, currentMinor);
     let cached = safeReadCache(key);
 
-    // Guest 캐시 폴백 / 최신 캐시 폴백 로직
     if (!cached && uEmail) cached = safeReadCache(cacheKey(null, currentMinor));
     if (!cached && (!norm(minorCategory) || currentMinor === 'ALL')) {
       const latest = findLatestCacheForUser(uEmail) ?? findLatestCacheForUser(null);
@@ -164,11 +162,10 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
 
     if (!cached) return;
 
-    // 복원 실행
     const resolvedScope = `${userId}|${currentMinor}`;
     if (Array.isArray(cached.tasks) && cached.tasks.length > 0) {
       setDraft((prev) => {
-        if (prev.tasks.length > 0) return prev; // 이미 작업 중이면 덮어쓰기 방지
+        if (prev.tasks.length > 0) return prev; 
         return { ...prev, tasks: cached.tasks };
       });
       autoAppliedRef.current = resolvedScope;
@@ -179,15 +176,14 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     setRecoLoading(false);
   }, [minorCategory, user?.email, overrideMinor, setDraft]);
 
-  // ✅ 3. API 호출 (추천 작업 목록)
+  // ✅ 3. API 호출
   useEffect(() => {
     const currentMinor = norm(minorCategory);
     if (!currentMinor || currentMinor === 'ALL') return;
 
     const s = `${norm(user?.email) || 'guest'}|${currentMinor}`;
-    if (safeReadCache(cacheKey(user?.email, currentMinor))) return; // 캐시 있으면 스킵
+    if (safeReadCache(cacheKey(user?.email, currentMinor))) return; 
 
-    // 쿨다운 체크
     const last = attemptRef.current.get(s);
     if (last && Date.now() - last < RETRY_COOLDOWN_MS) return;
     attemptRef.current.set(s, Date.now());
@@ -213,7 +209,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     return () => ac.abort();
   }, [minorCategory, user?.email]);
 
-  // ✅ 4. 자동 선택 (Auto Apply)
+  // ✅ 4. 자동 선택
   useEffect(() => {
     const currentMinor = norm(minorCategory) || 'ALL';
     if (recoLoading || recoError || recommended.length === 0) return;
@@ -242,7 +238,6 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     const key = cacheKey(user?.email, currentMinor);
     const tasksToSave = draft.tasks ?? [];
     
-    // 저장 조건: 데이터가 있거나, 추천 목록이 로드된 상태여야 함
     if (tasksToSave.length === 0 && recommended.length === 0) return;
 
     safeWriteCache(key, {
@@ -255,31 +250,45 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
     });
   }, [minorCategory, user?.email, draft.tasks, recommended]);
 
-  // 화면 표시용 리스트 (추천 목록이 없으면 선택된 목록이라도 보여줌)
   const displayList = useMemo(() => {
     if (recommended.length > 0) return recommended;
     return Array.from(new Set(draft.tasks.map(t => norm(t.title)).filter(Boolean)));
   }, [recommended, draft.tasks]);
 
+  // ✅ GA: 작업 선택/해제 핸들러
   const toggleSelect = (title: string) => {
     const v = norm(title);
     if (!v) return;
 
-    track(gaEvent(GA_CTX, 'TaskSelect'), { ui_id: gaUiId(GA_CTX, 'TaskSelect'), title: v });
+    // 현재 상태 확인 (Select vs Deselect)
+    const exists = draft.tasks.some((t) => norm(t.title) === v);
+    const eventName = exists ? 'RemoveTask' : 'SelectTask';
+
+    track(gaEvent(GA_CTX, eventName), {
+      ui_id: gaUiId(GA_CTX, eventName),
+      task_title: v,
+    });
 
     setDraft((prev) => {
-      const exists = prev.tasks.some((t) => norm(t.title) === v);
       if (exists) return { ...prev, tasks: prev.tasks.filter((t) => norm(t.title) !== v) };
       return { ...prev, tasks: [...prev.tasks, { id: uid(), title: v, processes: [] }] };
     });
   };
 
+  // ✅ GA: 직접 추가 핸들러
   const addManualTask = (title: string) => {
     const v = norm(title);
     if (!v) return;
     
     setDraft((prev) => {
       if (prev.tasks.some(t => norm(t.title) === v)) return prev;
+
+      // GA: 직접 추가 성공 시 추적
+      track(gaEvent(GA_CTX, 'AddManualTask'), {
+          ui_id: gaUiId(GA_CTX, 'AddManualTask'),
+          task_title: v
+      });
+
       return { ...prev, tasks: [...prev.tasks, { id: uid(), title: v, processes: [] }] };
     });
   };
@@ -290,10 +299,16 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         <div>
           <h3 className={s.title}>작업 선택</h3>
         </div>
+        {/* ✅ GA: 검색 모달 열기 버튼 */}
         <Button 
           variant="outline" 
           className={s.addBtn}
-          onClick={() => setAddOpen(true)}
+          onClick={() => {
+              track(gaEvent(GA_CTX, 'OpenSearchModal'), { ui_id: gaUiId(GA_CTX, 'OpenSearchModal') });
+              setAddOpen(true);
+          }}
+          data-ga-event="OpenSearchModal"
+          data-ga-id={gaUiId(GA_CTX, 'OpenSearchModal')}
         >
           <Search size={16} className="mr-2" /> 직접 검색/추가
         </Button>
@@ -309,9 +324,13 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
             draft.tasks.map(t => (
               <span key={t.id} className={s.chip}>
                 {t.title}
+                {/* ✅ GA: 칩 삭제 버튼 */}
                 <button 
                   className={s.chipRemove} 
                   onClick={(e) => { e.stopPropagation(); toggleSelect(t.title); }}
+                  data-ga-event="RemoveTask"
+                  data-ga-id={gaUiId(GA_CTX, 'RemoveTask')}
+                  data-ga-label={t.title}
                 >
                   ×
                 </button>
@@ -353,6 +372,10 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
                 key={title}
                 className={`${s.card} ${isSelected ? s.active : ''}`}
                 onClick={() => toggleSelect(title)}
+                // ✅ GA: 카드 선택/해제
+                data-ga-event={isSelected ? 'RemoveTask' : 'SelectTask'}
+                data-ga-id={gaUiId(GA_CTX, isSelected ? 'RemoveTask' : 'SelectTask')}
+                data-ga-label={title}
               >
                 <div className={s.checkCircle}>
                   {isSelected && <div className={s.checkDot} />}

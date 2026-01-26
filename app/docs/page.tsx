@@ -10,7 +10,7 @@ import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 // ✅ GA Context 정의
-const GA_CTX = { page: 'SafetyDocs', section: 'Dashboard', area: 'MenuGrid' } as const;
+const GA_CTX = { page: '', section: '', area: 'Landing' } as const;
 
 const MENU_ITEMS = [
   {

@@ -1,4 +1,3 @@
-// components/risk-assessment/steps/StepProcesses.tsx
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -8,10 +7,13 @@ import AddProcessModal from '../ui/AddProcessModal';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
 import { Button } from '@/app/components/ui/button';
+
+// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'RiskAssessmentProcesses' } as const;
+// ✅ GA Context: 상위, 섹션과 일관성 유지
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'StepProcesses' } as const;
 
 type Props = {
   draft: RiskAssessmentDraft;
@@ -102,14 +104,27 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
     });
   }, []);
 
+  // ✅ GA: 모달 열기 핸들러
   const openSheet = (taskId: string) => {
+    track(gaEvent(GA_CTX, 'OpenProcessModal'), {
+        ui_id: gaUiId(GA_CTX, 'OpenProcessModal'),
+        task_id: taskId
+    });
     setTargetTaskId(taskId);
     setModalOpen(true);
   };
 
+  // ✅ GA: 공정 추가 핸들러
   const addProcess = (taskId: string, title: string) => {
     const v = norm(title);
     if (!v) return;
+
+    track(gaEvent(GA_CTX, 'AddProcess'), {
+        ui_id: gaUiId(GA_CTX, 'AddProcess'),
+        task_id: taskId,
+        process_title: v
+    });
+
     setDraft((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) => {
@@ -121,7 +136,14 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
     }));
   };
 
-  const removeProcess = (taskId: string, processId: string) => {
+  // ✅ GA: 공정 삭제 핸들러
+  const removeProcess = (taskId: string, processId: string, processTitle: string) => {
+    track(gaEvent(GA_CTX, 'RemoveProcess'), {
+        ui_id: gaUiId(GA_CTX, 'RemoveProcess'),
+        task_id: taskId,
+        process_title: processTitle
+    });
+
     setDraft((prev) => ({
       ...prev,
       tasks: prev.tasks.map((t) => {
@@ -132,7 +154,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
   };
 
   // =======================================================
-  // ✅ [최종 수정] 쿨다운 초기화 포함 로직
+  // ✅ [로직 유지] 쿨다운 초기화 포함 로직
   // =======================================================
   useEffect(() => {
     const controller = new AbortController();
@@ -140,13 +162,13 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
     
     // 현재 이펙트에서 건드린 키들을 추적 (Cleanup 때 쓰기 위함)
     const activeScopeKeys: string[] = [];
-    const effectId = Math.random().toString(36).slice(2, 6); // 로그 식별용
+    const effectId = Math.random().toString(36).slice(2, 6); 
 
     const runAutoFill = async () => {
       const tasksToFetch: Array<{ t: typeof tasks[0], ck: string, scopeKey: string }> = [];
       const cacheUpdates: Record<string, string[]> = {}; 
 
-      console.log(`[${effectId}] Run AutoFill Start. Tasks: ${tasks.length}`);
+      // console.log(`[${effectId}] Run AutoFill Start. Tasks: ${tasks.length}`);
 
       for (const t of tasks) {
         const processName = norm(t.title);
@@ -167,7 +189,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         // 쿨다운 체크
         const last = attemptRef.current.get(scopeKey);
         if (last && Date.now() - last < RETRY_COOLDOWN_MS) {
-          console.log(`[${effectId}] Skip Cooldown: ${t.title}`);
+          // console.log(`[${effectId}] Skip Cooldown: ${t.title}`);
           continue;
         }
 
@@ -185,7 +207,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
       // 캐시 업데이트
       if (Object.keys(cacheUpdates).length > 0) {
         if (signal.aborted) return;
-        console.log(`[${effectId}] Apply Cache:`, Object.keys(cacheUpdates));
         setDraft((prev) => ({
           ...prev,
           tasks: prev.tasks.map((t) => {
@@ -206,11 +227,8 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
       }
 
       if (tasksToFetch.length === 0) {
-        console.log(`[${effectId}] Nothing to fetch.`);
-        // ★ 중요: 할 게 없으면 로딩이 켜져있을 수도 있으니(이전 렌더에서 넘어온 state) 확실히 끔
         if (!signal.aborted) {
            setAutoLoadingIds((prev) => {
-             // 혹시 켜져있는게 있다면 끔
              if (Object.keys(prev).length === 0) return prev;
              return {}; 
            });
@@ -223,12 +241,11 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
       tasksToFetch.forEach(({ t, scopeKey }) => {
         loadingState[t.id] = true;
         fetchSet.current.add(scopeKey);
-        attemptRef.current.set(scopeKey, Date.now()); // 쿨다운 기록
-        activeScopeKeys.push(scopeKey); // 추적
+        attemptRef.current.set(scopeKey, Date.now()); 
+        activeScopeKeys.push(scopeKey); 
       });
       
       if (!signal.aborted) {
-        console.log(`[${effectId}] Loading ON`, loadingState);
         setAutoLoadingIds((prev) => ({ ...prev, ...loadingState }));
       }
 
@@ -238,7 +255,6 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
         tasksToFetch.map(async ({ t, ck, scopeKey }) => {
           if (signal.aborted) return;
           try {
-            console.log(`[${effectId}] Fetching API... ${t.title}`);
             const processName = norm(t.title);
             const qs = new URLSearchParams({
               endpoint: 'sub-processes',
@@ -281,8 +297,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
       if (signal.aborted) return;
 
-      // 로딩 끄기 (setDraft보다 먼저!)
-      console.log(`[${effectId}] Loading OFF`);
+      // 로딩 끄기
       setAutoLoadingIds((prev) => {
         const next = { ...prev };
         tasksToFetch.forEach(({ t }) => delete next[t.id]);
@@ -313,15 +328,11 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
     runAutoFill();
 
-    // 3. Cleanup: 리렌더링/언마운트 시 실행
     return () => {
-        console.log(`[${effectId}] Cleanup (Abort & Clear)`);
         controller.abort();
-        
-        // ★ 핵심: 취소된 요청들의 '실행중 깃발(fetchSet)'과 '쿨다운 기록(attemptRef)'을 모두 삭제
         activeScopeKeys.forEach(key => {
             fetchSet.current.delete(key);
-            attemptRef.current.delete(key); // 이게 없으면 재시도시 쿨다운에 걸림!
+            attemptRef.current.delete(key); 
         });
     };
   }, [tasks, user?.email, minorCategory, mc]);
@@ -341,11 +352,15 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
             <div key={t.id} className={s.taskBlock}>
               <div className={s.taskHeader}>
                 <span className={s.taskTitle}>{t.title}</span>
+                {/* ✅ GA: 모달 열기 버튼 식별 */}
                 <Button 
                   size="sm" 
                   variant="outline" 
                   className={s.addBtn}
                   onClick={() => openSheet(t.id)}
+                  data-ga-event="OpenProcessModal"
+                  data-ga-id={gaUiId(GA_CTX, 'OpenProcessModal')}
+                  data-ga-label={t.title}
                 >
                   <Plus size={14} className="mr-1" /> 공정 추가
                 </Button>
@@ -368,9 +383,13 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
                 {procs.map((p) => (
                   <div key={p.id} className={s.chip}>
                     {p.title}
+                    {/* ✅ GA: 공정 삭제 버튼 식별 */}
                     <button 
                       className={s.removeBtn}
-                      onClick={() => removeProcess(t.id, p.id)}
+                      onClick={() => removeProcess(t.id, p.id, p.title)}
+                      data-ga-event="RemoveProcess"
+                      data-ga-id={gaUiId(GA_CTX, 'RemoveProcess')}
+                      data-ga-label={p.title}
                     >
                       <X size={12} />
                     </button>
@@ -384,7 +403,7 @@ export default function StepProcesses({ draft, setDraft, minorCategory }: Props)
 
       {modalOpen && (
         <AddProcessModal 
-          open={true} // 항상 true 전달
+          open={true} 
           taskTitle={targetTask?.title || ''}
           minorCategory={minorCategory}
           onClose={() => setModalOpen(false)}

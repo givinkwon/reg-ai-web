@@ -22,7 +22,7 @@ import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
 // ✅ GA Context
-const GA_CTX = { page: 'SafetyDocs', section: 'TBM', area: 'Landing' } as const;
+const GA_CTX = { page: 'Docs', section: 'TBM', area: 'Landing' } as const;
 
 export default function TBMPage() {
   const [isWriting, setIsWriting] = useState(false);
@@ -37,20 +37,20 @@ export default function TBMPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking (1회만 실행 보장)
+  // ✅ GA: Page View Tracking
+  // 수정: 스토어 초기화(initialized)가 완료된 후 추적하여 로그인 여부를 정확히 기록
   const viewTracked = useRef(false);
+  
   useEffect(() => {
-    if (viewTracked.current) return;
+    if (!initialized || viewTracked.current) return;
     
-    // 유저 정보 로딩이 끝났거나(initialized), 혹은 이미 유저 정보가 있을 때 트래킹
-    // (여기서는 단순하게 마운트 시점 기준으로 하되, user정보가 있으면 함께 보냅니다)
     viewTracked.current = true;
 
     track(gaEvent(GA_CTX, 'View'), {
       ui_id: gaUiId(GA_CTX, 'View'),
       is_logged_in: !!user?.email,
     });
-  }, [user?.email]);
+  }, [initialized, user?.email]);
 
   // 유저 상태 확인 로직
   useEffect(() => {
@@ -90,9 +90,11 @@ export default function TBMPage() {
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
   // ✅ GA: TBM 시작 버튼 핸들러
+  // 수정: 버튼 라벨 정보 추가
   const handleStartClick = () => {
     track(gaEvent(GA_CTX, 'ClickStart'), {
       ui_id: gaUiId(GA_CTX, 'ClickStart'),
+      button_label: '오늘의 TBM 시작하기',
       is_logged_in: !!user?.email,
     });
     setIsWriting(true);
@@ -113,7 +115,13 @@ export default function TBMPage() {
           </p>
           
           <div className={s.btnGroup}>
-            <Button className={s.whiteBtn} onClick={handleStartClick}>
+            {/* ✅ DOM 레벨 식별을 위한 data-ga 속성 추가 */}
+            <Button 
+              className={s.whiteBtn} 
+              onClick={handleStartClick}
+              data-ga-event="ClickStart"
+              data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
+            >
               <ClipboardList size={20} className="mr-2" />
               오늘의 TBM 시작하기
             </Button>
@@ -226,7 +234,7 @@ export default function TBMPage() {
         </div>
       </section>
 
-      {/* ✅ TBM 작성 모달 (닫기 이벤트 트래킹 추가) */}
+      {/* ✅ TBM 작성 모달 (닫기 이벤트 트래킹) */}
       <TbmCreateModal
         open={isWriting}
         onClose={() => {

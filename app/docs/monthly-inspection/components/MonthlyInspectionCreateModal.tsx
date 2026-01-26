@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, FileText, Loader2, ChevronLeft } from 'lucide-react';
+import { X, FileText, Loader2 } from 'lucide-react';
 import s from './MonthlyInspectionCreateModal.module.css';
 
 import MonthlyInspectionDetailTaskAutocompleteInput from './MonthlyInspectionDetailTaskAutocompleteInput';
@@ -13,9 +13,10 @@ import { useUserStore } from '@/app/store/user';
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-export type Rating = 'O' | '△' | 'X';
+// ✅ GA Context 수정: page='Docs', area='CreateModal'
+const GA_CTX = { page: 'Docs', section: 'MonthlyInspection', area: 'CreateModal' } as const;
 
-const GA_CTX = { page: 'Chat', section: 'MakeSafetyDocs', area: 'MonthlyInspection' } as const;
+export type Rating = 'O' | '△' | 'X';
 
 export type ChecklistCategory =
   | '사업장 점검 사항'
@@ -65,7 +66,7 @@ function toItems(sections: Sections): ChecklistItem[] {
       id: uid(),
       category: cat,
       question: q,
-      rating: 'O',
+      rating: undefined,
       note: '',
     })),
   );
@@ -101,31 +102,11 @@ function saveDraft(data: any) {
 }
 
 const CHECKLIST_CACHE_KEY = 'regai:monthlyInspection:checklistCache:v1';
-const CHECKLIST_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 function loadChecklistCache() {
   try {
     const raw = localStorage.getItem(CHECKLIST_CACHE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch { return {}; }
-}
-function saveChecklistCache(data: any) {
-  try {
-    localStorage.setItem(CHECKLIST_CACHE_KEY, JSON.stringify(data));
-  } catch {}
-}
-function pruneChecklistCache(store: any) {
-    const now = Date.now();
-    const newStore: any = {};
-    Object.keys(store).forEach(k => {
-        if (now - store[k].t < CHECKLIST_CACHE_TTL_MS) {
-            newStore[k] = store[k];
-        }
-    });
-    return newStore;
-}
-function stableTasksKey(minor: string | null | undefined, tasks: string[]) {
-    const k = `${minor || ''}:${tasks.sort().join(',')}`;
-    return { key: k, minorKey: minor, tasksKey: k };
 }
 // ------------------------------------------------------
 
@@ -137,9 +118,10 @@ export default function MonthlyInspectionCreateModal({
   minorCategory,
   onRequireLogin,
 }: Props) {
+  // 0: 작업선택, 1: 항목구성, 2: 점검실시
   const [step, setStep] = useState<0 | 1 | 2>(0);
-  const [detailTasks, setDetailTasks] = useState<string[]>(defaultValue?.detailTasks ?? []);
   
+  const [detailTasks, setDetailTasks] = useState<string[]>(defaultValue?.detailTasks ?? []);
   const [sections, setSections] = useState<Sections>(
     defaultValue?.sections ?? {
       '사업장 점검 사항': [],
@@ -149,7 +131,7 @@ export default function MonthlyInspectionCreateModal({
   );
   const [items, setItems] = useState<ChecklistItem[]>(defaultValue?.results ?? []);
 
-  // ✅ canFinish: 하나라도 평가가 있으면 true
+  // 하나라도 평가가 있으면 true
   const canFinish = useMemo(() => items.some((it) => !!it.rating), [items]);
 
   const [genLoading, setGenLoading] = useState(false);
@@ -163,7 +145,7 @@ export default function MonthlyInspectionCreateModal({
   const user = useUserStore((st) => st.user);
   const userEmail = (user?.email || '').trim();
 
-  // Alert Modal
+  // Alert Modal State
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({ title: '', lines: [] as string[], confirmText: '확인', showClose: false });
   const alertOnConfirmRef = useRef<(() => void) | null>(null);
@@ -184,13 +166,24 @@ export default function MonthlyInspectionCreateModal({
     alertOnConfirmRef.current = null;
   };
 
-  // Cache Ref
+  // Cache Init
   const checklistCacheRef = useRef<any>({});
   useEffect(() => {
     if (typeof window !== 'undefined') checklistCacheRef.current = loadChecklistCache();
   }, []);
 
-  // Open/Close Init Logic
+  // ✅ GA: 모달 View 추적 (Step 변경 시에도 추적)
+  useEffect(() => {
+    if (open) {
+      track(gaEvent(GA_CTX, 'View'), {
+        ui_id: gaUiId(GA_CTX, 'View'),
+        step,
+        is_logged_in: !!userEmail,
+      });
+    }
+  }, [open, step, userEmail]);
+
+  // Init Logic
   const prevOpenRef = useRef(false);
   useEffect(() => {
     const prev = prevOpenRef.current;
@@ -208,25 +201,20 @@ export default function MonthlyInspectionCreateModal({
     const draft = loadDraft();
     if (draft) {
       setDetailTasks(draft.detailTasks || []);
-      // Migration Logic
       const dSec = draft.sections || {};
-      if (dSec['작업 및 공정별 점검 사항'] && !dSec['작업 및 공정별 점검 사항']) {
-        dSec['작업 및 공정별 점검 사항'] = dSec['작업 및 공정별 점검 사항'];
-        delete dSec['작업 및 공정별 점검 사항'];
-      }
       setSections(cleanSections(dSec));
       
       const dRes = (draft.results || []).map((it: any) => ({
         ...it,
-        category: it.category === '작업 및 공정별 점검 사항' ? '작업 및 공정별 점검 사항' : it.category,
-        rating: it.rating || 'O'
+        category: it.category,
+        rating: it.rating
       }));
       setItems(dRes);
       setStep(draft.step ?? 0);
     }
-  }, [open, defaultValue]);
+  }, [open, defaultValue, detailTasks.length]);
 
-  // Draft Auto Save
+  // Auto Save
   useEffect(() => {
     if (!open) return;
     saveDraft({ detailTasks, sections, results: items, step });
@@ -235,10 +223,17 @@ export default function MonthlyInspectionCreateModal({
 
   // --- Actions ---
 
+  // 1. AI 항목 생성 (Step 0 -> 1)
   const handleCreateChecklist = async () => {
     setGenError('');
     setGenLoading(true);
     const tasks = detailTasks.map(norm).filter(Boolean);
+
+    // ✅ GA: 생성 시작
+    track(gaEvent(GA_CTX, 'ClickCreate'), {
+        ui_id: gaUiId(GA_CTX, 'ClickCreate'),
+        task_count: tasks.length
+    });
 
     try {
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-checklist', {
@@ -262,7 +257,7 @@ export default function MonthlyInspectionCreateModal({
 
       const cleaned = cleanSections(next);
       setSections(cleaned);
-      setItems(toItems(cleaned));
+      setItems(toItems(cleaned)); 
       setStep(1);
     } catch (e: any) {
       setGenError(e.message || '오류 발생');
@@ -271,15 +266,23 @@ export default function MonthlyInspectionCreateModal({
     }
   };
 
+  // 2. 점검 실시 진입 (Step 1 -> 2)
   const handleConfirmChecklist = () => {
     const cleaned = cleanSections(sections);
     const nextItems = toItems(cleaned);
     
+    // ✅ GA: 점검 실시 시작
+    track(gaEvent(GA_CTX, 'ClickStartInspection'), {
+        ui_id: gaUiId(GA_CTX, 'ClickStartInspection'),
+        total_items: nextItems.length
+    });
+
     setSections(cleaned);
     setItems(nextItems);
     setStep(2);
   };
 
+  // 3. 점검 완료 및 엑셀 다운로드 (Step 2 -> Finish)
   const handleFinish = async () => {
     if (!userEmail) {
       openAlert({
@@ -292,6 +295,13 @@ export default function MonthlyInspectionCreateModal({
     }
     if (exportLoading) return;
 
+    // ✅ GA: 완료 클릭
+    track(gaEvent(GA_CTX, 'ClickFinish'), {
+        ui_id: gaUiId(GA_CTX, 'ClickFinish'),
+        total_items: items.length,
+        checked_items: items.filter(i => !!i.rating).length
+    });
+
     const payload: MonthlyInspectionPayload = {
       dateISO,
       detailTasks: detailTasks.map(norm).filter(Boolean),
@@ -303,7 +313,7 @@ export default function MonthlyInspectionCreateModal({
       title: '점검표 생성 요청',
       lines: ['서버에서 문서를 생성 중입니다.', '완료되면 이메일/파일함에서 확인 가능합니다.'],
       confirmText: '확인',
-      onConfirm: () => onClose(), // ✅ 확인 누르면 모달 닫기
+      onConfirm: () => onClose(), 
     });
 
     setExportLoading(true);
@@ -331,6 +341,15 @@ export default function MonthlyInspectionCreateModal({
     }
   };
 
+  // 4. 이전 단계
+  const handleBack = () => {
+    track(gaEvent(GA_CTX, 'ClickBack'), {
+        ui_id: gaUiId(GA_CTX, 'ClickBack'),
+        from_step: step
+    });
+    setStep((prev) => (prev - 1) as any);
+  };
+
   return (
     <>
       {open && (
@@ -338,7 +357,17 @@ export default function MonthlyInspectionCreateModal({
           <div className={s.modal}>
             <div className={s.topBar}>
               <span className={s.pill}>월 작업장 순회 점검표</span>
-              <button className={s.iconBtn} onClick={onClose} disabled={exportLoading}>
+              {/* ✅ GA: 닫기 버튼 */}
+              <button 
+                className={s.iconBtn} 
+                onClick={() => {
+                    track(gaEvent(GA_CTX, 'Close'), { ui_id: gaUiId(GA_CTX, 'Close') });
+                    onClose();
+                }} 
+                disabled={exportLoading}
+                data-ga-event="Close"
+                data-ga-id={gaUiId(GA_CTX, 'Close')}
+              >
                 <X size={18} />
               </button>
             </div>
@@ -356,16 +385,18 @@ export default function MonthlyInspectionCreateModal({
                   </p>
                 </div>
 
-                {/* ✅ [수정] 버튼 순서 변경: [점검 실시/완료] -> [이전] */}
+                {/* 헤더 버튼 그룹 */}
                 {step > 0 && (
                   <div className={s.headerActions} style={{ display: 'flex', gap: '8px', minWidth: 'fit-content' }}>
                     
-                    {/* Primary Button (앞으로 배치) */}
+                    {/* Primary Button */}
                     {step === 1 && (
                       <button 
                         className={s.primaryBtn} 
                         onClick={handleConfirmChecklist}
                         style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}
+                        data-ga-event="ClickStartInspection"
+                        data-ga-id={gaUiId(GA_CTX, 'ClickStartInspection')}
                       >
                         점검 실시
                       </button>
@@ -377,16 +408,20 @@ export default function MonthlyInspectionCreateModal({
                         onClick={handleFinish}
                         disabled={!canFinish || exportLoading}
                         style={{ padding: '0.5rem 1rem', fontSize: '0.9rem', marginTop: 0 }}
+                        data-ga-event="ClickFinish"
+                        data-ga-id={gaUiId(GA_CTX, 'ClickFinish')}
                       >
                         점검 완료
                       </button>
                     )}
 
-                    {/* Secondary Button (뒤로 배치) */}
+                    {/* Secondary Button */}
                     <button 
                       className={s.secondaryBtn} 
-                      onClick={() => setStep((prev) => (prev - 1) as any)}
+                      onClick={handleBack}
                       style={{ padding: '0.5rem 0.8rem', fontSize: '0.9rem' }}
+                      data-ga-event="ClickBack"
+                      data-ga-id={gaUiId(GA_CTX, 'ClickBack')}
                     >
                       이전
                     </button>
@@ -406,6 +441,8 @@ export default function MonthlyInspectionCreateModal({
                     className={s.primaryBtn}
                     disabled={detailTasks.length === 0 || genLoading}
                     onClick={handleCreateChecklist}
+                    data-ga-event="ClickCreate"
+                    data-ga-id={gaUiId(GA_CTX, 'ClickCreate')}
                   >
                     {genLoading ? <Loader2 size={18} className={s.spin} /> : <FileText size={18} />}
                     {genLoading ? ' 항목 생성 중...' : ' 점검표 생성하기'}
@@ -417,8 +454,12 @@ export default function MonthlyInspectionCreateModal({
                 <StepBuildChecklist
                   detailTasks={detailTasks}
                   initialSections={sections}
-                  onNext={(updatedSections) => setSections(updatedSections)} 
-                  onBack={() => {}} 
+                  onBack={() => setStep(0)} 
+                  onNext={(updatedSections) => {
+                      setSections(updatedSections);
+                      setItems(toItems(updatedSections));
+                      handleConfirmChecklist(); // 다음 단계로 이동 처리
+                  }}
                 />
               )}
 
@@ -427,8 +468,8 @@ export default function MonthlyInspectionCreateModal({
                   detailTasks={detailTasks}
                   items={items}
                   onChangeItems={setItems}
-                  onBack={() => {}}
-                  onFinish={() => {}}
+                  onBack={handleBack}
+                  onFinish={handleFinish}
                   finishDisabled={false}
                 />
               )}
@@ -445,11 +486,7 @@ export default function MonthlyInspectionCreateModal({
         showClose={alertConfig.showClose}
         onConfirm={() => {
           const fn = alertOnConfirmRef.current;
-          
-          // ✅ [수정] 조건문(else) 없이 무조건 닫기를 수행합니다.
           closeAlert(); 
-          
-          // 그 다음, 예약된 함수(예: 부모 모달 닫기)가 있다면 실행합니다.
           if (fn) fn();
         }}
         onClose={closeAlert}

@@ -4,6 +4,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import s from './AddDetailTaskModal.module.css';
 
+// ✅ GA Imports
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ GA Context: 모달 영역이므로 area='SearchModal'
+const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'SearchModal' } as const;
+
 type Props = {
   open: boolean;
   minorCategory: string | null;
@@ -26,8 +33,15 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
   
-  // ✅ [추가] 클라이언트 캐시 (키워드: 결과배열)
+  // ✅ 클라이언트 캐시 (키워드: 결과배열)
   const cacheRef = useRef<Map<string, string[]>>(new Map());
+
+  // ✅ GA: 모달 열릴 때 View 이벤트
+  useEffect(() => {
+    if (open) {
+        track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View') });
+    }
+  }, [open]);
 
   // API 검색 (Debounce + Caching + Immediate Loading 적용)
   useEffect(() => {
@@ -40,8 +54,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
 
     // 1. 캐시 확인: 이미 검색한 키워드라면 서버 요청 없이 즉시 보여줌
     if (cacheRef.current.has(keyword)) {
-      // 진행 중이던 요청이 있다면 취소 (레이스 컨디션 방지)
-      abortRef.current?.abort();
+      abortRef.current?.abort(); // 진행 중이던 요청 취소
       
       setItems(cacheRef.current.get(keyword) || []);
       setLoading(false);
@@ -49,13 +62,12 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
       return; 
     }
 
-    // 2. 캐시에 없으면 '즉시' 로딩 상태로 전환 (사용자에게 반응성 제공)
+    // 2. 캐시에 없으면 '즉시' 로딩 상태로 전환
     setLoading(true);
     setError(null);
 
     // 3. 실제 API 호출은 0.25초 뒤에 수행 (Debounce)
     debounceRef.current = window.setTimeout(async () => {
-      // 이전 요청 취소
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
@@ -67,7 +79,6 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
         const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
           method: 'GET',
           signal: ac.signal,
-          // cache: 'no-store', // 브라우저 캐시 정책은 유지하되, 위에서 메모리 캐시로 먼저 방어함
         });
 
         if (!res.ok) throw new Error('검색 실패');
@@ -75,14 +86,23 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
         const data = await res.json();
         const next = Array.from<string>(new Set((data.items ?? []).map(norm).filter(Boolean)));
         
-        // ✅ [추가] 성공한 결과는 캐시에 저장
+        // ✅ 성공한 결과 캐시 저장
         cacheRef.current.set(keyword, next);
 
         setItems(next);
+        
+        // ✅ GA: 검색 완료 추적 (결과 개수 포함)
+        if (keyword) {
+            track(gaEvent(GA_CTX, 'Search'), {
+                ui_id: gaUiId(GA_CTX, 'Search'),
+                query: keyword,
+                result_count: next.length
+            });
+        }
+
       } catch (e: any) {
         if (e.name !== 'AbortError') setError('검색 중 오류가 발생했습니다.');
       } finally {
-        // 성공하든 실패하든 로딩 종료 (단, AbortError는 무시)
         if (!ac.signal.aborted) {
              setLoading(false);
         }
@@ -100,7 +120,15 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
 
     setSelected(prev => {
       const set = new Set(prev.map(norm));
+      // 해제
       if (set.has(v)) return prev.filter(x => norm(x) !== v);
+      
+      // 선택
+      // ✅ GA: 아이템 선택 추적
+      track(gaEvent(GA_CTX, 'SelectItem'), {
+        ui_id: gaUiId(GA_CTX, 'SelectItem'),
+        item_title: v
+      });
       return [...prev, v];
     });
   };
@@ -109,8 +137,28 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
     e.preventDefault();
     const uniq = Array.from(new Set(selected.map(norm).filter(Boolean)));
     if (uniq.length === 0) return;
+    
+    // ✅ GA: 확인(추가) 버튼 추적
+    track(gaEvent(GA_CTX, 'ClickConfirm'), {
+        ui_id: gaUiId(GA_CTX, 'ClickConfirm'),
+        selected_count: uniq.length
+    });
+
     uniq.forEach(t => onAdd(t));
     onClose();
+  };
+
+  // ✅ GA: 직접 추가 핸들러
+  const handleManualAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    track(gaEvent(GA_CTX, 'ClickManualAdd'), {
+        ui_id: gaUiId(GA_CTX, 'ClickManualAdd'),
+        query: q
+    });
+    
+    onAdd(q); 
+    onClose(); 
   };
 
   if (!open) return null;
@@ -124,11 +172,18 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
             <div className={s.title}>작업 선택</div>
             <div className={s.subTitle}>키워드를 검색하여 작업을 선택하세요.</div>
           </div>
+          {/* ✅ GA: 닫기 버튼 */}
           <button 
             type="button" 
             className={s.closeBtn} 
-            onClick={(e) => { e.preventDefault(); onClose(); }} 
+            onClick={(e) => { 
+                e.preventDefault(); 
+                track(gaEvent(GA_CTX, 'Close'), { ui_id: gaUiId(GA_CTX, 'Close') });
+                onClose(); 
+            }} 
             aria-label="닫기"
+            data-ga-event="Close"
+            data-ga-id={gaUiId(GA_CTX, 'Close')}
           >
             <X size={20} />
           </button>
@@ -170,7 +225,6 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
         <div className={s.list}>
           {loading && (
             <div className={s.empty}>
-              {/* 로딩 스피너나 텍스트를 좀 더 부드럽게 표현 가능 */}
               <div className="animate-pulse">목록을 불러오는 중...</div>
             </div>
           )}
@@ -192,6 +246,9 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
                         e.stopPropagation();
                         toggleSelect(v);
                     }}
+                    data-ga-event={isSelected ? 'DeselectItem' : 'SelectItem'}
+                    data-ga-id={gaUiId(GA_CTX, isSelected ? 'DeselectItem' : 'SelectItem')}
+                    data-ga-label={v}
                   >
                     <span className={s.itemText}>{v}</span>
                     {isSelected && <span className={s.pick}>선택됨</span>}
@@ -210,11 +267,9 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
                   <button 
                     type="button"
                     className={s.createBtn}
-                    onClick={(e) => { 
-                        e.preventDefault();
-                        onAdd(q); 
-                        onClose(); 
-                    }}
+                    onClick={handleManualAdd}
+                    data-ga-event="ClickManualAdd"
+                    data-ga-id={gaUiId(GA_CTX, 'ClickManualAdd')}
                   >
                     '{q}' 직접 추가하기
                   </button>
@@ -240,6 +295,8 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
             className={s.confirm} 
             onClick={handleConfirm} 
             disabled={selected.length === 0}
+            data-ga-event="ClickConfirm"
+            data-ga-id={gaUiId(GA_CTX, 'ClickConfirm')}
           >
             확인 {selected.length > 0 && `(${selected.length})`}
           </button>
