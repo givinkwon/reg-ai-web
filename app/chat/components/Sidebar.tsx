@@ -208,6 +208,7 @@ export default function Sidebar() {
               <img
                 data-ga-id={gaUiId(GA_CTX, 'ClickLogo')}
                 data-ga-event={gaEvent(GA_CTX, 'ClickLogo')}
+                data-ga-label="로고"
                 onClick={handleLogoClick}
                 src="/logo.png"
                 className={s.fav}
@@ -221,6 +222,7 @@ export default function Sidebar() {
             <button
               data-ga-id={gaUiId(GA_CTX, collapsed ? 'Expand' : 'Collapse')}
               data-ga-event={gaEvent(GA_CTX, collapsed ? 'Expand' : 'Collapse')}
+              data-ga-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
               onClick={toggleCollapse}
               className={s.collapseBtn}
               aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
@@ -239,6 +241,7 @@ export default function Sidebar() {
               type="button"
               data-ga-id={gaUiId(GA_CTX, 'ClickCloseBtn')}
               data-ga-event={gaEvent(GA_CTX, 'ClickCloseBtn')}
+              data-ga-label="사이드바 닫기"
               className={s.mobileCloseBtn}
               onClick={handleCompactCloseBtn}
               aria-label="사이드바 닫기"
@@ -256,6 +259,7 @@ export default function Sidebar() {
             role="button"
             data-ga-id={gaUiId(GA_CTX, 'OpenHome')}
             data-ga-event={gaEvent(GA_CTX, 'OpenHome')}
+            data-ga-label="Home"
             tabIndex={0}
             onClick={handleHomeClick}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleHomeClick()}
@@ -271,6 +275,7 @@ export default function Sidebar() {
             role="button"
             data-ga-id={gaUiId(GA_CTX, 'OpenDocs')}
             data-ga-event={gaEvent(GA_CTX, 'OpenDocs')}
+            data-ga-label="문서함"
             tabIndex={0}
             onClick={handleDocsClick}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDocsClick()}
@@ -328,6 +333,7 @@ export default function Sidebar() {
           className={s.startBtn}
           data-ga-id={gaUiId(GA_CTX, 'CreateRoom')}
           data-ga-event={gaEvent(GA_CTX, 'CreateRoom')}
+          data-ga-label="새 대화 시작"
           onClick={handleNewChat}
         >
           <Plus className={s.plus} />

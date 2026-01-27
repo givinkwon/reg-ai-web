@@ -263,6 +263,7 @@ export default function CheckSafetyDocs({
                 data-ga-event={gaEvent(GA_CTX, 'ToggleCategory')}
                 data-ga-id={gaUiId(GA_CTX, 'ToggleCategory')}
                 data-ga-text={`${cat.title}`}
+                data-ga-label={`카테고리_${cat.title}`}
               >
                 <div className={s.docCategoryText}>
                   <span className={s.docCategoryTitle}>{cat.title}</span>
@@ -286,6 +287,7 @@ export default function CheckSafetyDocs({
                             data-ga-event={gaEvent(GA_CTX, 'ClickDoc')}
                             data-ga-id={gaUiId(GA_CTX, 'ClickDoc')}
                             data-ga-text={`${doc.label}`}
+                            data-ga-label={`문서_${doc.label}`}
                           >
                             <FileText className={s.docChipIcon} />
                             <span className={s.docChipLabel}>{doc.label}</span>

@@ -344,6 +344,7 @@ export default function RightPanel() {
         onClick={closeByOverlay}
         data-ga-event={gaEvent(GA_CTX, 'Overlay')}
         data-ga-id={gaUiId(GA_CTX, 'Overlay')}
+        data-ga-label={`RightPanel_${panelTitle}`}
       />
 
       {/* sheet */}
@@ -362,6 +363,7 @@ export default function RightPanel() {
             aria-label="닫기"
             data-ga-event={gaEvent(GA_CTX, 'ClickBackClose')}
             data-ga-id={gaUiId(GA_CTX, 'ClickBackClose')}
+            data-ga-label={`RightPanel_${panelTitle}`}
           >
             <ChevronLeft
               color="#ffffff"
@@ -406,6 +408,7 @@ export default function RightPanel() {
                         }}
                         data-ga-event={gaEvent(GA_CTX, 'ClickNewsLink')}
                         data-ga-id={gaUiId(GA_CTX, 'ClickNewsLink')}
+                        data-ga-label={`RightPanel_${panelTitle}`}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -444,6 +447,7 @@ export default function RightPanel() {
                         }}
                         data-ga-event={gaEvent(GA_CTX, 'ClickLawNoticeLink')}
                         data-ga-id={gaUiId(GA_CTX, 'ClickLawNoticeLink')}
+                        data-ga-label={`RightPanel_${panelTitle}`}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{item.title}</span>
@@ -466,6 +470,7 @@ export default function RightPanel() {
                       className={s.newsItem}
                       data-ga-event={gaEvent(GA_CTX, 'ViewAccidentCase')}
                       data-ga-id={gaUiId(GA_CTX, 'ViewAccidentCase')}
+                      data-ga-label={`RightPanel_${panelTitle}`}
                       // ✅ 화면에 보일 때까지 정확히 트래킹하려면 IntersectionObserver가 필요하지만,
                       // 여기서는 "렌더된 목록 기준"으로 최소 트래킹만 남김.
                     >
@@ -509,6 +514,7 @@ export default function RightPanel() {
                             }}
                             data-ga-event={gaEvent(GA_CTX, 'ClickEvidenceLink')}
                             data-ga-id={gaUiId(GA_CTX, 'ClickEvidenceLink')}
+                            data-ga-label={`RightPanel_${panelTitle}`}
                           >
                             {it.title}
                           </a>
@@ -548,6 +554,7 @@ export default function RightPanel() {
                           }}
                           data-ga-event={gaEvent(GA_CTX, 'ClickFormLink')}
                           data-ga-id={gaUiId(GA_CTX, 'ClickFormLink')}
+                          data-ga-label={`RightPanel_${panelTitle}`}
                         >
                           {it.title}
                         </a>

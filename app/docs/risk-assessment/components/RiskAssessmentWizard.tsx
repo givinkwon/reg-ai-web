@@ -236,6 +236,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                     disabled={submitting}
                     data-ga-event="Close"
                     data-ga-id={gaUiId(GA_CTX, 'Close')}
+                    data-ga-label="나가기 버튼"
                 >
                   ← 나가기
                 </button>
@@ -284,6 +285,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                 disabled={step === 'tasks' || submitting}
                 data-ga-event="ClickPrev"
                 data-ga-id={gaUiId(GA_CTX, 'ClickPrev')}
+                data-ga-label="이전 단계 버튼"
               >
                 이전
               </button>
@@ -294,6 +296,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                   disabled={!canGoNext || submitting}
                   data-ga-event="ClickNext"
                   data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
+                  data-ga-label="다음 단계 버튼"
                 >
                   다음 단계
                 </button>
@@ -304,6 +307,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                   disabled={submitting || isAnalyzing || !canGoNext}
                   data-ga-event="ClickSubmit"
                   data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
+                  data-ga-label="제출 버튼"
                 >
                   {submitting ? '요청 중...' : isAnalyzing ? '데이터 분석 중' : '보고서 생성 완료'}
                 </button>

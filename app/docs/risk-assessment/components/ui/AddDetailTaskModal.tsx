@@ -184,6 +184,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
             aria-label="닫기"
             data-ga-event="Close"
             data-ga-id={gaUiId(GA_CTX, 'Close')}
+            data-ga-label="닫기 버튼"
           >
             <X size={20} />
           </button>
@@ -270,6 +271,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
                     onClick={handleManualAdd}
                     data-ga-event="ClickManualAdd"
                     data-ga-id={gaUiId(GA_CTX, 'ClickManualAdd')}
+                    data-ga-label={`'{q}' 직접 추가하기 버튼`}
                   >
                     '{q}' 직접 추가하기
                   </button>
@@ -297,6 +299,7 @@ export default function AddDetailTaskModal({ open, minorCategory, onClose, onAdd
             disabled={selected.length === 0}
             data-ga-event="ClickConfirm"
             data-ga-id={gaUiId(GA_CTX, 'ClickConfirm')}
+            data-ga-label="확인 버튼"
           >
             확인 {selected.length > 0 && `(${selected.length})`}
           </button>

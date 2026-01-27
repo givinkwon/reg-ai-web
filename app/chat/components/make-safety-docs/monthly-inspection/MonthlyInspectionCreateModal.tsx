@@ -845,6 +845,7 @@ export default function MonthlyInspectionCreateModal({
                 disabled={exportLoading}
                 data-ga-event={gaEvent(GA_CTX, 'ClickClose')}
                 data-ga-id={gaUiId(GA_CTX, 'ClickClose')}
+                data-ga-label="모달 닫기 버튼"
               >
                 <X size={18} />
               </button>
@@ -888,6 +889,7 @@ export default function MonthlyInspectionCreateModal({
                     onClick={handleCreateChecklist}
                     data-ga-event={gaEvent(GA_CTX, 'ClickGenerateChecklist')}
                     data-ga-id={gaUiId(GA_CTX, 'ClickGenerateChecklist')}
+                    data-ga-label="점검 항목 생성 버튼"
                   >
                     {genLoading ? (
                       <>

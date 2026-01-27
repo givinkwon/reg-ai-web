@@ -1077,7 +1077,7 @@ export default function ChatArea() {
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut data-ga-id={`Chat:ChatArea:Logout`} className={s.iconXs} />
+                    <LogOut data-ga-id={`Chat:ChatArea:Logout`} data-ga-label="로그아웃" className={s.iconXs} />
                     <span>로그아웃</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1087,6 +1087,7 @@ export default function ChatArea() {
                 variant="outline"
                 size="sm"
                 data-ga-id={`Chat:ChatArea:Login`}
+                data-ga-label="로그인"
                 className={s.settingsBtn}
                 onClick={() => setShowLoginModal(true)}
               >
@@ -1318,6 +1319,7 @@ export default function ChatArea() {
                                     type="button"
                                     className={s.quickCard}
                                     data-ga-id={`Chat:ChatArea:QuickButton:${action.id}`}
+                                    data-ga-label={action.label}
                                     onClick={() => handleQuickActionClick(action)}
                                   >
                                     <span className={s.quickIconWrap} aria-hidden="true">
@@ -1522,6 +1524,7 @@ export default function ChatArea() {
                   type="button"
                   className={s.plusBtn}
                   data-ga-id="Chat:ChatArea:OpenTaskModal"
+                  data-ga-label="작업 선택"
                   onClick={() => setShowTaskModal(true)}
                   aria-label="작업 선택"
                   title="작업 선택"
@@ -1536,6 +1539,7 @@ export default function ChatArea() {
                     <button
                       type="button"
                       data-ga-id="Chat:ChatArea:RemoveTaskTag"
+                      data-ga-label="작업 태그 제거"
                       className={s.taskChipClose}
                       onClick={() => setSelectedTask(null)}
                       aria-label="작업 태그 제거"
@@ -1573,6 +1577,7 @@ export default function ChatArea() {
             <button
               type="button"
               data-ga-id="Chat:ChatArea:AttachFile"
+              data-ga-label="파일 첨부"
               className={s.attachBtn}
               onClick={() => fileInputRef.current?.click()}
               aria-label="파일 첨부"
@@ -1580,7 +1585,7 @@ export default function ChatArea() {
               <Paperclip className={s.iconMd} />
             </button>
 
-            <button data-ga-id="Chat:ChatArea:Submit" onClick={handleSend} className={s.sendBtn} aria-label="전송">
+            <button data-ga-id="Chat:ChatArea:Submit" data-ga-label="전송" onClick={handleSend} className={s.sendBtn} aria-label="전송">
               <ArrowUp className={s.iconMdAccent} />
             </button>
 

@@ -170,6 +170,7 @@ export default function StepRunChecklist({
           onClick={handleBack}
           data-ga-event={gaEvent(GA_CTX, 'ClickBack')}
           data-ga-id={gaUiId(GA_CTX, 'ClickBack')}
+          data-ga-label="이전 버튼"
         >
           이전
         </button>
@@ -181,6 +182,7 @@ export default function StepRunChecklist({
           onClick={handleFinish}
           data-ga-event={gaEvent(GA_CTX, 'ClickFinish')}
           data-ga-id={gaUiId(GA_CTX, 'ClickFinish')}
+          data-ga-label="점검 완료 버튼"
         >
           점검 완료
         </button>
@@ -221,6 +223,7 @@ export default function StepRunChecklist({
                     data-ga-event={gaEvent(GA_CTX, 'SetRating')}
                     data-ga-id={gaUiId(GA_CTX, 'SetRating')}
                     data-ga-text={r.key}
+                    data-ga-label="점검 평가 버튼"
                   >
                     {r.label}
                   </button>

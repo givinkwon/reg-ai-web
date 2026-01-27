@@ -364,6 +364,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
           onClick={closeByOverlay}
           data-ga-event={gaEvent(GA_CTX, 'Overlay')}
           data-ga-id={gaUiId(GA_CTX, 'Overlay')}
+          data-ga-label="로그인 모달 오버레이"
         >
           <div className={s.loginCard} onClick={(e) => e.stopPropagation()}>
             <div className={s.loginBadge}>REG</div>
@@ -382,6 +383,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
               disabled={loading}
               data-ga-event={gaEvent(GA_CTX, 'ClickGoogle')}
               data-ga-id={gaUiId(GA_CTX, 'ClickGoogle')}
+              data-ga-label="구글로 시작하기"
             >
               <span className={s.loginBtnLabel}>{loading ? '로그인 중...' : '구글로 시작하기'}</span>
             </button>
@@ -393,6 +395,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
               disabled={loading}
               data-ga-event={gaEvent(GA_CTX, 'ClickKakao')}
               data-ga-id={gaUiId(GA_CTX, 'ClickKakao')}
+              data-ga-label="카카오로 시작하기"
             >
               <span className={s.loginBtnLabel}>카카오로 시작하기</span>
             </button>
@@ -404,6 +407,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
               disabled={loading}
               data-ga-event={gaEvent(GA_CTX, 'ClickBack')}
               data-ga-id={gaUiId(GA_CTX, 'ClickBack')}
+              data-ga-label="뒤로가기"
             >
               뒤로가기
             </button>

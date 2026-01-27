@@ -140,6 +140,7 @@ export default function StepBuildChecklist({ detailTasks, initialSections, onBac
                         onClick={() => removeItem(cat, idx, it)}
                         data-ga-event="RemoveItem"
                         data-ga-id={gaUiId(GA_CTX, 'RemoveItem')}
+                        data-ga-label={it}
                       >
                         <X size={14} />
                       </button>
@@ -159,6 +160,7 @@ export default function StepBuildChecklist({ detailTasks, initialSections, onBac
                         onClick={() => addItem(cat)}
                         data-ga-event="AddItem"
                         data-ga-id={gaUiId(GA_CTX, 'AddItem')}
+                        data-ga-label={inputs[cat] || ''}
                     >
                         <Plus size={16} />
                     </button>
@@ -176,6 +178,7 @@ export default function StepBuildChecklist({ detailTasks, initialSections, onBac
             onClick={handleBackClick}
             data-ga-event="ClickBack"
             data-ga-id={gaUiId(GA_CTX, 'ClickBack')}
+            data-ga-label="이전 버튼"
         >
             이전
         </button>
@@ -184,6 +187,7 @@ export default function StepBuildChecklist({ detailTasks, initialSections, onBac
             onClick={handleNextClick}
             data-ga-event="ClickNext"
             data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
+            data-ga-label="점검 실시 버튼"
         >
             점검 실시
         </button>

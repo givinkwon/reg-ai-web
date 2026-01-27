@@ -100,6 +100,7 @@ export default function MonthlyInspectionDetailTaskTagInput({
           }}
           data-ga-event={gaEvent(GA_CTX, 'DetailTaskTagInput')}
           data-ga-id={gaUiId(GA_CTX, 'DetailTaskTagInput')}
+          data-ga-label="작업 태그 입력창"
         />
         <button
           type="button"
@@ -113,6 +114,7 @@ export default function MonthlyInspectionDetailTaskTagInput({
           aria-label="추가"
           data-ga-event={gaEvent(GA_CTX, 'DetailTaskTagAddClick')}
           data-ga-id={gaUiId(GA_CTX, 'DetailTaskTagAddClick')}
+          data-ga-label="작업 태그 추가 버튼"
         >
           <Plus size={16} />
         </button>
@@ -131,6 +133,8 @@ export default function MonthlyInspectionDetailTaskTagInput({
               title="삭제"
               data-ga-event={gaEvent(GA_CTX, 'DetailTaskTagRemove')}
               data-ga-id={gaUiId(GA_CTX, 'DetailTaskTagRemove')}
+              data-ga-text={t}
+              data-ga-label="태그 삭제 버튼"
             >
               {t}
               <X size={14} />
@@ -155,6 +159,8 @@ export default function MonthlyInspectionDetailTaskTagInput({
                 onClick={() => add(t, 'suggestion')}
                 data-ga-event={gaEvent(GA_CTX, 'DetailTaskTagAddSuggestion')}
                 data-ga-id={gaUiId(GA_CTX, 'DetailTaskTagAddSuggestion')}
+                data-ga-text={t}
+                data-ga-label="태그 선택 버튼"
               >
                 {t}
               </button>

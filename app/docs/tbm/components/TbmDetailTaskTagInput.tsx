@@ -264,6 +264,7 @@ export default function TbmDetailTaskTagInput({ value, onChange, minorCategory, 
               }}
               data-ga-event="RemoveTag"
               data-ga-id={gaUiId(GA_CTX, 'RemoveTag')}
+              data-ga-label={tag}
             >
               <X size={14} />
             </button>

@@ -76,6 +76,7 @@ export default function LawNoticeArticlesModal({
         data-ga-event={gaEvent(GA_CTX, 'Close')}
         data-ga-id={gaUiId(GA_CTX, 'Close')}
         data-ga-text="overlay"
+        data-ga-label="모달 오버레이"
       />
       <div
         className={s.wrap}
@@ -83,6 +84,7 @@ export default function LawNoticeArticlesModal({
         data-ga-event={gaEvent(GA_CTX, 'Close')}
         data-ga-id={gaUiId(GA_CTX, 'Close')}
         data-ga-text="wrap"
+        data-ga-label="모달 랩"
       >
         <div className={s.modal} onClick={(e) => e.stopPropagation()}>
           <div className={s.head}>
@@ -95,6 +97,7 @@ export default function LawNoticeArticlesModal({
               data-ga-event={gaEvent(GA_CTX, 'Close')}
               data-ga-id={gaUiId(GA_CTX, 'Close')}
               data-ga-text="x"
+              data-ga-label="모달 닫기 버튼"
             >
               ×
             </button>
@@ -117,6 +120,7 @@ export default function LawNoticeArticlesModal({
                         data-ga-event={gaEvent(GA_CTX, 'ClickArticle')}
                         data-ga-id={gaUiId(GA_CTX, 'ClickArticle')}
                         data-ga-text={it.title}
+                        data-ga-label={it.url}
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{it.title}</span>
@@ -129,6 +133,7 @@ export default function LawNoticeArticlesModal({
                         data-ga-event={gaEvent(GA_CTX, 'ClickArticle')}
                         data-ga-id={gaUiId(GA_CTX, 'ClickArticle')}
                         data-ga-text={it.title}
+                        data-ga-label="URL 없음"
                       >
                         <span className={s.newsIndex}>{idx + 1}.</span>
                         <span className={s.newsTitle}>{it.title}</span>
@@ -148,6 +153,7 @@ export default function LawNoticeArticlesModal({
               data-ga-event={gaEvent(GA_CTX, 'Close')}
               data-ga-id={gaUiId(GA_CTX, 'Close')}
               data-ga-text="button"
+              data-ga-label="모달 닫기 버튼"
             >
               닫기
             </button>

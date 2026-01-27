@@ -289,6 +289,7 @@ export default function TbmCreateModal({
                 disabled={submitting}
                 data-ga-event="Close"
                 data-ga-id={gaUiId(GA_CTX, 'Close')}
+                data-ga-label="닫기 버튼"
             >
               <X size={20} />
             </button>
@@ -318,6 +319,7 @@ export default function TbmCreateModal({
                 }}
                 data-ga-event="AddAttendee"
                 data-ga-id={gaUiId(GA_CTX, 'AddAttendee')}
+                data-ga-label="참석자 추가 버튼"
               >
                 <Plus size={16} /> 추가
               </button>
@@ -360,6 +362,7 @@ export default function TbmCreateModal({
                     }}
                     data-ga-event="RemoveAttendee"
                     data-ga-id={gaUiId(GA_CTX, 'RemoveAttendee')}
+                    data-ga-label={`참석자 '${a.name}' 삭제 버튼`}
                   >
                     <X size={18} />
                   </button>
@@ -374,6 +377,7 @@ export default function TbmCreateModal({
                 disabled={!canSubmit}
                 data-ga-event="ClickSubmit"
                 data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
+                data-ga-label="TBM 일지 생성하기 버튼"
             >
               <FileText size={18} />
               {submitting ? '생성 요청 중...' : 'TBM 일지 생성하기'}

@@ -121,6 +121,7 @@ export default function TBMPage() {
               onClick={handleStartClick}
               data-ga-event="ClickStart"
               data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
+              data-ga-label="오늘의 TBM 시작하기 버튼"
             >
               <ClipboardList size={20} className="mr-2" />
               오늘의 TBM 시작하기

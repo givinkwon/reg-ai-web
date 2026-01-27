@@ -451,6 +451,8 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
               aria-label="태그 삭제"
               data-ga-event={gaEvent(GA_CTX, 'DetailTaskRemoveTag')}
               data-ga-id={gaUiId(GA_CTX, 'DetailTaskRemoveTag')}
+              data-ga-text={t}
+              data-ga-label="태그 삭제 버튼"
             >
               <X size={14} />
             </button>
@@ -494,6 +496,7 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
           autoComplete="off"
           data-ga-event={gaEvent(GA_CTX, 'DetailTaskInput')}
           data-ga-id={gaUiId(GA_CTX, 'DetailTaskInput')}
+          data-ga-label="작업 자동완성 입력창"
         />
         {state === 'loading' && <Loader2 size={16} className={cs.loader} />}
       </div>
@@ -517,6 +520,8 @@ export default function MonthlyInspectionDetailTaskAutocompleteInput({
                   }}
                   data-ga-event={gaEvent(GA_CTX, 'DetailTaskSelectSuggestion')}
                   data-ga-id={gaUiId(GA_CTX, 'DetailTaskSelectSuggestion')}
+                  data-ga-text={it}
+                  data-ga-label="자동완성 항목 선택 버튼"
                 >
                   {it}
                 </button>

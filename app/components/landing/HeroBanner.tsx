@@ -93,7 +93,7 @@ export default function HeroBanner() {
           </p>
 
           <div className={s.ctaRow}>
-            <button data-ga-id="Home:HeroBanner:ClickChat:Left" className={s.primaryBtn} onClick={goChat}>
+            <button data-ga-id="Home:HeroBanner:ClickChat:Left" data-ga-label="바로 사용하기 버튼" className={s.primaryBtn} onClick={goChat}>
               바로 사용하기
             </button>
             {/* <button className={s.ghostBtn} onClick={() => router.push('#features')}>

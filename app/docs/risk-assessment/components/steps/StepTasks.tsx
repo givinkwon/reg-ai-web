@@ -309,6 +309,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
           }}
           data-ga-event="OpenSearchModal"
           data-ga-id={gaUiId(GA_CTX, 'OpenSearchModal')}
+          data-ga-label="직접 검색/추가 버튼"
         >
           <Search size={16} className="mr-2" /> 직접 검색/추가
         </Button>

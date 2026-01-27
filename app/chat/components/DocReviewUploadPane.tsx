@@ -190,6 +190,7 @@ export default function DocReviewUploadPane({
       aria-label="파일 업로드 영역"
       data-ga-event={gaEvent(GA_CTX, 'ClickDropzone')}
       data-ga-id={gaUiId(GA_CTX, 'ClickDropzone')}
+      data-ga-label={`${category.title} - ${doc.label}`}
     >
       <input
         ref={inputRef}

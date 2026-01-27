@@ -110,6 +110,7 @@ export default function LawNoticeSummaryModal({
         data-ga-event={gaEvent(GA_CTX, 'Close')}
         data-ga-id={gaUiId(GA_CTX, 'Close')}
         data-ga-text="overlay"
+        data-ga-label="모달 오버레이"
       />
       <div
         className={s.wrap}
@@ -117,6 +118,7 @@ export default function LawNoticeSummaryModal({
         data-ga-event={gaEvent(GA_CTX, 'Close')}
         data-ga-id={gaUiId(GA_CTX, 'Close')}
         data-ga-text="wrap"
+        data-ga-label="모달 랩"
       >
         <div className={s.modal} onClick={(e) => e.stopPropagation()}>
           <div className={s.head}>
@@ -129,6 +131,7 @@ export default function LawNoticeSummaryModal({
               data-ga-event={gaEvent(GA_CTX, 'Close')}
               data-ga-id={gaUiId(GA_CTX, 'Close')}
               data-ga-text="x"
+              data-ga-label="모달 닫기 버튼"
             >
               ×
             </button>
@@ -162,6 +165,7 @@ export default function LawNoticeSummaryModal({
                 data-ga-event={gaEvent(GA_CTX, 'ClickOpenArticles')}
                 data-ga-id={gaUiId(GA_CTX, 'ClickOpenArticles')}
                 data-ga-text="open_articles"
+                data-ga-label="참고 입법예고 목록 보기"
               >
                 참고 입법예고 목록 보기
               </button>

@@ -342,6 +342,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
       className={styles.overlay}
       data-ga-id={gaUiId(GA_CTX, 'Overlay')}
       data-ga-event={gaEvent(GA_CTX, 'Overlay')}
+      data-ga-label="회원 정보 입력 모달"
     >
       <div className={styles.card}>
         <h3 className={styles.title}>회원 정보 입력</h3>
@@ -352,6 +353,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
           className={styles.form}
           data-ga-id={gaUiId(GA_CTX, 'Form')}
           data-ga-event={gaEvent(GA_CTX, 'Form')}
+          data-ga-label="회원 정보 입력 폼"
         >
           <label className={styles.field}>
             <span>연락처</span>
@@ -482,6 +484,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
                     title="선택 해제"
                     data-ga-id={gaUiId(GA_CTX, 'ClearSubcategory')}
                     data-ga-event={gaEvent(GA_CTX, 'ClearSubcategory')}
+                    data-ga-label={subcategorySelected.name}
                   >
                     ✕
                   </button>
@@ -499,6 +502,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
                   className={styles.autoPanel}
                   data-ga-id={gaUiId(GA_CTX, 'SubcategoryPanel')}
                   data-ga-event={gaEvent(GA_CTX, 'SubcategoryPanel')}
+                  data-ga-label="소분류 자동완성 패널"
                 >
                   {subcategoryLoading && <div className={styles.autoHint}>검색 중…</div>}
 
@@ -552,6 +556,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
             title={!formValid ? '필수 항목과 소분류 선택을 완료해 주세요.' : undefined}
             data-ga-id={gaUiId(GA_CTX, 'Submit')}
             data-ga-event={gaEvent(GA_CTX, 'Submit')}
+            data-ga-label="회원 정보 제출 버튼"
           >
             {loading ? '제출 중...' : '제출하기'}
           </button>

@@ -273,6 +273,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                 title="메뉴"
                 data-ga-event={gaEvent(GA_CTX, 'OpenSidebarMobile')}
                 data-ga-id={gaUiId(GA_CTX, 'OpenSidebarMobile')}
+                data-ga-label="메뉴"
               >
                 <Menu className={s.menuIcon} />
               </button>
@@ -322,6 +323,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
               title="메뉴"
               data-ga-event={gaEvent(GA_CTX, 'OpenSidebarMobile')}
               data-ga-id={gaUiId(GA_CTX, 'OpenSidebarMobile')}
+              data-ga-label="메뉴"
             >
               <Menu className={s.menuIcon} />
             </button>
@@ -338,6 +340,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
               title={lastFetchedLabel}
               data-ga-event={gaEvent(GA_CTX, 'DocsCountBadge')}
               data-ga-id={gaUiId(GA_CTX, 'DocsCountBadge')}
+              data-ga-label={countText}
             >
               <span className={s.badgeDot} />
               <span className={s.badgeText}>{countText}</span>
@@ -352,6 +355,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
               title="새로고침"
               data-ga-event={gaEvent(GA_CTX, 'ClickRefresh')}
               data-ga-id={gaUiId(GA_CTX, 'ClickRefresh')}
+              data-ga-label="새로고침"
             >
               <RefreshCw size={16} />
               <span>새로고침</span>
@@ -404,6 +408,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                           className={s.row}
                           data-ga-event={gaEvent(GA_CTX, 'Row')}
                           data-ga-id={gaUiId(GA_CTX, `Row_${idx}`)}
+                          data-ga-label={d.name}
                         >
                           <td className={s.tdName}>
                             <div className={s.docName}>
@@ -426,6 +431,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                               onClick={() => handleDownload(d, 'desktop')}
                               data-ga-event={gaEvent(GA_CTX, 'ClickDownload')}
                               data-ga-id={gaUiId(GA_CTX, `ClickDownload_${idx}`)}
+                              aria-label="다운로드"
                             >
                               <Download size={16} />
                               <span className={s.dlText}>다운로드</span>
@@ -461,6 +467,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                       className={s.mobileRow}
                       data-ga-event={gaEvent(GA_CTX, 'RowMobile')}
                       data-ga-id={gaUiId(GA_CTX, `RowMobile_${idx}`)}
+                      data-ga-label={d.name}
                     >
                       <div className={s.mobileLeft}>
                         <div className={s.docName}>
@@ -484,6 +491,7 @@ export default function DocsVault({ userEmail, onRequireLogin }: Props) {
                         title="다운로드"
                         data-ga-event={gaEvent(GA_CTX, 'ClickDownload')}
                         data-ga-id={gaUiId(GA_CTX, `ClickDownloadMobile_${idx}`)}
+                        data-ga-label={d.name}
                       >
                         <Download size={16} />
                         <span className={s.dlText}>다운로드</span>

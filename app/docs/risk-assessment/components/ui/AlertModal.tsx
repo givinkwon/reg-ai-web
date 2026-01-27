@@ -96,6 +96,7 @@ export default function CenteredAlertModal({
               onClick={handleClose}
               data-ga-event="ClickClose"
               data-ga-id={gaUiId(GA_CTX, 'ClickClose')}
+              data-ga-label="취소 버튼"
             >
               취소
             </button>
@@ -109,6 +110,7 @@ export default function CenteredAlertModal({
             onClick={handleConfirm}
             data-ga-event="ClickConfirm"
             data-ga-id={gaUiId(GA_CTX, 'ClickConfirm')}
+            data-ga-label="확인 버튼"
           >
             {confirmText}
           </button>

@@ -92,6 +92,7 @@ export default function DashboardPage() {
                 // (선택 사항) data-속성을 유지하고 싶다면 아래처럼 추가 가능합니다.
                 data-ga-event={gaEvent(GA_CTX, 'ClickMenu')}
                 data-ga-id={gaUiId(GA_CTX, 'ClickMenu')}
+                data-ga-label={item.title}
                 data-ga-text={item.title}
               >
                 <div className={s.cardIconBox}>{item.icon}</div>
