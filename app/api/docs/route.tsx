@@ -123,8 +123,9 @@ export async function GET(req: NextRequest) {
     // download
     // -------------------------
     if (endpoint === 'download') {
-      const id = (url.searchParams.get('id') || '').trim();
-      if (!id) return new NextResponse('id is required', { status: 400 });
+      // id가 없으면 key 파라미터라도 확인하도록 수정
+      const id = (url.searchParams.get('id') || url.searchParams.get('key') || '').trim();
+      if (!id) return new NextResponse('id or key is required', { status: 400 });
 
       const qKind = (url.searchParams.get('kind') || '').trim();   // tbm_excel
       const qName = (url.searchParams.get('name') || '').trim();   // ✅ 여기 한글일 수 있음
