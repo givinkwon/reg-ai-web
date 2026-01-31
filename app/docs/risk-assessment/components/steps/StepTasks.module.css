@@ -110,7 +110,7 @@
   line-height: 1.5; /* 줄 간격 넉넉하게 */
   
   /* 줄바꿈 처리 */
-  word-break: keep-all; /* 한글 단어 끊김 방지 */
+  /* word-break: keep-all; 한글 단어 끊김 방지 */
   word-wrap: break-word; /* 긴 영문 강제 줄바꿈 */
   overflow-wrap: break-word;
 }
