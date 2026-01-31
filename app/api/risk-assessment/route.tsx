@@ -222,7 +222,7 @@ async function handleGET(req: Request) {
   }
 }
 
-export async function handlePOST(req: Request) {
+async function handlePOST(req: Request) {
   const rid = Math.random().toString(16).slice(2, 8);
   const started = Date.now();
 
