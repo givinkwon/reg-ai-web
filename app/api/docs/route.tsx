@@ -124,17 +124,20 @@ async function handleGET(req: NextRequest) {
     // download
     // -------------------------
     if (endpoint === 'download') {
-      const id = (url.searchParams.get('id') || '').trim();
-      if (!id) return new NextResponse('id is required', { status: 400 });
+      // ✅ 수정: 'id' 또는 'key' 파라미터를 모두 확인합니다.
+      const id = (url.searchParams.get('id') || url.searchParams.get('key') || '').trim();
+      
+      if (!id) {
+        console.error(`[api/docs][${_rid}] 400 Error: Missing ID/Key in query params`);
+        return new NextResponse('id or key is required', { status: 400 });
+      }
 
-      const qKind = (url.searchParams.get('kind') || '').trim();   // tbm_excel
-      const qName = (url.searchParams.get('name') || '').trim();   // ✅ 여기 한글일 수 있음
+      const qKind = (url.searchParams.get('kind') || '').trim();
+      const qName = (url.searchParams.get('name') || '').trim();
       const qTbmId = (url.searchParams.get('tbmId') || '').trim();
 
       console.log(
-        `[api/docs][${_rid}] download params id=${id} kind=${qKind || 'NONE'} tbmId=${
-          qTbmId || 'NONE'
-        } name=${qName ? qName : 'NONE'}`
+        `[api/docs][${_rid}] download start -> id/key=${id} kind=${qKind || 'NONE'} tbmId=${qTbmId || 'NONE'}`
       );
 
       // ✅ tbmId가 오면 regen 호출
