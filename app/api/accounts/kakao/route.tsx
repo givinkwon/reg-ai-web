@@ -1,11 +1,12 @@
 // app/api/accounts/kakao/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '../../api-wrapper';
 
 export const runtime = 'nodejs';
 
 const FASTAPI_BASE_URL = 'http://35.76.230.177:8008';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     const body = await req.json();
     // body: { kakao_id, email?, name?, picture?, locale? }
@@ -29,3 +30,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withErrorHandling(handlePOST);

@@ -1,5 +1,6 @@
 // app/api/tbm-sign/submit/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '../../api-wrapper';
 
 export const dynamic = 'force-dynamic';
 // 필요하면 (Vercel Edge 말고 Node 런타임 강제)
@@ -12,7 +13,7 @@ type FrontSubmitBody = {
   attendeeName?: string;
 };
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const base = (process.env.FASTAPI_BASE_URL || 'http://35.76.230.177:8008').trim();
   if (!base) {
     return NextResponse.json({ error: 'FASTAPI_BASE_URL is not set' }, { status: 500 });
@@ -87,3 +88,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, raw });
 }
+
+export const POST = withErrorHandling(handlePOST);

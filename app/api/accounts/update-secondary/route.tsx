@@ -1,11 +1,12 @@
 // app/api/accounts/update-secondary/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '../../api-wrapper';
 
 export const runtime = 'nodejs';
 
 const FASTAPI_BASE_URL = 'http://35.76.230.177:8008';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     const body = await req.json(); // { email, secondary_info, mark_complete }
 
@@ -25,3 +26,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withErrorHandling(handlePOST);

@@ -1,5 +1,6 @@
 // app/api/docs/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '../api-wrapper';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,7 +67,7 @@ async function safeReadText(resp: Response) {
   }
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const _rid = rid();
   const t0 = Date.now();
 
@@ -123,9 +124,8 @@ export async function GET(req: NextRequest) {
     // download
     // -------------------------
     if (endpoint === 'download') {
-      // id가 없으면 key 파라미터라도 확인하도록 수정
-      const id = (url.searchParams.get('id') || url.searchParams.get('key') || '').trim();
-      if (!id) return new NextResponse('id or key is required', { status: 400 });
+      const id = (url.searchParams.get('id') || '').trim();
+      if (!id) return new NextResponse('id is required', { status: 400 });
 
       const qKind = (url.searchParams.get('kind') || '').trim();   // tbm_excel
       const qName = (url.searchParams.get('name') || '').trim();   // ✅ 여기 한글일 수 있음
@@ -243,3 +243,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withErrorHandling(handleGET);

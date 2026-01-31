@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '../../api-wrapper';
 
 export const runtime = 'nodejs'; // 안전하게 node로
 
@@ -10,7 +11,7 @@ function short(s: string, n = 400) {
   return t.length > n ? t.slice(0, n) + '…' : t;
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   try {
     if (!ORIGIN) {
       return NextResponse.json(
@@ -54,3 +55,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withErrorHandling(handleGET);

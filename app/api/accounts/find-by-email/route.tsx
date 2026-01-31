@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandling } from '../../api-wrapper';
 
 export const runtime = 'nodejs';
 
 // ✅ 가능하면 env로 빼는 걸 추천
 const FASTAPI_BASE_URL = process.env.FASTAPI_BASE_URL ?? 'http://35.76.230.177:8008';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
@@ -27,3 +28,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withErrorHandling(handlePOST);
