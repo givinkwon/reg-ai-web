@@ -20,6 +20,7 @@ import { useChatStore } from '../../store/chat';
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+import Footer from '@/app/components/landing/Footer';
 
 // ✅ GA Context
 const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'Landing' } as const;
@@ -380,6 +381,8 @@ export default function RiskPage() {
           }}
         />
       )}
+          
+    <Footer />
     </div>
   );
 }

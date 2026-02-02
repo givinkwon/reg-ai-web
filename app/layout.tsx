@@ -3,7 +3,8 @@ import "./globals.css";
 import Script from "next/script";
 import type { Metadata } from "next";
 import GAEventBridge from "./components/analytics/GAEventBridge";
-import Navbar from "./docs/components/Navbar"; // ✅ Navbar 컴포넌트 임포트
+import Navbar from "./docs/components/Navbar"; 
+import FloatingSupport from "./components/landing/FloatingSupport";
 
 export const metadata: Metadata = {
   title: "reg-ai-web",
@@ -13,14 +14,13 @@ export const metadata: Metadata = {
 const GTM_ID = "GTM-MS4RQT3J";
 const ADS_ID = "AW-17610431883";
 const ADS_CONVERSION_LABEL = "LxoSCPy-y-UbEIu7p81B";
-const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"; // (현재 코드에선 미사용)
+const KAKAO_JS_KEY = "79c1a2486d79d909091433229e814d9d"; 
 
 function envBool(v?: string) {
   const s = (v ?? "").trim().toLowerCase();
   return ["1", "true", "yes", "on"].includes(s);
 }
 
-// ✅ env에 값이 있으면 전체 트래킹 로딩 자체를 막음
 const GA_DISABLED = envBool(process.env.NEXT_PUBLIC_GA_DISABLED);
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -49,14 +49,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-        {/* ✅ Kakao JS SDK (트래킹과 무관하면 계속 로딩) */}
         <Script
           id="kakao-sdk"
           src="https://developers.kakao.com/sdk/js/kakao.min.js"
           strategy="afterInteractive"
         />
 
-        {/* ✅ GA_DISABLED면 아래 트래킹 스크립트/브릿지 모두 로딩 안 함 */}
         {!GA_DISABLED && (
           <>
             {/* Google Ads gtag.js */}
@@ -118,7 +116,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body>
-        {/* GTM noscript도 GA_DISABLED면 숨김 */}
         {!GA_DISABLED && (
           <noscript>
             <iframe
@@ -130,16 +127,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </noscript>
         )}
 
-        {/* ✅ 전역 GA 브릿지도 GA_DISABLED면 렌더링 안 함 */}
         {!GA_DISABLED && <GAEventBridge />}
 
-        {/* ✅ Navbar 및 레이아웃 구조 복구 */}
+        {/* 메인 레이아웃 구조 */}
         <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
           <Navbar />
           <main className="flex-1 flex flex-col relative">
             {children}
           </main>
         </div>
+
+        {/* ✅ 글로벌 플로팅 버튼 추가 (최상위 레벨에 배치) */}
+        <FloatingSupport />
         
       </body>
     </html>

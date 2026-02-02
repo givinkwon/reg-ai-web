@@ -29,9 +29,8 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
     track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View') });
   }, []);
 
-  // 유효성 검사: 회사명만 필수로 설정 (전화번호는 선택 사항인 경우)
-  // 전화번호도 필수로 하려면: company.trim().length > 0 && phone.trim().length > 0;
-  const formValid = company.trim().length > 0;
+  // 유효성 검사: 회사명 AND 전화번호 모두 필수
+  const formValid = company.trim().length > 0 && phone.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +39,7 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
     track(gaEvent(GA_CTX, 'ClickSubmit'), {
         ui_id: gaUiId(GA_CTX, 'ClickSubmit'),
         company_len: company.length,
+        phone_len: phone.length, // (선택사항) 전화번호 길이도 로깅하고 싶다면 추가
     });
 
     try {
@@ -148,17 +148,21 @@ export default function SignupExtraInfoModal({ email, onComplete }: Props) {
           </label>
 
           <label className={styles.field}>
-            <span>연락처</span>
+            {/* 시각적으로 필수임을 표시 (*) */}
+            <span>연락처 *</span>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="전화번호"
+              // 브라우저 폼 검증을 위한 required 추가
+              required
             />
           </label>
 
           <button
             type="submit"
             className={styles.submit}
+            // 둘 다 값이 있어야만 버튼 활성화
             disabled={loading || !formValid}
             data-ga-event="ClickSubmit"
             data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}

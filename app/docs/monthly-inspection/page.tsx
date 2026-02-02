@@ -19,6 +19,7 @@ import { useChatStore } from '@/app/store/chat';
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+import Footer from '@/app/components/landing/Footer';
 
 // ✅ GA Context: 섹션과 영역을 명확히 정의
 const GA_CTX = { page: 'Docs', section: 'MonthlyInspection', area: 'Landing' } as const;
@@ -282,6 +283,8 @@ export default function MonthlyPage() {
           }}
         />
       )}
+            
+      <Footer />
     </div>
   );
 }

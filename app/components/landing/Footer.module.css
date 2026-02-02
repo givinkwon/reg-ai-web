@@ -1,0 +1,71 @@
+/* app/components/Footer/Footer.module.css */
+.footer {
+  width: 100%;
+  padding: 3rem 1rem;
+  margin-top: 4rem; /* 본문과 간격 */
+  border-top: 1px solid #eaeaea;
+  background-color: #f9fafb;
+  text-align: center;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.message {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.contactBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+/* 카카오톡 스타일 */
+.kakao {
+  background-color: #FEE500;
+  color: #000000;
+  border-color: #FEE500;
+}
+.kakao:hover {
+  background-color: #FDD835;
+}
+
+/* 이메일 스타일 */
+.email {
+  background-color: #ffffff;
+  color: #333;
+  border-color: #ddd;
+}
+.email:hover {
+  background-color: #f0f0f0;
+  border-color: #ccc;
+}
+
+.copyright {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+}

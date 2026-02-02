@@ -1,0 +1,114 @@
+/* app/components/FloatingSupport/FloatingSupport.module.css */
+.wrapper {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 9999; /* 다른 요소보다 위에 오게 설정 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* 펼쳐지는 메뉴 영역 */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu.isOpen {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* 개별 버튼 공통 스타일 */
+.actionBtn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+  position: relative;
+  text-decoration: none; /* a 태그용 */
+}
+
+.actionBtn:hover {
+  transform: scale(1.1);
+}
+
+/* 카카오톡 */
+.kakao {
+  background-color: #FEE500;
+  color: #000;
+}
+
+/* 이메일 */
+.email {
+  background-color: #fff;
+  color: #555;
+}
+
+/* 메인 토글 버튼 */
+.mainBtn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #111; /* 브랜드 컬러에 맞게 조정 가능 */
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, background-color 0.3s;
+}
+
+.mainBtn:hover {
+  transform: scale(1.05);
+  background-color: #333;
+}
+
+/* '복사됨' 말풍선 */
+.tooltip {
+  position: absolute;
+  right: 60px; /* 버튼 왼쪽 */
+  background-color: #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.2s;
+}
+
+.tooltip.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 툴팁 화살표 */
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  transform: translateY(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: transparent transparent transparent #333;
+}

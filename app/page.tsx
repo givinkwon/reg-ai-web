@@ -9,6 +9,7 @@ import s from './page.module.css';
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+import Footer from './components/landing/Footer';
 
 // ✅ GA Context 정의
 // page: SafetyDocs (전체 안전 문서 섹션)
@@ -107,7 +108,7 @@ export default function DashboardPage() {
         </div>
       </section>
       
-      {/* 하단 설명 섹션 */}
+      <Footer />
     </div>
   );
 }
