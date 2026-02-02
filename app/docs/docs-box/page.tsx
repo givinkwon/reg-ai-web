@@ -20,7 +20,6 @@ type DocItem = {
   id: string;
   name: string;
   createdAt: number;
-  // S3 key가 보통 id와 같거나 별도 필드로 올 수 있음. 여기선 id를 key로 가정하거나 meta에 포함
   meta?: { s3Key?: string; kind?: string }; 
   kind?: string;
 };
@@ -55,7 +54,7 @@ export default function DocsBoxPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // 개별 파일 다운로드 로딩 상태 (문서 ID를 키로 사용)
+  // 개별 파일 다운로드 로딩 상태
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const fetchAbortRef = useRef<AbortController | null>(null);
@@ -120,7 +119,7 @@ export default function DocsBoxPage() {
       const data = (await res.json()) as { items: DocItem[] };
       const items = Array.isArray(data.items) ? data.items : [];
 
-      // 최신순 정렬 (createdAt 내림차순)
+      // 최신순 정렬
       items.sort((a, b) => b.createdAt - a.createdAt);
 
       setDocs(items);
@@ -132,21 +131,35 @@ export default function DocsBoxPage() {
       });
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
+      
       const msg = e?.message ?? '문서 목록을 불러오지 못했습니다.';
       setError(msg);
       setDocs([]); 
+      
+      // ✅ [추가됨] 실패 이벤트 트래킹
+      track(gaEvent(GA_CTX, 'FetchDocsFailure'), {
+        ui_id: gaUiId(GA_CTX, 'FetchDocsFailure'),
+        source,
+        error_message: msg,
+      });
+
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ 초기화 완료 및 유저 로그인 시 데이터 로드
+  // ✅ 초기화 완료 및 유저 로그인 시 데이터 로드 + View 이벤트
   useEffect(() => {
-    if (initialized && userEmail) {
-      track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View'), logged_in: true });
-      fetchDocs('mount');
-    } else if (initialized && !userEmail) {
-      setDocs([]); 
+    if (initialized) {
+      if (userEmail) {
+        // 로그인 유저 View
+        track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View'), logged_in: true });
+        fetchDocs('mount');
+      } else {
+        // ✅ [추가됨] 비로그인 유저 View (게스트가 페이지에 진입했음을 알기 위함)
+        track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View'), logged_in: false });
+        setDocs([]); 
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, userEmail]);
@@ -154,9 +167,8 @@ export default function DocsBoxPage() {
   // --- 실제 다운로드 핸들러 ---
   const handleDownload = async (doc: DocItem, source: 'desktop' | 'mobile') => {
     if (!userEmail) return handleRequireLogin();
-    if (downloadingId) return; // 이미 다른 다운로드 중이면 방지
+    if (downloadingId) return; 
 
-    // ✅ GA: 다운로드 시작
     track(gaEvent(GA_CTX, 'ClickDownload'), {
       ui_id: gaUiId(GA_CTX, 'ClickDownload'),
       doc_id: doc.id,
@@ -168,12 +180,9 @@ export default function DocsBoxPage() {
     setDownloadingId(doc.id);
 
     try {
-      // 1. 서버 API를 통해 프록시 다운로드 요청 (또는 Presigned URL)
-      // 여기서는 예시로 /api/docs?endpoint=download&key={doc.id} 형태를 가정합니다.
-      // 실제 구현에 따라 endpoint 파라미터나 body 전송 방식은 달라질 수 있습니다.
       const qs = new URLSearchParams({
         endpoint: 'download',
-        key: doc.id, // S3 Key가 doc.id라고 가정
+        key: doc.id, 
       });
 
       const res = await fetch(`/api/docs?${qs.toString()}`, {
@@ -188,12 +197,10 @@ export default function DocsBoxPage() {
         throw new Error(errText || '다운로드 요청 실패');
       }
 
-      // 2. Blob 변환 및 다운로드 트리거
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      // Content-Disposition 헤더에서 파일명을 추출하거나, doc.name 사용
       a.download = doc.name; 
       document.body.appendChild(a);
       a.click();
@@ -202,6 +209,14 @@ export default function DocsBoxPage() {
 
     } catch (e: any) {
       console.error('Download error:', e);
+      
+      // ✅ [추가됨] 다운로드 실패 트래킹
+      track(gaEvent(GA_CTX, 'DownloadFailure'), {
+        ui_id: gaUiId(GA_CTX, 'DownloadFailure'),
+        doc_id: doc.id,
+        error_message: e?.message || 'Unknown error',
+      });
+
       alert('다운로드 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setDownloadingId(null);
@@ -210,7 +225,7 @@ export default function DocsBoxPage() {
 
   const countText = useMemo(() => loading ? '로딩 중...' : `총 ${docs.length}건`, [docs.length, loading]);
 
-  // --- 렌더링: 비로그인 상태 (초기화 완료 후) ---
+  // --- 렌더링: 비로그인 상태 ---
   if (initialized && !userEmail) {
     return (
       <div className={s.container}>
@@ -227,7 +242,7 @@ export default function DocsBoxPage() {
     );
   }
 
-  // --- 렌더링: 로딩 중 (초기화 전) ---
+  // --- 렌더링: 로딩 중 ---
   if (!initialized) {
     return (
         <div className={s.container}>
