@@ -341,29 +341,29 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
         </div>
       </div>
 
-      <div className={s.desc}>
+      {/* <div className={s.desc}>
         {norm(minorCategory) ? (
           <>소분류 <b className="text-purple-600 font-semibold">{minorCategory}</b> 기준으로 작업을 자동 추천해 드렸습니다.</>
         ) : (
           '진행할 작업을 선택하세요. 관련된 공정 데이터를 자동으로 불러옵니다.'
         )}
-      </div>
+      </div> */}
 
       {/* 로딩 상태 */}
-      {recoLoading && (
+      {/* {recoLoading && (
         <div className={s.loadingState}>
           <RefreshCw className="animate-spin text-purple-500" />
           <span>추천 작업을 불러오는 중...</span>
         </div>
-      )}
+      )} */}
 
       {/* 에러 상태 */}
-      {!recoLoading && recoError && (
+      {/* {!recoLoading && recoError && (
         <div className={s.errorState}>{recoError}</div>
-      )}
+      )} */}
 
       {/* 추천 목록 그리드 */}
-      {!recoLoading && !recoError && displayList.length > 0 && (
+      {/* {!recoLoading && !recoError && displayList.length > 0 && (
         <div className={s.grid}>
           {displayList.map((item) => {
             const title = norm(item);
@@ -386,7 +386,7 @@ export default function StepTasks({ draft, setDraft, minor }: Props) {
             );
           })}
         </div>
-      )}
+      )} */}
 
       {/* 빈 상태 */}
       {!recoLoading && !recoError && displayList.length === 0 && (

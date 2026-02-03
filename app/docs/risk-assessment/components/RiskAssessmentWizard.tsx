@@ -108,6 +108,30 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
     }
   }, [open]);
 
+  // =================================================================
+  // 🔍 [DEBUG] Draft 데이터 실시간 로깅 (요청하신 부분)
+  // =================================================================
+  useEffect(() => {
+    // tasks가 비어있지 않을 때만 로그 출력
+    if (draft.tasks.length > 0) {
+      console.groupCollapsed(`📝 [RiskWizard] Draft Updated (Step: ${step})`);
+      
+      console.log('🔹 Minor Category (소분류):', minor);
+      
+      // 보기 좋게 테이블 형태로 출력
+      console.table(draft.tasks.map((t, idx) => ({
+        index: idx,
+        id: t.id,
+        title: t.title, // 👈 여기가 "A > B" 인지 "B" 인지 확인 포인트
+        process_count: t.processes.length,
+        first_process: t.processes[0]?.title || '(없음)'
+      })));
+
+      console.groupEnd();
+    }
+  }, [draft, step, minor]);
+  // =================================================================
+
   const openAlert = (opts: any) => {
     setAlertTitle(opts.title ?? '안내');
     setAlertLines(opts.lines);
@@ -267,14 +291,7 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
             })}
           </div>
 
-          <div className={s.content}>
-            {step === 'tasks' && <StepTasks draft={draft} setDraft={setDraft} minor={minor} />}
-            {step === 'processes' && <StepProcesses draft={draft} setDraft={setDraft} />}
-            {step === 'hazards' && <StepHazards draft={draft} setDraft={setDraft} />}
-            {step === 'controls' && <StepControls draft={draft} setDraft={setDraft} />}
-          </div>
-
-          <div className={s.footer}>
+           <div className={s.footer}>
             <div className={s.footerMessage}>
               {isAnalyzing && <span className={s.loadingText}>⚙️ 데이터를 분석하고 있습니다...</span>}
             </div>
@@ -313,6 +330,13 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
                 </button>
               )}
             </div>
+          </div>
+
+          <div className={s.content}>
+            {step === 'tasks' && <StepTasks draft={draft} setDraft={setDraft} minor={minor} />}
+            {step === 'processes' && <StepProcesses draft={draft} setDraft={setDraft} />}
+            {step === 'hazards' && <StepHazards draft={draft} setDraft={setDraft} />}
+            {step === 'controls' && <StepControls draft={draft} setDraft={setDraft} />}
           </div>
         </div>
       )}

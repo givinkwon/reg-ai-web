@@ -3,10 +3,13 @@
 .wrap {
   position: relative;
   width: 100%;
-  /* ✅ [핵심 수정 1] 부모 컨테이너가 다른 형제 요소들(참석자 명단 등)보다 레이어 순위가 높아야 합니다. */
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 입력창과 추천 태그 영역 사이 간격 */
   z-index: 100;
 }
 
+/* 1. 입력 박스 영역 */
 .box {
   display: flex;
   flex-wrap: wrap;
@@ -16,15 +19,17 @@
   border-radius: 8px;
   background-color: #f9fafb;
   cursor: text;
-  min-height: 42px;
+  min-height: 48px;
+  transition: all 0.2s;
 }
 
 .box:focus-within {
   border-color: #2388FF;
   background-color: #fff;
-  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.1);
+  box-shadow: 0 0 0 2px rgba(35, 136, 255, 0.1);
 }
 
+/* 2. 생성된 태그(칩스) */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -47,11 +52,11 @@
   color: #6366f1;
   padding: 0;
 }
-
 .tagX:hover {
   color: #4338ca;
 }
 
+/* 3. 실제 입력창 */
 .input {
   flex: 1;
   border: none;
@@ -59,42 +64,92 @@
   font-size: 0.95rem;
   outline: none;
   min-width: 120px;
+  padding: 4px 0;
+}
+.input::placeholder {
+  color: #9ca3af;
 }
 
-.dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 0.3rem;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  
-  /* ✅ [핵심 수정 2] 다른 모든 요소보다 확실히 위에 오도록 설정 */
-  z-index: 9999;
-  
-  /* UI 개선: 목록이 너무 길어지면 스크롤 생기도록 설정 */
-  overflow: hidden; 
-  max-height: 240px; 
-  overflow-y: auto;
+/* 4. ✅ 추천 태그 섹션 (추가됨) */
+.recommendSection {
+  padding: 4px 2px;
 }
 
+.recommendLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recommendGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recommendChip {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recommendChip:hover {
+  border-color: #2388FF;
+  background-color: #eff6ff;
+  color: #2388FF;
+  transform: translateY(-1px);
+}
+
+/* 이미 선택되어 비활성화된 칩 스타일 */
+.activeChip {
+  background-color: #f3f4f6;
+  color: #d1d5db;
+  border-color: #e5e7eb;
+  text-decoration: line-through;
+  cursor: default;
+}
+.activeChip:hover {
+  background-color: #fee2e2; /* 다시 누르면 삭제될 수 있다는 느낌의 빨간색 */
+  border-color: #fecaca;
+  color: #ef4444;
+  text-decoration: none;
+}
+
+/* 5. 검색 결과 드롭다운 (포탈 내부에 인라인 스타일로도 들어가지만 클래스로 제어 시) */
 .option {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1rem;
   border: none;
   background: #fff;
   cursor: pointer;
   font-size: 0.95rem;
-  color: black;
+  color: #111;
+  transition: background 0.1s;
 }
 
-.optionActive,
 .option:hover {
   background-color: #f3f4f6;
   color: #2388FF;
+}
+
+/* 로딩 애니메이션 */
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
