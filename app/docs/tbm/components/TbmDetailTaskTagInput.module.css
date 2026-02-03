@@ -65,6 +65,7 @@
   outline: none;
   min-width: 120px;
   padding: 4px 0;
+  color:black;
 }
 .input::placeholder {
   color: #9ca3af;
