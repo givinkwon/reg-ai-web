@@ -55,12 +55,6 @@ type Props = {
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 
-const CATS: ChecklistCategory[] = [
-  '사업장 점검 사항',
-  '노동안전 점검 사항',
-  '작업 및 공정별 점검 사항',
-];
-
 function formatKoreanWeekLabel(d: Date) {
   const day = d.getDate();
   const week = Math.ceil(day / 7);
@@ -69,17 +63,20 @@ function formatKoreanWeekLabel(d: Date) {
   return `${yyyy}년 ${mm}월 ${week}주차`;
 }
 
-// (기존) rating: undefined -> (수정) rating: 'O'
+// ✅ [핵심] 항목 생성 시 무조건 'O'를 기본값으로 설정
 function toItems(sections: Sections): ChecklistItem[] {
-  return (Object.keys(sections) as ChecklistCategory[]).flatMap((cat) =>
+  console.log('🔨 [toItems] 아이템 생성 시작');
+  const items = (Object.keys(sections) as ChecklistCategory[]).flatMap((cat) =>
     (sections[cat] ?? []).map((q) => ({
       id: uid(),
       category: cat,
       question: q,
-      rating: 'O', 
+      rating: 'O' as Rating, // 강제 'O' 설정
       note: '',
     })),
   );
+  console.log('🔨 [toItems] 생성된 아이템(첫번째 예시):', items[0]);
+  return items;
 }
 
 function cleanSections(nextSections: Sections): Sections {
@@ -122,41 +119,6 @@ type GenResponse = {
   hazards?: string[];
   model?: string;
 };
-
-/** -----------------------
- * localStorage: draft
- * ---------------------- */
-type DraftState = {
-  t: number;
-  minorCategory?: string | null;
-  step: 0 | 1 | 2;
-  detailTasks: string[];
-  sections: Sections;
-  results: ChecklistItem[];
-};
-
-const DRAFT_KEY = 'regai:monthlyInspection:draft:v1';
-const DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 180;
-
-function loadDraft(): DraftState | null {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as DraftState;
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (!parsed.t || Date.now() - parsed.t > DRAFT_TTL_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveDraft(next: Omit<DraftState, 't'>) {
-  try {
-    const payload: DraftState = { ...next, t: Date.now() };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
-  } catch {}
-}
 
 /** -----------------------
  * localStorage: checklist cache
@@ -264,21 +226,27 @@ export default function MonthlyInspectionCreateModal({
   );
   const [items, setItems] = useState<ChecklistItem[]>(defaultValue?.results ?? []);
 
+  // 🐛 [디버깅 로그] 렌더링 시점의 items 상태 확인
+  if (open) {
+      console.log('👀 [Modal] 렌더링 - 현재 Step:', step);
+      if (items.length > 0) {
+          console.log(`👀 [Modal] items[0] 상태: id=${items[0].id}, rating=${items[0].rating}`);
+      } else {
+          console.log('👀 [Modal] items 비어있음');
+      }
+  }
+
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string>('');
-
-  // ✅ “서버 생성 진행중” 중복 클릭 방지용 (UI 로딩 표시는 따로 안 함)
   const [exportLoading, setExportLoading] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const weekLabel = useMemo(() => formatKoreanWeekLabel(today), [today]);
   const dateISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // ✅ 로그인 유저(아이디=email)
   const user = useUserStore((st) => st.user);
   const userEmail = (user?.email || '').trim();
 
-  // ✅ AlertModal 상태 (TBM과 동일 패턴)
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertTitle, setAlertTitle] = useState('안내');
   const [alertLines, setAlertLines] = useState<string[]>([]);
@@ -294,7 +262,7 @@ export default function MonthlyInspectionCreateModal({
     showClose?: boolean;
     onConfirm?: () => void;
     onClose?: () => void;
-    gaAction?: string; // ✅ GA 액션(선택)
+    gaAction?: string;
     gaExtra?: Record<string, any>;
   }) => {
     setAlertTitle(opts.title ?? '안내');
@@ -305,7 +273,6 @@ export default function MonthlyInspectionCreateModal({
     alertOnCloseRef.current = opts.onClose ?? null;
     setAlertOpen(true);
 
-    // ✅ GA: Alert Open
     if (opts.gaAction) {
       track(gaEvent(GA_CTX, opts.gaAction), {
         ui_id: gaUiId(GA_CTX, opts.gaAction),
@@ -331,10 +298,8 @@ export default function MonthlyInspectionCreateModal({
   const canFinish = useMemo(() => items.some((it) => !!it.rating), [items]);
   const canGoStep1 = detailTasks.map(norm).filter(Boolean).length > 0;
 
-  // ✅ checklist cache store in memory
   const checklistCacheRef = useRef<ChecklistCacheStore>({});
 
-  // mount: load checklist cache
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const loaded = pruneChecklistCache(loadChecklistCache());
@@ -342,7 +307,6 @@ export default function MonthlyInspectionCreateModal({
     saveChecklistCache(loaded);
   }, []);
 
-  // ✅ GA: Modal Open/Close
   const prevOpenGaRef = useRef(false);
   useEffect(() => {
     const prev = prevOpenGaRef.current;
@@ -360,14 +324,9 @@ export default function MonthlyInspectionCreateModal({
         step,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  /**
-   * ✅ open 시 초기화/복원 로직:
-   * - (중요) defaultValue가 렌더마다 새 객체로 내려오면 alertOpen이 꺼지는 문제를 막기 위해
-   *   "열릴 때(open false→true)"에만 초기화를 강하게 수행.
-   */
+  // ✅ [초기화 로직] open 시 초기화
   const prevOpenRef = useRef(false);
   useEffect(() => {
     const prev = prevOpenRef.current;
@@ -375,8 +334,8 @@ export default function MonthlyInspectionCreateModal({
 
     if (!open) return;
 
-    // ✅ 처음 열릴 때만 초기화
     if (!prev && open) {
+      console.log('🚀 [Modal] 처음 열림: 상태 초기화 시작');
       dirtyRef.current = false;
       setGenLoading(false);
       setGenError('');
@@ -384,12 +343,12 @@ export default function MonthlyInspectionCreateModal({
       setAlertOpen(false);
     }
 
-    // ✅ 데이터 복원은 open 상태에서만 수행
     const dvTasks = (defaultValue?.detailTasks ?? []).map(norm).filter(Boolean);
     const dvSections = defaultValue?.sections;
     const dvResults = defaultValue?.results;
 
     if (dvTasks.length > 0) {
+      console.log('🚀 [Modal] defaultValue 있음');
       setDetailTasks(dvTasks);
 
       if (dvSections) {
@@ -397,7 +356,11 @@ export default function MonthlyInspectionCreateModal({
         setSections(cleaned);
 
         if (dvResults?.length) {
-          setItems(dvResults as ChecklistItem[]);
+          console.log('🚀 [Modal] defaultValue 결과 적용 (rating 보정)');
+          setItems((dvResults as ChecklistItem[]).map(it => ({
+            ...it,
+            rating: it.rating || ('O' as Rating)
+          })));
           setStep(2);
         } else {
           setItems(toItems(cleaned));
@@ -415,23 +378,7 @@ export default function MonthlyInspectionCreateModal({
       return;
     }
 
-    const draft = loadDraft();
-    if (draft) {
-      setDetailTasks((draft.detailTasks ?? []).map(norm).filter(Boolean));
-      setSections(
-        cleanSections(
-          (draft.sections as Sections) ?? {
-            '사업장 점검 사항': [],
-            '노동안전 점검 사항': [],
-            '작업 및 공정별 점검 사항': [],
-          },
-        ),
-      );
-      setItems(draft.results ?? []);
-      setStep(draft.step ?? 0);
-      return;
-    }
-
+    console.log('🚀 [Modal] 초기화: Step 0으로 이동');
     setStep(0);
     setDetailTasks([]);
     setSections({
@@ -440,9 +387,8 @@ export default function MonthlyInspectionCreateModal({
       '작업 및 공정별 점검 사항': [],
     });
     setItems([]);
-  }, [open, defaultValue, minorCategory]); // minorCategory 변경도 반영
+  }, [open, defaultValue, minorCategory]);
 
-  // ✅ body scroll lock: 모달/Alert 떠 있으면 잠금
   useEffect(() => {
     if (!open && !alertOpen) return;
     const prev = document.body.style.overflow;
@@ -452,40 +398,14 @@ export default function MonthlyInspectionCreateModal({
     };
   }, [open, alertOpen]);
 
-  // ✅ draft 즉시 저장
-  const persistDraftNow = (next?: Partial<DraftState>) => {
-    const payload: Omit<DraftState, 't'> = {
-      minorCategory: minorCategory ?? null,
-      step,
-      detailTasks: detailTasks.map(norm).filter(Boolean),
-      sections,
-      results: items,
-      ...(next ?? {}),
-    };
-    saveDraft(payload);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    persistDraftNow();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, detailTasks, sections, items, minorCategory]);
-
-  /**
-   * ✅ 중요: 모달(open)이 닫혀도 Alert(alertOpen)이 떠 있으면 렌더를 유지해야 함
-   * -> 부모가 open=false로 바꿔버려도 Alert이 화면에 떠야 한다는 요구사항 대응
-   */
   if (!open && !alertOpen) return null;
 
   const closeOnly = () => {
-    // ✅ export 중엔 닫기 방지(원하면 제거 가능)
     if (exportLoading) return;
-
     track(gaEvent(GA_CTX, 'ClickClose'), {
       ui_id: gaUiId(GA_CTX, 'ClickClose'),
       step,
     });
-
     onClose();
   };
 
@@ -508,23 +428,10 @@ export default function MonthlyInspectionCreateModal({
 
     const cached = checklistCacheRef.current[key];
     if (cached && Date.now() - cached.t <= CHECKLIST_CACHE_TTL_MS) {
-      track(gaEvent(GA_CTX, 'GenerateChecklistCacheHit'), {
-        ui_id: gaUiId(GA_CTX, 'GenerateChecklistCacheHit'),
-        step,
-        tasks_count: tasks.length,
-      });
-
       setSections(cached.sections);
-      setItems(toItems(cached.sections));
+      setItems(toItems(cached.sections)); 
       setStep(1);
       setGenLoading(false);
-
-      persistDraftNow({
-        step: 1,
-        detailTasks: tasks,
-        sections: cached.sections,
-        results: toItems(cached.sections),
-      });
       return;
     }
 
@@ -560,7 +467,6 @@ export default function MonthlyInspectionCreateModal({
       };
 
       const cleaned = cleanSections(next);
-
       const anyEmpty =
         cleaned['사업장 점검 사항'].length === 0 ||
         cleaned['노동안전 점검 사항'].length === 0 ||
@@ -580,7 +486,7 @@ export default function MonthlyInspectionCreateModal({
       saveChecklistCache(checklistCacheRef.current);
 
       setSections(finalSections);
-      setItems(toItems(finalSections));
+      setItems(toItems(finalSections)); 
       setStep(1);
 
       track(gaEvent(GA_CTX, 'GenerateChecklistSuccess'), {
@@ -593,13 +499,6 @@ export default function MonthlyInspectionCreateModal({
           b: finalSections['노동안전 점검 사항'].length,
           c: finalSections['작업 및 공정별 점검 사항'].length,
         },
-      });
-
-      persistDraftNow({
-        step: 1,
-        detailTasks: tasks,
-        sections: finalSections,
-        results: toItems(finalSections),
       });
     } catch (e) {
       const fb = buildFallbackSections(tasks);
@@ -622,9 +521,14 @@ export default function MonthlyInspectionCreateModal({
   };
 
   const handleConfirmChecklist = (nextSections: Sections) => {
+    console.log('🚀 [Modal] handleConfirmChecklist 실행됨');
     markDirty();
     const cleaned = cleanSections(nextSections);
+    
+    // 🔥 여기가 핵심입니다. toItems가 호출되면서 rating: 'O'가 들어가야 합니다.
     const nextItems = toItems(cleaned);
+    
+    console.log('🚀 [Modal] 생성된 nextItems 첫번째:', nextItems[0]);
 
     track(gaEvent(GA_CTX, 'ConfirmChecklist'), {
       ui_id: gaUiId(GA_CTX, 'ConfirmChecklist'),
@@ -654,19 +558,11 @@ export default function MonthlyInspectionCreateModal({
     };
     checklistCacheRef.current = pruneChecklistCache(store);
     saveChecklistCache(checklistCacheRef.current);
-
-    persistDraftNow({
-      step: 2,
-      detailTasks: tasks,
-      sections: cleaned,
-      results: nextItems,
-    });
   };
 
   const handleFinish = async () => {
     const tasks = detailTasks.map(norm).filter(Boolean);
 
-    // ✅ GA: Finish 클릭 시도
     track(gaEvent(GA_CTX, 'ClickFinish'), {
       ui_id: gaUiId(GA_CTX, 'ClickFinish'),
       step: 2,
@@ -676,7 +572,6 @@ export default function MonthlyInspectionCreateModal({
       total_count: items.length,
     });
 
-    // ✅ 로그인 체크
     if (!userEmail) {
       openAlert({
         title: '로그인이 필요합니다',
@@ -699,7 +594,6 @@ export default function MonthlyInspectionCreateModal({
       results: items,
     };
 
-    // ✅ 핵심: “점검완료” 누르는 즉시 Alert 먼저 띄우기
     openAlert({
       title: '순회 점검 문서 생성 요청',
       lines: [
@@ -713,7 +607,6 @@ export default function MonthlyInspectionCreateModal({
       },
     });
 
-    // ✅ 중복 클릭 방지 + UI 반영 한 프레임 보장
     setExportLoading(true);
     await nextFrame();
 
@@ -724,15 +617,13 @@ export default function MonthlyInspectionCreateModal({
     });
 
     try {
-      // (옵션) DB 저장/로그
       await onSubmit?.(payload);
 
-      // ✅ 엑셀 다운로드 + 서버 저장
       const res = await fetch('/api/risk-assessment?endpoint=monthly-inspection-export-excel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-email': userEmail, // ✅ 아이디로 저장
+          'x-user-email': userEmail,
         },
         body: JSON.stringify(payload),
       });
@@ -767,7 +658,6 @@ export default function MonthlyInspectionCreateModal({
 
       const url = window.URL.createObjectURL(blob);
 
-      // ✅ GA: 다운로드 트리거 직전
       track(gaEvent(GA_CTX, 'DownloadExcel'), {
         ui_id: gaUiId(GA_CTX, 'DownloadExcel'),
         step: 2,
@@ -790,7 +680,6 @@ export default function MonthlyInspectionCreateModal({
         bytes: blob.size,
       });
 
-      // ✅ 원하면 완료 후 모달 닫기 (TBM처럼)
       onClose();
     } catch (e) {
       track(gaEvent(GA_CTX, 'ExportError'), {
@@ -812,7 +701,6 @@ export default function MonthlyInspectionCreateModal({
 
   return (
     <>
-      {/* ✅ 모달 본체는 open일 때만 렌더 */}
       {open && (
         <div
           className={s.overlay}
@@ -820,8 +708,6 @@ export default function MonthlyInspectionCreateModal({
           aria-modal="true"
           aria-label="월 작업장 순회 점검표"
           onMouseDown={(e) => {
-            // overlay 클릭으로 닫는 UX를 쓴다면 GA도 같이 찍기
-            // (현재 코드에서 closeOnly()는 주석 처리되어 있어, 안전하게 "overlay 자체" 클릭만 기록)
             if (e.target === e.currentTarget) {
               track(gaEvent(GA_CTX, 'ClickOverlay'), {
                 ui_id: gaUiId(GA_CTX, 'ClickOverlay'),
@@ -829,10 +715,6 @@ export default function MonthlyInspectionCreateModal({
               });
             }
           }}
-          // onMouseDown={(e) => {
-          //   if (e.target !== e.currentTarget) return;
-          //   closeOnly();
-          // }}
         >
           <div className={s.modal}>
             <div className={s.topBar}>
@@ -870,8 +752,6 @@ export default function MonthlyInspectionCreateModal({
                     onChange={(next) => {
                       markDirty();
                       setDetailTasks(next);
-                      persistDraftNow({ detailTasks: next.map(norm).filter(Boolean), step: 0 });
-
                       track(gaEvent(GA_CTX, 'ChangeDetailTasks'), {
                         ui_id: gaUiId(GA_CTX, 'ChangeDetailTasks'),
                         step: 0,
@@ -929,8 +809,8 @@ export default function MonthlyInspectionCreateModal({
                   onChangeItems={(next) => {
                     markDirty();
                     setItems(next);
-                    persistDraftNow({ results: next, step: 2 });
-
+                    // 🐛 [디버깅] 여기서 데이터가 잘 바뀌는지 확인
+                    console.log('🔄 [Modal] onChangeItems 호출됨. 변경된 rating:', next[0]?.rating);
                     track(gaEvent(GA_CTX, 'ChangeRatings'), {
                       ui_id: gaUiId(GA_CTX, 'ChangeRatings'),
                       step: 2,
@@ -955,7 +835,6 @@ export default function MonthlyInspectionCreateModal({
         </div>
       )}
 
-      {/* ✅ Alert Modal: open이 false여도 alertOpen이면 렌더되어야 함 */}
       <CenteredAlertModal
         open={alertOpen}
         title={alertTitle}

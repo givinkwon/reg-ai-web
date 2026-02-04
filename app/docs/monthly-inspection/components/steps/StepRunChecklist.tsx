@@ -28,6 +28,24 @@ const RATINGS: { key: Rating; label: string }[] = [
 
 export default function StepRunChecklist({ items, onChangeItems, onBack, onFinish, finishDisabled }: Props) {
   
+  // 🔥 [핵심 수정] 진입 시(또는 아이템 변경 시) 빈 값이 있으면 무조건 'O'로 자동 체크
+  useEffect(() => {
+    // 1. 체크 안 된(rating이 없는) 항목이 있는지 확인
+    const hasMissing = items.some(it => !it.rating);
+
+    if (hasMissing) {
+      // 2. 빈 항목들만 'O'로 채운 새로운 배열 생성
+      const nextItems = items.map(it => ({
+        ...it,
+        rating: it.rating || ('O' as Rating) // 기존 값이 있으면 유지, 없으면 'O'
+      }));
+
+      // 3. 부모 상태 업데이트 (화면 갱신)
+      onChangeItems(nextItems);
+    }
+  }, [items, onChangeItems]);
+
+
   // ✅ GA: View 이벤트 (진입 시 진행 상황 추적)
   useEffect(() => {
     const doneCount = items.filter(it => !!it.rating).length;
@@ -120,7 +138,8 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
           </div>
         ))}
       </div>
-
+      
+      {/* 주석 처리된 푸터 (원래 코드 유지) */}
       {/* <div className={s.footer}>
         <button className={s.backBtn} onClick={onBack}>이전</button>
         <button className={s.finishBtn} onClick={onFinish} disabled={finishDisabled}>

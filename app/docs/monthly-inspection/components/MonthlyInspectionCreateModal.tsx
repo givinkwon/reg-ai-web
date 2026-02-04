@@ -190,29 +190,32 @@ export default function MonthlyInspectionCreateModal({
     prevOpenRef.current = open;
     if (!open) return;
 
+    // ✅ 수정된 부분: 모달이 "처음 열리는 순간"에만 실행
     if (!prev && open) {
       setGenLoading(false);
       setExportLoading(false);
       setGenError('');
-    }
 
-    if (detailTasks.length > 0) return; 
+      // defaultValue(기본값)가 있거나 이미 작업이 선택되어 있다면 드래프트를 불러오지 않음
+      if (detailTasks.length > 0) return;
 
-    const draft = loadDraft();
-    if (draft) {
-      setDetailTasks(draft.detailTasks || []);
-      const dSec = draft.sections || {};
-      setSections(cleanSections(dSec));
-      
-      const dRes = (draft.results || []).map((it: any) => ({
-        ...it,
-        category: it.category,
-        rating: it.rating
-      }));
-      setItems(dRes);
-      setStep(draft.step ?? 0);
+      // 드래프트 로드 로직을 여기 안으로 이동
+      const draft = loadDraft();
+      if (draft) {
+        setDetailTasks(draft.detailTasks || []);
+        const dSec = draft.sections || {};
+        setSections(cleanSections(dSec));
+
+        const dRes = (draft.results || []).map((it: any) => ({
+          ...it,
+          category: it.category,
+          rating: it.rating
+        }));
+        setItems(dRes);
+        setStep(draft.step ?? 0);
+      }
     }
-  }, [open, defaultValue, detailTasks.length]);
+  }, [open, defaultValue]); // ❌ [open, defaultValue, detailTasks.length] 에서 detailTasks.length 제거
 
   // Auto Save
   useEffect(() => {

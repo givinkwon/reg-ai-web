@@ -1,6 +1,5 @@
 // app/api/risk-assessment/route.ts
 import { NextResponse } from 'next/server';
-import { withErrorHandling } from '../api-wrapper';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -130,7 +129,7 @@ function noStoreHeaders(extra?: Record<string, string>) {
   return { 'Cache-Control': 'no-store', ...(extra ?? {}) };
 }
 
-async function handleGET(req: Request) { 
+export async function GET(req: Request) {
   const rid = Math.random().toString(16).slice(2, 8);
   const started = Date.now();
 
@@ -222,7 +221,7 @@ async function handleGET(req: Request) {
   }
 }
 
-async function handlePOST(req: Request) {
+export async function POST(req: Request) {
   const rid = Math.random().toString(16).slice(2, 8);
   const started = Date.now();
 
@@ -311,6 +310,3 @@ async function handlePOST(req: Request) {
     );
   }
 }
-
-export const GET = withErrorHandling(handleGET);
-export const POST = withErrorHandling(handlePOST);

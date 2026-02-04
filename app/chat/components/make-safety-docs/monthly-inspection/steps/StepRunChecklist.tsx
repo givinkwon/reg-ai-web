@@ -38,22 +38,35 @@ export default function StepRunChecklist({
   onFinish,
   finishDisabled,
 }: Props) {
-  // ✅ items 목록(IDs)이 바뀔 때마다 "자동 기본값 적용"을 다시 허용
-  const lastIdsKeyRef = useRef<string>('');
-  const didAutofillRef = useRef<boolean>(false);
-
-  // ✅ GA: view 1회
+  // ✅ GA 중복 전송 방지용 Ref (기능 로직에는 관여 안 함)
+  const gaSentRef = useRef<boolean>(false);
   const viewedRef = useRef(false);
+  
+  // ✅ 리스트가 변경되었는지 감지하기 위한 Ref
+  const lastIdsKeyRef = useRef<string>('');
 
+  // 🐛 [디버깅] 렌더링 될 때마다 현재 아이템 상태 출력
+  console.log('🔍 [StepRunChecklist] 렌더링됨. 현재 items 상태:', items);
+  
+  // rating이 없는 아이템이 있는지 확인
+  const missingCount = items.filter(it => !it.rating).length;
+  console.log(`🔍 [StepRunChecklist] 체크 안 된 항목 수: ${missingCount} / ${items.length}`);
+
+
+  // ─────────────────────────────────────────────────────────────
+  // 1️⃣ 통합 useEffect: 초기화 및 오토필 로직
+  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const idsKey = items.map((it) => it.id).join('|');
 
+    // 1-1. 리스트가 아예 바뀌었으면(다른 점검표 진입) GA 플래그 초기화
     if (lastIdsKeyRef.current !== idsKey) {
       lastIdsKeyRef.current = idsKey;
-      didAutofillRef.current = false;
+      gaSentRef.current = false;
+      viewedRef.current = false;
     }
 
-    // ✅ 첫 진입/리스트 변경 시 view 트래킹
+    // 1-2. GA View 트래킹
     if (!viewedRef.current) {
       viewedRef.current = true;
       track(gaEvent(GA_CTX, 'View'), {
@@ -63,26 +76,37 @@ export default function StepRunChecklist({
         ids_key_len: idsKey.length,
       });
     }
-  }, [items, detailTasks.length]);
 
-  useEffect(() => {
-    if (didAutofillRef.current) return;
-
+    // 1-3. 오토필 로직 (핵심 수정)
     const hasMissing = items.some((it) => !it.rating);
-    if (!hasMissing) return;
 
-    didAutofillRef.current = true;
+    console.log('🔍 [useEffect] 오토필 로직 진입. hasMissing:', hasMissing);
 
-    track(gaEvent(GA_CTX, 'AutoFillDefaultRatings'), {
-      ui_id: gaUiId(GA_CTX, 'AutoFillDefaultRatings'),
-      items_count: items.length,
-      missing_count: items.filter((it) => !it.rating).length,
-      default_rating: 'O',
-    });
+    if (hasMissing) {
+      // (1) 빈 값 채워서 부모에게 업데이트 요청
+      const next = items.map((it) => (it.rating ? it : { ...it, rating: 'O' as Rating }));
+      
+      console.log('⚡ [useEffect] onChangeItems 호출 시도! 보낼 데이터:', next);
+      onChangeItems(next);
 
-    const next = items.map((it) => (it.rating ? it : { ...it, rating: 'O' as Rating }));
-    onChangeItems(next);
-  }, [items, onChangeItems]);
+      // (2) GA는 딱 한 번만 보내기 위해 여기서만 Ref 체크
+      if (!gaSentRef.current) {
+        gaSentRef.current = true;
+        track(gaEvent(GA_CTX, 'AutoFillDefaultRatings'), {
+          ui_id: gaUiId(GA_CTX, 'AutoFillDefaultRatings'),
+          items_count: items.length,
+          missing_count: items.filter((it) => !it.rating).length,
+          default_rating: 'O',
+        });
+      }
+    } else {
+        console.log('✅ [useEffect] 모든 항목에 rating이 있습니다. 업데이트 안 함.');
+    }
+  }, [items, detailTasks.length, onChangeItems]);
+
+  // ─────────────────────────────────────────────────────────────
+  // (아래부터는 기존과 동일)
+  // ─────────────────────────────────────────────────────────────
 
   const grouped = useMemo(() => {
     const m = new Map<string, ChecklistItem[]>();
@@ -96,6 +120,9 @@ export default function StepRunChecklist({
 
   const setRating = (id: string, rating: Rating) => {
     const it = items.find((x) => x.id === id);
+    // 디버깅: 버튼 클릭 시 동작 확인
+    console.log(`🖱 [setRating] 클릭됨 id: ${id}, rating: ${rating}`);
+    
     track(gaEvent(GA_CTX, 'SetRating'), {
       ui_id: gaUiId(GA_CTX, 'SetRating'),
       item_id: id,
@@ -109,13 +136,10 @@ export default function StepRunChecklist({
   };
 
   const setNote = (id: string, note: string) => {
-    // ✅ 타이핑마다 GA는 과도하므로 "blur"가 없어서 여기서는 쓰로틀/디바운스 없이
-    //    최소 이벤트만: 길이가 특정 구간을 넘어설 때만 기록
     const it = items.find((x) => x.id === id);
     const prevLen = (it?.note ?? '').length;
     const nextLen = note.length;
 
-    // 0->1, 20, 50, 100 이상 구간에서만 찍기
     const checkpoints = [1, 20, 50, 100];
     const crossed = checkpoints.find((cp) => prevLen < cp && nextLen >= cp);
 
@@ -214,20 +238,25 @@ export default function StepRunChecklist({
               <div className={s.question}>{it.question}</div>
 
               <div className={s.ratingRow}>
-                {RATINGS.map((r) => (
-                  <button
-                    key={r.key}
-                    type="button"
-                    className={`${s.rateBtn} ${it.rating === r.key ? s.active : ''}`}
-                    onClick={() => setRating(it.id, r.key)}
-                    data-ga-event={gaEvent(GA_CTX, 'SetRating')}
-                    data-ga-id={gaUiId(GA_CTX, 'SetRating')}
-                    data-ga-text={r.key}
-                    data-ga-label="점검 평가 버튼"
-                  >
-                    {r.label}
-                  </button>
-                ))}
+                {RATINGS.map((r) => {
+                    // 디버깅: 각 버튼이 렌더링될 때 상태 확인 (필요시 주석 해제)
+                    // if (it.id === items[0].id) console.log(`[Button Render] Item: ${it.rating}, Button: ${r.key}, Match: ${it.rating === r.key}`);
+                    return (
+                      <button
+                        key={r.key}
+                        type="button"
+                        // 🔥 여기서 CSS가 제대로 적용되는지 확인이 필요함
+                        className={`${s.rateBtn} ${it.rating === r.key ? s.active : ''}`}
+                        onClick={() => setRating(it.id, r.key)}
+                        data-ga-event={gaEvent(GA_CTX, 'SetRating')}
+                        data-ga-id={gaUiId(GA_CTX, 'SetRating')}
+                        data-ga-text={r.key}
+                        data-ga-label="점검 평가 버튼"
+                      >
+                        {r.label}
+                      </button>
+                    )
+                })}
               </div>
 
               <textarea
