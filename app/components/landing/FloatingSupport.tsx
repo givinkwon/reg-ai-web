@@ -56,21 +56,31 @@ export default function FloatingSupport() {
     <div className={s.wrapper}>
       <div className={`${s.menu} ${isOpen ? s.isOpen : ''}`}>
         
+        {/* 1. 카카오톡 문의 버튼 */}
         <a
           href="https://pf.kakao.com/_ExjVxcn"
           target="_blank"
           rel="noopener noreferrer"
           className={`${s.actionBtn} ${s.kakao}`}
           title="카카오톡 문의하기"
-          onClick={handleClickKakao} // ✅ 클릭 이벤트 연결
+          onClick={handleClickKakao}
+          // ✅ GA Data Attributes 추가
+          data-ga-event="ClickKakao"
+          data-ga-id={gaUiId(GA_CTX, 'ClickKakao')}
+          data-ga-label="카카오톡 문의하기 버튼"
         >
           <MessageCircle size={24} fill="currentColor" fillOpacity={0.4} />
         </a>
 
+        {/* 2. 이메일 복사 버튼 */}
         <button
-          onClick={handleCopyEmail} // ✅ 핸들러 내부에서 GA track 호출
+          onClick={handleCopyEmail}
           className={`${s.actionBtn} ${s.email}`}
           aria-label="이메일 주소 복사"
+          // ✅ GA Data Attributes 추가
+          data-ga-event="CopyEmail"
+          data-ga-id={gaUiId(GA_CTX, 'CopyEmail')}
+          data-ga-label="이메일 주소 복사 버튼"
         >
           <Mail size={24} />
           <span className={`${s.tooltip} ${copied ? s.show : ''}`}>
@@ -79,7 +89,16 @@ export default function FloatingSupport() {
         </button>
       </div>
 
-      <button onClick={toggleOpen} className={s.mainBtn} aria-label="고객센터 메뉴 열기">
+      {/* 3. 메인 플로팅 버튼 */}
+      <button 
+        onClick={toggleOpen} 
+        className={s.mainBtn} 
+        aria-label="고객센터 메뉴 열기"
+        // ✅ GA Data Attributes 추가
+        data-ga-event="ToggleMenu"
+        data-ga-id={gaUiId(GA_CTX, 'MainButton')}
+        data-ga-label="고객센터 메뉴 토글 버튼"
+      >
         {isOpen ? <X size={28} /> : <MessageCircleQuestion size={28} />}
       </button>
     </div>

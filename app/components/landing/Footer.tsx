@@ -8,7 +8,7 @@ import s from './Footer.module.css';
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ GA Context 정의 (Footer는 공통 영역이므로 page를 'Common' 등으로 설정)
+// ✅ GA Context 정의
 const GA_CTX = { page: 'Common', section: 'Footer', area: 'Contact' } as const;
 
 export default function Footer() {
@@ -20,7 +20,7 @@ export default function Footer() {
     navigator.clipboard.writeText(emailAddress);
     setCopied(true);
     
-    // GA 트래킹
+    // GA 트래킹 (함수 호출)
     track(gaEvent(GA_CTX, 'CopyEmail'), {
       ui_id: gaUiId(GA_CTX, 'CopyEmail'),
       target_email: emailAddress,
@@ -61,7 +61,11 @@ export default function Footer() {
             target="_blank" 
             rel="noopener noreferrer"
             className={`${s.contactBtn} ${s.kakao}`}
-            onClick={handleClickKakao} // ✅ 클릭 이벤트 연결
+            onClick={handleClickKakao}
+            // ✅ GA Data Attributes 추가
+            data-ga-event="ClickKakao"
+            data-ga-id={gaUiId(GA_CTX, 'ClickKakao')}
+            data-ga-label="카카오톡 문의하기 버튼"
           >
             <MessageCircle size={20} fill="currentColor" fillOpacity={0.4} />
             카카오톡 문의하기
@@ -69,9 +73,13 @@ export default function Footer() {
 
           {/* 2. 이메일 (복사) */}
           <button 
-            onClick={handleCopyEmail} // ✅ 핸들러 내부에서 GA track 호출됨
+            onClick={handleCopyEmail}
             className={`${s.contactBtn} ${s.email}`}
             title="클릭하여 이메일 주소 복사"
+            // ✅ GA Data Attributes 추가
+            data-ga-event="CopyEmail"
+            data-ga-id={gaUiId(GA_CTX, 'CopyEmail')}
+            data-ga-label="이메일 주소 복사 버튼"
           >
             <Mail size={20} />
             <span className={s.emailText}>{emailAddress}</span>
