@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, FileText } from 'lucide-react';
+import { X, Plus, FileText, Sparkles } from 'lucide-react';
 import s from './TbmCreateModal.module.css';
 
-import TbmDetailTaskTagInput from './TbmDetailTaskTagInput';
 import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+// ✅ 딕셔너리 Import (파일 경로를 실제 위치에 맞게 수정해주세요)
+import { TASK_DICTIONARY } from './taskDictionary';
 
 // ✅ GA Context 정의
 const GA_CTX = { page: 'Docs', section: 'TBM', area: 'CreateModal' } as const;
@@ -41,15 +43,16 @@ type Props = {
 
 const norm = (v?: string | null) => (v ?? '').trim();
 
-// 폼 데이터 캐싱 설정
-const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v2';
+// 폼 데이터 캐싱 설정 (버전 업그레이드 v2 -> v3)
+const FORM_CACHE_PREFIX = 'regai:tbm:createForm:v3'; 
 const FORM_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180;
 
 type TbmFormCache = {
-  v: 2;
+  v: 3;
   ts: number;
   user: 'guest';
   minorScope: string;
+  workDescription: string; // ✅ 문장 저장 추가
   detailTasks: string[];
   attendees: TbmAttendee[];
 };
@@ -64,7 +67,7 @@ function safeReadFormCache(key: string): TbmFormCache | null {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as TbmFormCache;
-    if (parsed?.v !== 2) return null;
+    if (parsed?.v !== 3) return null;
     if (Date.now() - parsed.ts > FORM_CACHE_TTL_MS) return null;
     return parsed;
   } catch {
@@ -108,7 +111,11 @@ export default function TbmCreateModal({
   const user = useUserStore((st) => st.user);
   
   const [minorCategory, setMinorCategory] = useState<string | null>(minorFromProps ?? null);
-  const [detailTasks, setDetailTasks] = useState<string[]>([]);
+  
+  // ✅ [수정] 자연어 입력을 위한 상태 추가
+  const [workDescription, setWorkDescription] = useState<string>('');
+  const [detailTasks, setDetailTasks] = useState<string[]>([]); // AI 감지 키워드(태그)
+  
   const [attendees, setAttendees] = useState<TbmAttendee[]>([{ name: '', contact: '' }]);
   const [submitting, setSubmitting] = useState(false);
   const [accountCompanyName, setAccountCompanyName] = useState<string | null>(norm(companyNameProp) || null);
@@ -121,6 +128,28 @@ export default function TbmCreateModal({
 
   const scopeKey = useMemo(() => formCacheKey(norm(minorCategory) || 'ALL'), [minorCategory]);
 
+  // ✅ [수정] "AI 감지" 로직 (입력된 문장에서 딕셔너리 키워드 매칭)
+  useEffect(() => {
+    if (!workDescription.trim()) {
+      setDetailTasks([]);
+      return;
+    }
+
+    // 디바운싱: 사용자가 입력을 멈춘 후 300ms 뒤에 실행 (성능 최적화)
+    const handler = setTimeout(() => {
+        const input = workDescription.replace(/\s+/g, ' '); // 공백 정규화
+
+        // 딕셔너리에 있는 단어가 입력된 문장에 포함되어 있는지 확인
+        const matched = TASK_DICTIONARY.filter(taskName => input.includes(taskName));
+
+        setDetailTasks(matched);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [workDescription]);
+
+
+  // 캐시 불러오기
   useEffect(() => {
     if (!open) {
       setSubmitting(false);
@@ -128,23 +157,27 @@ export default function TbmCreateModal({
     }
     const cached = safeReadFormCache(scopeKey);
     if (cached) {
-      setDetailTasks(cached.detailTasks);
+      setWorkDescription(cached.workDescription || '');
       setAttendees(cached.attendees.length ? cached.attendees : [{ name: '', contact: '' }]);
+      // detailTasks는 workDescription에 의해 위 useEffect로 자동 생성됨
     }
   }, [open, scopeKey]);
 
+  // 캐시 저장
   useEffect(() => {
     if (!open) return;
-    if (detailTasks.length === 0 && attendees.length === 0) return;
+    if (!workDescription && attendees.length === 0) return;
+    
     safeWriteFormCache(scopeKey, {
-      v: 2,
+      v: 3,
       ts: Date.now(),
       user: 'guest',
       minorScope: norm(minorCategory) || 'ALL',
-      detailTasks,
+      workDescription, // 문장 저장
+      detailTasks,     // 태그 저장
       attendees,
     });
-  }, [detailTasks, attendees, scopeKey, open, minorCategory]);
+  }, [workDescription, detailTasks, attendees, scopeKey, open, minorCategory]);
 
   // 회사명 로드
   useEffect(() => {
@@ -234,7 +267,6 @@ export default function TbmCreateModal({
     const cleanedTasks = detailTasks.map(norm).filter(Boolean);
     const cleanedAttendees = attendees.map(a => ({ name: norm(a.name), contact: norm(a.contact) })).filter(a => a.name);
 
-    // ✅ GA: 제출 시작 트래킹 (작업 개수, 참석자 수 포함)
     track(gaEvent(GA_CTX, 'ClickSubmit'), {
         ui_id: gaUiId(GA_CTX, 'ClickSubmit'),
         task_count: cleanedTasks.length,
@@ -279,7 +311,6 @@ export default function TbmCreateModal({
         <div className={s.modal}>
           <div className={s.topBar}>
             <span className={s.pill}>TBM 활동일지</span>
-            {/* ✅ GA: 닫기 버튼 추적 */}
             <button 
                 className={s.iconBtn} 
                 onClick={() => {
@@ -297,20 +328,63 @@ export default function TbmCreateModal({
 
           <div className={s.card}>
             <div className={s.header}>
-              <h3 className={s.title}>TBM 작성</h3>
-              <p className={s.desc}>오늘 진행할 작업과 참석자를 입력해주세요.</p>
+              <h3 className={s.title}>AI TBM 작성</h3>
+              <p className={s.desc}>오늘 진행할 작업과 참석자를 입력해주세요</p>
             </div>
 
-            <label className={s.label}>금일 작업 (태그 입력)</label>
-            <TbmDetailTaskTagInput
-              value={detailTasks}
-              onChange={setDetailTasks}
-              minorCategory={minorCategory}
-            />
+            {/* ✅ [UI 변경] 자연어 입력 textarea */}
+            <div style={{ marginBottom: '24px' }}>
+                <label className={s.label}>TBM 대상 작업을 자유롭게 작성해주세요</label>
+                <textarea
+                    className={s.textarea}
+                    style={{ 
+                        width: '100%', 
+                        height: '80px', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        border: '1px solid #E5E7EB', 
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        resize: 'none',
+                        outline: 'none',
+                        marginBottom: '8px'
+                    }}
+                    placeholder="예) 3층 배관 용접 작업 진행, 불티 비산 방지포 설치 예정"
+                    value={workDescription}
+                    onChange={(e) => setWorkDescription(e.target.value)}
+                />
+            </div>
+
+            {/* ✅ [UI 변경] AI 감지 키워드 표시 영역 */}
+            {detailTasks.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <Sparkles size={14} color="#3B82F6" />
+                        <label className={s.label} style={{ marginBottom: 0, color: '#3B82F6' }}>AI 감지 키워드</label>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {detailTasks.map((task, idx) => (
+                            <span 
+                                key={idx}
+                                style={{
+                                    backgroundColor: '#EFF6FF',
+                                    color: '#1D4ED8',
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '13px',
+                                    fontWeight: '500',
+                                    border: '1px solid #BFDBFE'
+                                }}
+                            >
+                                {task}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className={s.sectionRow}>
               <span className={s.sectionTitle}>참석자 명단</span>
-              {/* ✅ GA: 참석자 추가 버튼 추적 */}
               <button 
                 className={s.addBtn} 
                 onClick={() => {
@@ -353,7 +427,6 @@ export default function TbmCreateModal({
                       setAttendees(newAtt);
                     }}
                   />
-                  {/* ✅ GA: 참석자 삭제 버튼 추적 */}
                   <button
                     className={s.removeBtn}
                     onClick={() => {
@@ -370,7 +443,6 @@ export default function TbmCreateModal({
               ))}
             </div>
 
-            {/* ✅ GA: 제출 버튼 (핸들러 내부에서 track 호출) */}
             <button 
                 className={s.primaryBtn} 
                 onClick={handleSubmit} 
