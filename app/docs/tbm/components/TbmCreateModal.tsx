@@ -340,6 +340,7 @@ export default function TbmCreateModal({
                     style={{ 
                         width: '100%', 
                         height: '80px', 
+                        marginTop: '20px',
                         padding: '12px', 
                         borderRadius: '8px', 
                         border: '1px solid #E5E7EB', 
