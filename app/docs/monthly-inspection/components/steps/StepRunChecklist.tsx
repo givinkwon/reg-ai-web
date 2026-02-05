@@ -1,14 +1,13 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import s from './StepRunChecklist.module.css';
-import type { ChecklistItem, Rating } from '../MonthlyInspectionCreateModal';
+import type { ChecklistItem, Rating } from '../MonthlyInspectionCreateModal'; // 타입 경로는 실제 경로에 맞게
 
-// ✅ GA Imports
+// GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ GA Context: 점검 실시 단계
 const GA_CTX = { page: 'Docs', section: 'MonthlyInspection', area: 'StepRunChecklist' } as const;
 
 type Props = {
@@ -18,6 +17,8 @@ type Props = {
   onBack: () => void;
   onFinish: () => void;
   finishDisabled?: boolean;
+  // ✅ [추가] 자동 주행 모드 여부
+  isAutoRun?: boolean;
 };
 
 const RATINGS: { key: Rating; label: string }[] = [
@@ -26,27 +27,40 @@ const RATINGS: { key: Rating; label: string }[] = [
   { key: 'X', label: '불량' },
 ];
 
-export default function StepRunChecklist({ items, onChangeItems, onBack, onFinish, finishDisabled }: Props) {
+export default function StepRunChecklist({ 
+  items, onChangeItems, onBack, onFinish, finishDisabled, isAutoRun 
+}: Props) {
   
-  // 🔥 [핵심 수정] 진입 시(또는 아이템 변경 시) 빈 값이 있으면 무조건 'O'로 자동 체크
+  // 중복 호출 방지를 위한 Ref
+  const finishTriggeredRef = useRef(false);
+
+  // ✅ [핵심 로직] 자동 채우기 및 자동 완료 트리거
   useEffect(() => {
     // 1. 체크 안 된(rating이 없는) 항목이 있는지 확인
     const hasMissing = items.some(it => !it.rating);
 
     if (hasMissing) {
-      // 2. 빈 항목들만 'O'로 채운 새로운 배열 생성
+      // 2-A. 빈 값이 있으면 -> 자동으로 'O' 채우기
       const nextItems = items.map(it => ({
         ...it,
-        rating: it.rating || ('O' as Rating) // 기존 값이 있으면 유지, 없으면 'O'
+        rating: it.rating || ('O' as Rating)
       }));
-
-      // 3. 부모 상태 업데이트 (화면 갱신)
       onChangeItems(nextItems);
+    } else {
+      // 2-B. 빈 값이 없고(다 채워졌고) + 자동 모드라면 -> 완료 실행
+      if (isAutoRun && !finishDisabled && !finishTriggeredRef.current) {
+        finishTriggeredRef.current = true; // 중복 실행 방지
+        
+        // 시각적 효과를 위해 0.8초 뒤 실행
+        setTimeout(() => {
+          onFinish();
+        }, 800);
+      }
     }
-  }, [items, onChangeItems]);
+  }, [items, onChangeItems, isAutoRun, finishDisabled, onFinish]);
 
 
-  // ✅ GA: View 이벤트 (진입 시 진행 상황 추적)
+  // GA: View 이벤트
   useEffect(() => {
     const doneCount = items.filter(it => !!it.rating).length;
     track(gaEvent(GA_CTX, 'View'), {
@@ -54,8 +68,7 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
       total_items: items.length,
       initial_done: doneCount,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 마운트 시 1회만
+  }, []);
 
   const grouped = useMemo(() => {
     const m = new Map<string, ChecklistItem[]>();
@@ -76,7 +89,6 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
     return { done, total: items.length };
   }, [items]);
 
-  // ✅ CSS 클래스 매핑 함수
   const getRatingClass = (r: Rating) => {
     if (r === 'O') return s.rate_O;
     if (r === '△') return s.rate_Tri;
@@ -109,7 +121,7 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
                         type="button"
                         className={`${s.rateBtn} ${isActive ? getRatingClass(r.key) : ''}`}
                         onClick={() => {
-                            // ✅ GA: 등급 선택 추적
+                            if (isAutoRun) return; // 자동 모드 중엔 클릭 방지
                             track(gaEvent(GA_CTX, 'SelectRating'), {
                                 ui_id: gaUiId(GA_CTX, 'SelectRating'),
                                 rating: r.key,
@@ -117,9 +129,6 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
                             });
                             updateItem(it.id, { rating: r.key });
                         }}
-                        data-ga-event="SelectRating"
-                        data-ga-id={gaUiId(GA_CTX, 'SelectRating')}
-                        data-ga-label={r.label}
                       >
                         <span className={s.mark}>{r.key}</span> {r.label}
                       </button>
@@ -132,21 +141,13 @@ export default function StepRunChecklist({ items, onChangeItems, onBack, onFinis
                   placeholder="지적사항 및 조치계획 입력"
                   value={it.note || ''}
                   onChange={e => updateItem(it.id, { note: e.target.value })}
+                  disabled={isAutoRun} // 자동 모드 중엔 입력 방지
                 />
               </div>
             ))}
           </div>
         ))}
       </div>
-      
-      {/* 주석 처리된 푸터 (원래 코드 유지) */}
-      {/* <div className={s.footer}>
-        <button className={s.backBtn} onClick={onBack}>이전</button>
-        <button className={s.finishBtn} onClick={onFinish} disabled={finishDisabled}>
-          점검 완료
-        </button>
-      </div> 
-      */}
     </div>
   );
 }

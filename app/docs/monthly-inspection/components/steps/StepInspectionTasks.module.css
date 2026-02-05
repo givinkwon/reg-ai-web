@@ -1,0 +1,210 @@
+/* StepInspectionTasks.module.css */
+
+.container {
+  width: 100%;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* NLP Section */
+.nlpSection {
+  background-color: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 2rem;
+}
+
+.nlpHeader {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.iconBox {
+  width: 40px; height: 40px;
+  background-color: #eff6ff;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.4rem 0;
+}
+
+.desc {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.searchBox {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.inputWrapper {
+  position: relative;
+  flex: 1;
+}
+
+.aiInput {
+  width: 100%;
+  padding: 0.9rem 1.2rem;
+  padding-right: 2.5rem;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  font-size: 1rem;
+  transition: all 0.2s;
+  outline: none;
+}
+.aiInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clearBtn {
+  position: absolute;
+  right: 12px; top: 50%;
+  transform: translateY(-50%);
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #94a3b8;
+}
+.clearBtn:hover { background: #e2e8f0; color: #64748b; }
+
+.submitBtn {
+  padding: 0.9rem 1.5rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 0.5rem;
+  white-space: nowrap;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 10px -2px rgba(37, 99, 235, 0.3);
+}
+.submitBtn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.divider {
+  border: none;
+  border-top: 1px dashed #cbd5e1;
+  margin: 0 0 2rem 0;
+}
+
+/* Result Section */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.subTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  position: relative;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 0.8rem;
+}
+.card:hover {
+  border-color: #3b82f6;
+  background-color: #f8fafc;
+}
+.card.active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 2px #3b82f6 inset;
+}
+
+.checkCircle {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.active .checkCircle {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.cardText {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #334155;
+}
+.active .cardText { color: #1e40af; }
+
+.emptyBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background-color: #f8fafc;
+  border: 2px dashed #e2e8f0;
+  border-radius: 16px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.errorBox {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .searchBox { flex-direction: column; }
+  .aiInput { padding-right: 1rem; }
+  .submitBtn { width: 100%; justify-content: center; }
+  .grid { grid-template-columns: 1fr; }
+}

@@ -9,19 +9,18 @@ import {
 import { Button } from '@/app/components/ui/button';
 import s from './page.module.css';
 
-import MonthlyInspectionCreateModal from './components/MonthlyInspectionCreateModal';
+// 🔴 [수정 포인트] 예전 CreateModal 대신 Wizard를 Import 해야 합니다!
+import MonthlyInspectionWizard from './components/MonthlyInspectionWizard'; 
 import LoginPromptModal from '../components/LoginPromptModal';
 import SignupExtraInfoModal from '../components/SignupExtraInfoModal';
 
 import { useUserStore } from '@/app/store/user';
 import { useChatStore } from '@/app/store/chat';
 
-// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 import Footer from '@/app/components/landing/Footer';
 
-// ✅ GA Context: 섹션과 영역을 명확히 정의
 const GA_CTX = { page: 'Docs', section: 'MonthlyInspection', area: 'Landing' } as const;
 
 export default function MonthlyPage() {
@@ -37,15 +36,12 @@ export default function MonthlyPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking
-  // 수정사항: initialized가 true가 될 때까지 기다렸다가 추적하여 'is_logged_in' 값을 정확하게 보장합니다.
+  // GA: Page View Tracking
   const viewTracked = useRef(false);
   
   useEffect(() => {
     if (!initialized || viewTracked.current) return;
-    
     viewTracked.current = true;
-
     track(gaEvent(GA_CTX, 'View'), {
       ui_id: gaUiId(GA_CTX, 'View'),
       is_logged_in: !!user?.email,
@@ -84,12 +80,10 @@ export default function MonthlyPage() {
 
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
-  // ✅ GA: 시작 버튼 핸들러
-  // 수정사항: 어떤 버튼인지 명확히 식별하기 위해 Payload에 정보를 추가했습니다.
   const handleStartClick = () => {
     track(gaEvent(GA_CTX, 'ClickStart'), {
       ui_id: gaUiId(GA_CTX, 'ClickStart'),
-      button_label: '점검표 생성하기', // 추가된 식별 정보
+      button_label: '점검표 생성하기',
       is_logged_in: !!user?.email,
     });
     setIsWriting(true);
@@ -97,7 +91,7 @@ export default function MonthlyPage() {
 
   return (
     <div className={s.container}>
-      {!isWriting && (
+      {!isWriting ? (
         <>
           {/* === 1. Hero Section === */}
           <section className={s.actionSection}>
@@ -108,61 +102,59 @@ export default function MonthlyPage() {
               <h1 className={s.title}>월 순회점검표</h1>
               <p className={s.desc}>
                 사업장 순회 점검표를 체계적으로 기록하세요.<br />
-                사업장 맞춤 점검표를 즉시 생성하고, 점검을 진행합니다.
+                AI가 사업장 맞춤 점검표를 즉시 생성합니다.
               </p>
               
               <div className={s.btnGroup}>
-                {/* ✅ DOM 레벨에서도 식별되도록 data-ga 속성을 추가했습니다 (선택사항이지만 권장) */}
                 <Button 
                   className={s.whiteBtn} 
                   onClick={handleStartClick}
                   data-ga-event="ClickStart"
                   data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
                 > 
-                  점검표 생성하기
+                  점검표 자동 생성 시작
                 </Button>
               </div>
             </div>
           </section>
 
-          {/* === 2. Top Features (3단계) === */}
+          {/* === 2. Top Features === */}
           <section className={s.featureSection}>
             <div className={s.featureGrid}>
               <div className={s.featureCard}>
                 <div className={s.featureIconBox}>
                   <ClipboardList size={40} strokeWidth={1.5} color="#2388FF"/>
                 </div>
-                <h3 className={s.featureTitle}>맞춤 점검표 1분 생성</h3>
+                <h3 className={s.featureTitle}>자연어 AI 분석</h3>
                 <p className={s.featureDesc}>
-                  1분 만에 사업장 점검표가 만들어집니다. 작업과 공정을 입력하면 맞춤 점검 리스트가 자동으로 생성됩니다.
+                  작업 내용을 문장으로 입력하면 AI가 필요한 점검 항목을 자동으로 도출합니다.
                 </p>
               </div>
               <div className={s.featureCard}>
                 <div className={s.featureIconBox}>
                   <CheckSquare size={40} strokeWidth={1.5} color="#2388FF"/>
                 </div>
-                <h3 className={s.featureTitle}>체크리스트 점검</h3>
+                <h3 className={s.featureTitle}>원클릭 자동 완성</h3>
                 <p className={s.featureDesc}>
-                  안전 점검 항목을 세 가지 기준으로 빠르게 확인합니다. 개선이 필요한 공정을 바로 파악하세요.
+                  복잡한 설정 없이 단계별 자동 진행으로 1분 만에 점검표를 완성합니다.
                 </p>
               </div>
               <div className={s.featureCard}>
                 <div className={s.featureIconBox}>
-                  <Sparkles size={40} strokeWidth={1.5} color="#2388FF"/>
+                  <Download size={40} strokeWidth={1.5} color="#2388FF"/>
                 </div>
-                <h3 className={s.featureTitle}>AI 문서 자동 작성</h3>
+                <h3 className={s.featureTitle}>표준 문서 다운로드</h3>
                 <p className={s.featureDesc}>
-                  점검이 필요한 작업과 공정을 분석하여 사업장에 딱 맞는 점검표를 자동으로 생성합니다.
+                  생성된 점검표는 엑셀로 다운로드하여 즉시 보고 및 보관이 가능합니다.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* === 3. Preview Section (Images) === */}
+          {/* === 3. Preview Section === */}
           <section className={s.previewSection}>
             <h2 className={s.sectionHeader}>무엇을 할 수 있나요?</h2>
             
-            {/* 1. 맞춤 점검표 생성 */}
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -180,7 +172,6 @@ export default function MonthlyPage() {
               </div>
             </div>
 
-            {/* 2. 체크리스트 점검 진행 (Reverse) */}
             <div className={`${s.previewRow} ${s.reverse}`}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -198,7 +189,6 @@ export default function MonthlyPage() {
               </div>
             </div>
 
-            {/* 3. 점검표 다운로드 */}
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
@@ -217,7 +207,7 @@ export default function MonthlyPage() {
             </div>
           </section>
 
-          {/* === 4. Guide Grid (6단계) === */}
+          {/* === 4. Guide Grid === */}
           <section className={s.guideSection}>
             <h2 className={s.sectionHeader}>사용 방법</h2>
             <div className={s.guideGrid}>
@@ -228,45 +218,47 @@ export default function MonthlyPage() {
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Building2 size={32} /></div>
-                <h4>2. 공정 및 작업 입력</h4>
-                <p>사업장에서 점검이 필요한 공정 또는 작업을 입력하세요. 2만가지의 예시 공정을 검색 가능합니다.</p>
+                <h4>2. 작업 내용 입력</h4>
+                <p>어떤 작업을 하는지 문장으로 입력하세요. AI가 자동으로 분석합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Cpu size={32} /></div>
-                <h4>3. 점검표 AI 생성</h4>
-                <p>점검표 생성하기 버튼을 눌러, 공정 맞춤 점검표 생성을 기다리세요.</p>
+                <h4>3. 점검 항목 자동 생성</h4>
+                <p>AI가 분석한 내용을 바탕으로 맞춤형 안전 점검 리스트를 생성합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Search size={32} /></div>
-                <h4>4. 점검표 확인 및 수정</h4>
-                <p>생성된 점검 사항을 확인하고, 사업장에 더 알맞게 수정하세요.</p>
+                <h4>4. 점검 실시</h4>
+                <p>생성된 항목을 확인하며 O/X로 점검을 실시합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><CheckCircle2 size={32} /></div>
-                <h4>5. 순회 점검 실시</h4>
-                <p>매일 같은 양식으로 순회 점검을 실시하세요. 지난 기록은 자동으로 저장됩니다.</p>
+                <h4>5. 완료 및 저장</h4>
+                <p>점검이 완료되면 문서를 생성하고 자동으로 저장됩니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Download size={32} /></div>
-                <h4>6. 점검표 다운로드</h4>
-                <p>한 달의 순회 점검이 완료되면, 문서를 다운로드 하세요. 제출 혹은 사내 보관용으로 깔끔하게 보관하세요.</p>
+                <h4>6. 엑셀 다운로드</h4>
+                <p>완성된 점검표를 엑셀 파일로 다운로드하여 활용하세요.</p>
               </div>
             </div>
           </section>
+          
+          <Footer />
         </>
-      )}
-
-      <MonthlyInspectionCreateModal
-        open={isWriting}
-        onClose={() => {
-            // ✅ GA: 모달 닫힘 추적
-            track(gaEvent(GA_CTX, 'CloseCreateModal'), {
-                ui_id: gaUiId(GA_CTX, 'CloseCreateModal'),
+      ) : (
+        /* 🔴 [수정 포인트] 여기서 MonthlyInspectionWizard를 사용해야 합니다! */
+        <MonthlyInspectionWizard
+          open={isWriting}
+          onClose={() => {
+            track(gaEvent(GA_CTX, 'CloseWizard'), {
+                ui_id: gaUiId(GA_CTX, 'CloseWizard'),
             });
             setIsWriting(false);
-        }}
-        onRequireLogin={() => setShowLoginModal(true)}
-      />
+          }}
+          onRequireLogin={() => setShowLoginModal(true)}
+        />
+      )}
 
       {showLoginModal && !showExtraModal && (
         <LoginPromptModal onClose={() => setShowLoginModal(false)} />
@@ -283,8 +275,6 @@ export default function MonthlyPage() {
           }}
         />
       )}
-            
-      <Footer />
     </div>
   );
 }
