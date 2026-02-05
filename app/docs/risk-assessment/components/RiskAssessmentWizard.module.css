@@ -4,7 +4,7 @@
   position: fixed;
   inset: 0;
   background-color: #ffffff;
-  z-index: 50; /* 모달보다 높거나 같게 */
+  z-index: 50; 
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -14,11 +14,11 @@
    ✅ 전역 로딩 오버레이
    ========================================= */
 .loadingOverlay {
-  position: absolute; /* wrap 기준 절대 위치 */
+  position: absolute;
   inset: 0;
   background-color: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(8px);
-  z-index: 100; /* 컨텐츠보다 위에 */
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -49,7 +49,7 @@
 }
 
 .spin {
-  color: #3b82f6; /* Blue-500 */
+  color: #3b82f6; 
   animation: spin 1s linear infinite;
 }
 
@@ -319,7 +319,8 @@
   box-shadow: 0 6px 10px -2px rgba(37, 99, 235, 0.3);
 }
 
-button:disabled {
+/* ✅ 해결 포인트: button 선택자를 .wrap 안으로 한정함 */
+.wrap button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
