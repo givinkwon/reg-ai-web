@@ -11,7 +11,6 @@ import { useRiskWizardStore } from '@/app/store/docs';
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ GA Context 정의
 const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'StepControls' } as const;
 
 type Props = {
@@ -23,9 +22,6 @@ const JUDGEMENTS: Judgement[] = ['상', '중', '하'];
 const norm = (v?: string | null) => (v ?? '').trim();
 
 // === 유틸리티 함수 ===
-const CACHE_PREFIX = 'regai:risk:stepControls:v4';
-const TTL_MS = 1000 * 60 * 60 * 24 * 180;
-
 function dedup(arr: any): string[] {
   if (!Array.isArray(arr)) return [];
   return Array.from(new Set(arr.map((x: any) => norm(String(x ?? ''))).filter(Boolean)));
@@ -49,7 +45,9 @@ export default function StepControls({ draft, setDraft }: Props) {
   const setIsAnalyzing = useRiskWizardStore((state) => state.setIsAnalyzing);
 
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
-  const [isInitialAnalyzing, setIsInitialAnalyzing] = useState(true);
+  
+  // ✅ 수정: 초기값을 false로 설정 (조건부 활성화)
+  const [isInitialAnalyzing, setIsInitialAnalyzing] = useState(false);
 
   const completedRef = useRef<Set<string>>(new Set());
   const mountedRef = useRef(false);
@@ -109,7 +107,6 @@ export default function StepControls({ draft, setDraft }: Props) {
     }));
   };
 
-  // ✅ GA: 위험성 판단 변경 핸들러
   const handleChangeJudgement = (r: any, val: Judgement) => {
     track(gaEvent(GA_CTX, 'ChangeJudgement'), {
         ui_id: gaUiId(GA_CTX, 'ChangeJudgement'),
@@ -120,7 +117,6 @@ export default function StepControls({ draft, setDraft }: Props) {
     updateHazard(r.taskId, r.processId, r.hazardId, { judgement: val });
   };
 
-  // ✅ GA: 추천 문구 선택 핸들러
   const handleSelectRecommendation = (r: any, field: 'current_control_text' | 'mitigation_text', val: string) => {
     track(gaEvent(GA_CTX, 'SelectRecommendation'), {
         ui_id: gaUiId(GA_CTX, 'SelectRecommendation'),
@@ -130,26 +126,29 @@ export default function StepControls({ draft, setDraft }: Props) {
     updateHazard(r.taskId, r.processId, r.hazardId, { [field]: val });
   };
 
-
-  // ✅ 자동 채움 및 강제 10초 대기 로직 (기존 유지)
+  // =================================================================
+  // 🚀 [핵심] 자동 채움 로직 (뒤로가기 시 로딩 방지)
+  // =================================================================
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
 
     const runAutoFill = async () => {
+      // 아직 데이터가 없는 항목만 필터링
       const targetsToFetch = rows.filter(r => r.current_controls_items.length === 0 && !completedRef.current.has(r.rowKey));
 
+      // ✅ 가져올 데이터가 없으면(=이미 다 채워져 있으면) 즉시 종료 (로딩 X)
+      if (targetsToFetch.length === 0) {
+        setIsAnalyzing(false);
+        setIsInitialAnalyzing(false);
+        return;
+      }
+
+      // ✅ 가져올 데이터가 있을 때만 로딩 시작
       setIsAnalyzing(true);
       setIsInitialAnalyzing(true);
 
       const minWaitTimer = new Promise(resolve => setTimeout(resolve, 10000)); 
-
-      if (targetsToFetch.length === 0) {
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
-        setIsInitialAnalyzing(false);
-        setIsAnalyzing(false);
-        return;
-      }
 
       try {
         await Promise.all([
@@ -222,7 +221,7 @@ export default function StepControls({ draft, setDraft }: Props) {
       controller.abort();
       setIsAnalyzing(false);
     };
-  }, [targetsSig, userKey, setIsAnalyzing]);
+  }, [targetsSig, userKey, setIsAnalyzing]); // rows가 바뀌면(=새 항목 추가되면) 다시 실행됨
 
   if (rows.length === 0) {
     return (
@@ -235,7 +234,7 @@ export default function StepControls({ draft, setDraft }: Props) {
   return (
     <div className={s.wrap}>
       
-      {/* 분석 중 팝업 */}
+      {/* 분석 중 팝업 (isInitialAnalyzing일 때만 뜸) */}
       {isInitialAnalyzing && (
         <div className={s.loadingOverlay}>
           <div className={s.loadingPopup}>
@@ -270,12 +269,10 @@ export default function StepControls({ draft, setDraft }: Props) {
             </div>
             <div className={s.hazardTitle}>⚠️ {r.risk_situation_result}</div>
             
-            {/* 1. 위험성 판단 */}
             <div className={s.section}>
               <div className={s.sectionTitle}>위험성 판단</div>
               <div className={s.judgementGroup}>
                 {JUDGEMENTS.map((j) => (
-                  // ✅ GA: 판단 버튼 식별
                   <button
                     key={j}
                     type="button"
@@ -291,13 +288,11 @@ export default function StepControls({ draft, setDraft }: Props) {
               </div>
             </div>
 
-            {/* 2. 현재 안전조치 */}
             <div className={s.section}>
               <div className={s.sectionTitle}>현재 안전조치</div>
               {r.current_controls_items.length > 0 && (
                 <div className={s.chipRow}>
                   {r.current_controls_items.map((x: string) => (
-                    // ✅ GA: 추천 칩 선택 식별
                     <button
                       key={x}
                       type="button"
@@ -320,13 +315,11 @@ export default function StepControls({ draft, setDraft }: Props) {
               />
             </div>
 
-            {/* 3. 개선 대책 */}
             <div className={s.section}>
               <div className={s.sectionTitle}>개선 대책</div>
               {r.mitigation_items.length > 0 && (
                 <div className={s.chipRow}>
                   {r.mitigation_items.map((x: string) => (
-                    // ✅ GA: 추천 칩 선택 식별
                     <button
                       key={x}
                       type="button"
