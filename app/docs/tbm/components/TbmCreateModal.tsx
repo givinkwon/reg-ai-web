@@ -11,7 +11,7 @@ import { useUserStore } from '@/app/store/user';
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ 딕셔너리 Import (파일 경로를 실제 위치에 맞게 수정해주세요)
+// ✅ 딕셔너리 Import
 import { TASK_DICTIONARY } from './taskDictionary';
 
 // ✅ GA Context 정의
@@ -52,7 +52,7 @@ type TbmFormCache = {
   ts: number;
   user: 'guest';
   minorScope: string;
-  workDescription: string; // ✅ 문장 저장 추가
+  workDescription: string;
   detailTasks: string[];
   attendees: TbmAttendee[];
 };
@@ -112,9 +112,9 @@ export default function TbmCreateModal({
   
   const [minorCategory, setMinorCategory] = useState<string | null>(minorFromProps ?? null);
   
-  // ✅ [수정] 자연어 입력을 위한 상태 추가
+  // 자연어 입력을 위한 상태
   const [workDescription, setWorkDescription] = useState<string>('');
-  const [detailTasks, setDetailTasks] = useState<string[]>([]); // AI 감지 키워드(태그)
+  const [detailTasks, setDetailTasks] = useState<string[]>([]); // AI 감지 키워드
   
   const [attendees, setAttendees] = useState<TbmAttendee[]>([{ name: '', contact: '' }]);
   const [submitting, setSubmitting] = useState(false);
@@ -128,20 +128,16 @@ export default function TbmCreateModal({
 
   const scopeKey = useMemo(() => formCacheKey(norm(minorCategory) || 'ALL'), [minorCategory]);
 
-  // ✅ [수정] "AI 감지" 로직 (입력된 문장에서 딕셔너리 키워드 매칭)
+  // "AI 감지" 로직
   useEffect(() => {
     if (!workDescription.trim()) {
       setDetailTasks([]);
       return;
     }
 
-    // 디바운싱: 사용자가 입력을 멈춘 후 300ms 뒤에 실행 (성능 최적화)
     const handler = setTimeout(() => {
-        const input = workDescription.replace(/\s+/g, ' '); // 공백 정규화
-
-        // 딕셔너리에 있는 단어가 입력된 문장에 포함되어 있는지 확인
+        const input = workDescription.replace(/\s+/g, ' '); 
         const matched = TASK_DICTIONARY.filter(taskName => input.includes(taskName));
-
         setDetailTasks(matched);
     }, 300);
 
@@ -159,7 +155,6 @@ export default function TbmCreateModal({
     if (cached) {
       setWorkDescription(cached.workDescription || '');
       setAttendees(cached.attendees.length ? cached.attendees : [{ name: '', contact: '' }]);
-      // detailTasks는 workDescription에 의해 위 useEffect로 자동 생성됨
     }
   }, [open, scopeKey]);
 
@@ -173,8 +168,8 @@ export default function TbmCreateModal({
       ts: Date.now(),
       user: 'guest',
       minorScope: norm(minorCategory) || 'ALL',
-      workDescription, // 문장 저장
-      detailTasks,     // 태그 저장
+      workDescription, 
+      detailTasks,     
       attendees,
     });
   }, [workDescription, detailTasks, attendees, scopeKey, open, minorCategory]);
@@ -274,13 +269,15 @@ export default function TbmCreateModal({
         is_logged_in: !!user.email,
     });
 
+    // ✅ [수정] 서버로 workDescription을 함께 전송
     const body = {
       email: user.email,
       companyName: accountCompanyName || '',
       dateISO: new Date().toISOString().split('T')[0],
       minorCategory: minorCategory || null,
+      workDescription: workDescription, // 자연어 설명 추가
       detailTasks: cleanedTasks,
-      attendees: cleanedAttendees,
+      attendees: cleanedAttendees, 
     };
 
     setSubmitting(true);
@@ -301,7 +298,11 @@ export default function TbmCreateModal({
     runBackgroundDownload(body);
   };
 
-  const canSubmit = detailTasks.length > 0 && attendees.some(a => a.name) && !submitting;
+  // ✅ [수정] 제출 가능 조건 변경
+  // 1. 태그(detailTasks)가 있거나
+  // 2. OR 자연어 입력(workDescription)이 있으면 활성화
+  // 3. AND 제출 중이 아닐 것
+  const canSubmit = (detailTasks.length > 0 || workDescription.trim().length > 0) && !submitting;
 
   if (!open) return null;
 
@@ -332,7 +333,6 @@ export default function TbmCreateModal({
               <p className={s.desc}>오늘 진행할 작업과 참석자를 입력해주세요</p>
             </div>
 
-            {/* ✅ [UI 변경] 자연어 입력 textarea */}
             <div style={{ marginBottom: '24px' }}>
                 <label className={s.label}>TBM 대상 작업을 자유롭게 작성해주세요</label>
                 <textarea
@@ -356,7 +356,7 @@ export default function TbmCreateModal({
                 />
             </div>
 
-            {/* ✅ [UI 변경] AI 감지 키워드 표시 영역 */}
+            {/* AI 감지 키워드 표시 영역 */}
             {detailTasks.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
@@ -385,7 +385,7 @@ export default function TbmCreateModal({
             )}
 
             <div className={s.sectionRow}>
-              <span className={s.sectionTitle}>참석자 명단</span>
+              <span className={s.sectionTitle}>참석자 명단 (선택사항)</span>
               <button 
                 className={s.addBtn} 
                 onClick={() => {
@@ -447,7 +447,7 @@ export default function TbmCreateModal({
             <button 
                 className={s.primaryBtn} 
                 onClick={handleSubmit} 
-                disabled={!canSubmit}
+                // disabled={!canSubmit} 
                 data-ga-event="ClickSubmit"
                 data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
                 data-ga-label="TBM 일지 생성하기 버튼"
