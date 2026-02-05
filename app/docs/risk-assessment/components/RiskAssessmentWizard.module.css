@@ -1,20 +1,119 @@
+/* app/chat/risk/RiskAssessmentWizard.module.css */
+
 .wrap {
+  position: fixed;
+  inset: 0;
+  background-color: #ffffff;
+  z-index: 50; /* 모달보다 높거나 같게 */
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 80vw;
-  background-color: #fff;
-  color: #333;
   overflow: hidden;
 }
 
-/* 헤더 */
+/* =========================================
+   ✅ 전역 로딩 오버레이
+   ========================================= */
+.loadingOverlay {
+  position: absolute; /* wrap 기준 절대 위치 */
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 100; /* 컨텐츠보다 위에 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loadingPopup {
+  background-color: white;
+  padding: 2.5rem 3rem;
+  border-radius: 24px;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid rgba(0,0,0,0.05);
+  max-width: 90vw;
+  width: 380px;
+  text-align: center;
+  animation: popUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spinnerWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.spin {
+  color: #3b82f6; /* Blue-500 */
+  animation: spin 1s linear infinite;
+}
+
+.aiBadge {
+  position: absolute;
+  bottom: -6px;
+  right: -8px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.loadingTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loadingTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.loadingDesc {
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes popUp {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =========================================
+   기존 레이아웃 스타일
+   ========================================= */
+
 .header {
+  flex-shrink: 0;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #eee;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
   background-color: #fff;
 }
 
@@ -25,210 +124,216 @@
 }
 
 .closeBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  color: #64748b;
   font-weight: 500;
-  color: #64748b; /* 차분한 슬레이트 그레이 */
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0; /* 연한 테두리 추가 */
+  background: none;
+  border: none;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 8px; /* 약간 둥글게 */
-  transition: all 0.2s ease; /* 부드러운 전환 효과 */
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
 }
 
 .closeBtn:hover {
-  background-color: #f8fafc; /* 호버 시 아주 연한 하늘색 배경 */
-  color: #0f172a; /* 글자색은 더 진하게 */
-  border-color: #cbd5e1; /* 테두리도 약간 진하게 */
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* 미세한 그림자 */
-}
-
-.closeBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 클릭했을 때 살짝 눌리는 효과 */
-.closeBtn:active {
-  transform: translateY(1px);
   background-color: #f1f5f9;
+  color: #334155;
 }
 
 .title {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
+  color: #1e293b;
   margin: 0;
 }
 
 .progressText {
   font-size: 0.9rem;
-  color: #888;
-  font-weight: 500;
+  font-weight: 600;
+  color: #3b82f6;
+  background-color: #eff6ff;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
 }
 
-/* ✅ 탭 영역 (개선됨) */
+/* Tabs */
 .tabs {
+  flex-shrink: 0;
   display: flex;
-  align-items: center;
-  background-color: #f9fafb;
-  border-bottom: 1px solid #eee;
-  padding: 0.7rem 1.5rem;
-  gap: 0.5rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
   overflow-x: auto;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
+  gap: 0.6rem;
+  padding: 1rem 1.2rem;
   background: none;
   border: none;
-  outline: none;
-  font-family: inherit;
-  font-size: 0.95rem;
-  color: #888;
-  border-radius: 50px; /* 캡슐형 */
-  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.2s;
   white-space: nowrap;
 }
 
-/* 호버 시 글자색 사라짐 방지 및 시각적 피드백 */
-.tab:hover:not(:disabled) {
-  background-color: #f0f3f5;
-  color: #555;
+.tab:hover {
+  color: #64748b;
 }
 
-/* ✅ 활성 상태 (강조) */
 .tabActive {
-  color: #2388FF !important;
-  background-color: #eaf4ff !important;
-  font-weight: 700;
+  color: #2563eb;
+  border-bottom-color: #2563eb;
 }
 
-/* 지나간 단계 */
 .tabPast {
-  color: #555;
+  color: #334155;
 }
 
-/* ✅ 단계 숫자 원형 인디케이터 */
 .stepNum {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: #e5e7eb;
-  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  color: #64748b;
+  font-size: 0.8rem;
   font-weight: 700;
-  flex-shrink: 0;
+  transition: all 0.2s;
 }
 
 .tabActive .stepNum {
-  background-color: #2388FF;
+  background-color: #2563eb;
+  color: white;
 }
 
 .tabPast .stepNum {
-  background-color: #94a3b8;
+  background-color: #bfdbfe;
+  color: #1e40af;
 }
 
-/* 컨텐츠 영역 */
+.tabLabel {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Content Area */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
-  background-color: #fff;
+  padding: 2rem;
+  background-color: #ffffff;
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-/* 푸터 */
+/* Footer */
 .footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #eee;
+  flex-shrink: 0;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 2rem;
+  border-top: 1px solid #e2e8f0;
   background-color: #fff;
+  z-index: 10;
+}
+
+.footerMessage {
+  font-size: 0.9rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loadingText {
+  animation: pulse 1.5s infinite;
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .footerBtns {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.8rem;
 }
 
 .navBtn {
-  padding: 0.7rem 1.2rem;
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background-color: #fff;
-  color: black!important;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-}
-
-.navBtn:hover {
-    color:white!important;
+  background-color: #fff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  transition: all 0.2s;
 }
 
 .navBtn:hover:not(:disabled) {
-  color:white!important;
-}
-
-.navBtn:disabled {
-  color: #cbd5e1;
-  cursor: not-allowed;
+  background-color: #f1f5f9;
 }
 
 .navBtnPrimary {
-  padding: 0.7rem 1.5rem;
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  border: none;
-  background-color: #2388FF;
-  color: #fff;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  background-color: #2563eb;
+  border: 1px solid #2563eb;
+  color: white;
+  transition: all 0.2s;
 }
 
 .navBtnPrimary:hover:not(:disabled) {
-  background-color: #1b6cd9; /* ✅ 오타 수정된 컬러 */
-}
-
-.navBtnPrimary:disabled {
-  background-color: #e2e8f0;
-  color: #94a3b8;
-  cursor: not-allowed;
+  background-color: #1d4ed8;
 }
 
 .submitBtn {
-  padding: 0.7rem 1.5rem;
+  padding: 0.6rem 1.5rem;
   border-radius: 8px;
-  border: none;
-  background-color: #2388FF;
-  color: #fff;
   font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(35, 136, 255, 0.2);
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
 }
 
 .submitBtn:hover:not(:disabled) {
-  background-color: #1b6cd9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 10px -2px rgba(37, 99, 235, 0.3);
 }
 
-.submitBtn:disabled {
-  background-color: #e2e8f0;
-  color: #94a3b8;
-  box-shadow: none;
+button:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none !important;
 }
 
-.loadingText {
-  font-size: 0.9rem;
-  color: #2388FF;
-  font-weight: 500;
+/* Mobile */
+@media (max-width: 600px) {
+  .content {
+    padding: 1rem;
+  }
+  .footer {
+    padding: 0 1rem;
+  }
+  .tabLabel {
+    display: none;
+  }
 }

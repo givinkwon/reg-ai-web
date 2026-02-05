@@ -1,9 +1,9 @@
-// app/api/risk-assessment/route.ts
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// 환경 변수 또는 기본값 설정
 const FASTAPI_BASE = process.env.FASTAPI_BASE ?? 'http://35.76.230.177:8008';
 
 function short(s: string, n = 220) {
@@ -12,32 +12,15 @@ function short(s: string, n = 220) {
 }
 
 // ✅ endpoint 안전장치 (SSRF/경로 인젝션 방지)
-// - hyphen + underscore까지 허용 (필요시)
 function isValidEndpoint(endpoint: string) {
   if (!endpoint) return false;
   if (endpoint.length > 80) return false;
   return /^[a-z0-9_-]+$/i.test(endpoint);
 }
 
-function buildUpstream(reqUrl: string) {
-  const url = new URL(reqUrl);
-  const endpoint = url.searchParams.get('endpoint') ?? '';
-
-  if (!endpoint) return { error: 'Missing query param: endpoint' as const };
-  if (!isValidEndpoint(endpoint)) return { error: 'Invalid endpoint' as const };
-
-  url.searchParams.delete('endpoint');
-
-  const upstream = new URL(`/riskassessment/${endpoint}`, FASTAPI_BASE);
-  url.searchParams.forEach((v, k) => upstream.searchParams.append(k, v));
-
-  return { upstream, endpoint };
-}
-
-// ✅ FastAPI로 전달할 헤더 선택
+// ✅ 헤더 복사 로직
 function pickForwardHeaders(req: Request) {
   const h: Record<string, string> = {};
-
   const copyKeys = [
     'accept',
     'content-type',
@@ -47,8 +30,6 @@ function pickForwardHeaders(req: Request) {
     'x-request-id',
     'x-forwarded-for',
     'user-agent',
-
-    // ✅ 추가: 로그인 사용자 식별용(문서 저장/문서함)
     'x-user-email',
   ];
 
@@ -70,7 +51,6 @@ function pickBackHeaders(res: Response) {
   const cd = res.headers.get('content-disposition');
   if (cd) headers.set('content-disposition', cd);
 
-  // ✅ 추가: TBM 등에서 내려주는 커스텀 헤더가 필요하면 전달
   const tbmId = res.headers.get('x-tbm-id');
   if (tbmId) headers.set('x-tbm-id', tbmId);
 
@@ -93,13 +73,7 @@ function isJsonLike(contentType: string) {
   return ct.includes('application/json') || ct.includes('application/problem+json');
 }
 
-/**
- * ✅ 핵심: upstream이 어떤 endpoint에서는
- *   {"items":[...]} 를 주고,
- *   어떤 endpoint에서는 "{\"items\":[...]}" 처럼 "JSON 문자열"을 주는 경우가 있음.
- *
- * 프록시에서 1~2번 파싱해서 최종적으로 object/array로 정규화한다.
- */
+// JSON 문자열 이중 파싱 방지/처리 로직
 function parseMaybeJsonTwice(raw: string) {
   let v: any = raw;
 
@@ -129,20 +103,29 @@ function noStoreHeaders(extra?: Record<string, string>) {
   return { 'Cache-Control': 'no-store', ...(extra ?? {}) };
 }
 
+// =================================================================
+// 🚀 GET 핸들러 (기존 로직 유지 - URL Query 사용)
+// =================================================================
 export async function GET(req: Request) {
   const rid = Math.random().toString(16).slice(2, 8);
-  const started = Date.now();
+  const start = Date.now();
+  
+  const url = new URL(req.url);
+  const endpoint = url.searchParams.get('endpoint');
 
-  const built = buildUpstream(req.url);
-  if ('error' in built) {
-    console.warn(`[risk-assessment ${rid}] ${built.error}`);
-    return NextResponse.json({ error: built.error }, { status: 400 });
+  if (!endpoint) {
+    return NextResponse.json({ error: 'Missing query param: endpoint' }, { status: 400 });
+  }
+  if (!isValidEndpoint(endpoint)) {
+    return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 });
   }
 
-  const { upstream } = built;
+  // Upstream URL 구성
+  url.searchParams.delete('endpoint');
+  const upstream = new URL(`/riskassessment/${endpoint}`, FASTAPI_BASE);
+  url.searchParams.forEach((v, k) => upstream.searchParams.append(k, v));
 
-  console.log(`[risk-assessment ${rid}] GET req.url=`, req.url);
-  console.log(`[risk-assessment ${rid}] GET upstream=`, upstream.toString());
+  console.log(`[risk-assessment ${rid}] GET upstream=${upstream.toString()}`);
 
   try {
     const fwdHeaders = pickForwardHeaders(req);
@@ -155,158 +138,129 @@ export async function GET(req: Request) {
 
     const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
 
-    // ✅ JSON/Text 계열이면 텍스트로 읽어서 처리
+    // JSON/Text 응답 처리
     if (isTextLike(contentType)) {
       const body = await res.text();
+      // console.log(`[risk-assessment ${rid}] GET status=${res.status} bodyHead=${short(body)}`);
 
-      console.log(
-        `[risk-assessment ${rid}] GET upstreamStatus=${res.status} ct=${contentType} elapsed=${
-          Date.now() - started
-        }ms bodyHead=${JSON.stringify(short(body))}`,
-      );
-
-      // ✅ JSON이면 "문자열 JSON"까지 풀어 object/array로 정규화해서 반환
       if (isJsonLike(contentType)) {
         const parsed = parseMaybeJsonTwice(body);
-
-        // object/array면 그대로 json 응답
         if (typeof parsed === 'object' && parsed !== null) {
-          return NextResponse.json(parsed, {
-            status: res.status,
-            headers: noStoreHeaders(),
-          });
+          return NextResponse.json(parsed, { status: res.status, headers: noStoreHeaders() });
         }
-
-        // JSON인데 object가 아니면(예: string/number/bool) 안전하게 감싸서 반환
-        return NextResponse.json(
-          { value: parsed },
-          { status: res.status, headers: noStoreHeaders() },
-        );
+        return NextResponse.json({ value: parsed }, { status: res.status, headers: noStoreHeaders() });
       }
-
-      // ✅ JSON이 아닌 text/xml 등은 그대로 반환
-      return new NextResponse(body, {
-        status: res.status,
-        headers: noStoreHeaders({ 'Content-Type': contentType }),
-      });
+      return new NextResponse(body, { status: res.status, headers: noStoreHeaders({ 'Content-Type': contentType }) });
     }
 
-    // ✅ 바이너리는 스트리밍 반환
-    console.log(
-      `[risk-assessment ${rid}] GET upstreamStatus=${res.status} ct=${contentType} elapsed=${
-        Date.now() - started
-      }ms (stream)`,
-    );
+    // Binary 스트리밍 응답
+    return new NextResponse(res.body, { status: res.status, headers: pickBackHeaders(res) });
 
-    return new NextResponse(res.body, {
-      status: res.status,
-      headers: pickBackHeaders(res),
-    });
   } catch (e: any) {
-    console.error(
-      `[risk-assessment ${rid}] GET fetch failed elapsed=${Date.now() - started}ms err=${
-        e?.message ?? String(e)
-      }`,
-    );
-
-    return NextResponse.json(
-      {
-        error: 'fetch failed',
-        reqUrl: req.url,
-        upstream: upstream.toString(),
-        message: e?.message ?? String(e),
-      },
-      { status: 502 },
-    );
+    console.error(`[risk-assessment ${rid}] GET failed: ${e}`);
+    return NextResponse.json({ error: 'fetch failed', message: String(e) }, { status: 502 });
   }
 }
 
+// =================================================================
+// 🚀 POST 핸들러 (🔥 수정됨: URL 파라미터 및 Body 모두 지원)
+// =================================================================
 export async function POST(req: Request) {
   const rid = Math.random().toString(16).slice(2, 8);
-  const started = Date.now();
+  const start = Date.now();
+  const url = new URL(req.url);
 
-  const built = buildUpstream(req.url);
-  if ('error' in built) {
-    console.warn(`[risk-assessment ${rid}] ${built.error}`);
-    return NextResponse.json({ error: built.error }, { status: 400 });
-  }
+  // 1. URL 쿼리 파라미터에서 endpoint 확인 (기존 엑셀 다운로드 등)
+  let endpoint = url.searchParams.get('endpoint');
+  let isEndpointFromUrl = !!endpoint;
 
-  const { upstream } = built;
-
-  console.log(`[risk-assessment ${rid}] POST req.url=`, req.url);
-  console.log(`[risk-assessment ${rid}] POST upstream=`, upstream.toString());
+  let bodyText = "";
+  let bodyJson: any = null;
 
   try {
-    const bodyBuf = await req.arrayBuffer();
+    // Body를 한 번 읽어둠 (Next.js Request Body는 한 번만 읽을 수 있음)
+    bodyText = await req.text();
+    if (bodyText) {
+      bodyJson = JSON.parse(bodyText);
+    }
+  } catch (e) {
+    // Body가 JSON이 아니거나 비어있을 수 있음 (무시)
+  }
+
+  // 2. URL에 없다면 Body에서 endpoint 확인 (NLU 기능 등)
+  if (!endpoint && bodyJson && bodyJson.endpoint) {
+    endpoint = bodyJson.endpoint;
+    isEndpointFromUrl = false;
+  }
+
+  // 3. 검증
+  if (!endpoint) {
+    console.warn(`[risk-assessment ${rid}] Missing endpoint in URL or Body`);
+    return NextResponse.json({ error: 'Missing endpoint' }, { status: 400 });
+  }
+
+  if (!isValidEndpoint(endpoint)) {
+    console.warn(`[risk-assessment ${rid}] Invalid endpoint: ${endpoint}`);
+    return NextResponse.json({ error: 'Invalid endpoint' }, { status: 400 });
+  }
+
+  // 4. Upstream URL 및 Body 구성
+  const upstream = new URL(`/riskassessment/${endpoint}`, FASTAPI_BASE);
+  
+  // URL 쿼리 파라미터 전달 (endpoint 제외)
+  url.searchParams.delete('endpoint');
+  url.searchParams.forEach((v, k) => upstream.searchParams.append(k, v));
+
+  console.log(`[risk-assessment ${rid}] POST upstream=${upstream.toString()}`);
+
+  // 전송할 Body 결정
+  let upstreamBody: any;
+  
+  if (!isEndpointFromUrl && bodyJson) {
+    // Body에서 endpoint를 꺼낸 경우 -> endpoint를 제외한 나머지를 전송
+    const { endpoint: _, ...rest } = bodyJson;
+    upstreamBody = JSON.stringify(rest);
+  } else {
+    // URL에서 endpoint를 꺼낸 경우 -> 원본 Body 그대로 전송
+    upstreamBody = bodyText;
+  }
+
+  try {
     const fwdHeaders = pickForwardHeaders(req);
+    // JSON Body를 재구성했을 경우 Content-Type 명시
+    if (!isEndpointFromUrl) {
+      fwdHeaders['content-type'] = 'application/json';
+    }
 
     const res = await fetch(upstream.toString(), {
       method: 'POST',
       cache: 'no-store',
       headers: fwdHeaders,
-      body: bodyBuf,
+      body: upstreamBody,
     });
 
     const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
 
-    // ✅ JSON/Text 계열이면 텍스트로 읽어서 처리(특히 JSON 정규화)
+    // JSON/Text 응답 처리
     if (isTextLike(contentType)) {
-      const body = await res.text();
-
-      console.log(
-        `[risk-assessment ${rid}] POST upstreamStatus=${res.status} ct=${contentType} elapsed=${
-          Date.now() - started
-        }ms bodyHead=${JSON.stringify(short(body))}`,
-      );
+      const resText = await res.text();
+      console.log(`[risk-assessment ${rid}] POST status=${res.status} bodyHead=${short(resText)}`);
 
       if (isJsonLike(contentType)) {
-        const parsed = parseMaybeJsonTwice(body);
-
+        const parsed = parseMaybeJsonTwice(resText);
         if (typeof parsed === 'object' && parsed !== null) {
-          return NextResponse.json(parsed, {
-            status: res.status,
-            headers: noStoreHeaders(),
-          });
+          return NextResponse.json(parsed, { status: res.status, headers: noStoreHeaders() });
         }
-
-        return NextResponse.json(
-          { value: parsed },
-          { status: res.status, headers: noStoreHeaders() },
-        );
+        return NextResponse.json({ value: parsed }, { status: res.status, headers: noStoreHeaders() });
       }
-
-      return new NextResponse(body, {
-        status: res.status,
-        headers: noStoreHeaders({ 'Content-Type': contentType }),
-      });
+      return new NextResponse(resText, { status: res.status, headers: noStoreHeaders({ 'Content-Type': contentType }) });
     }
 
-    // ✅ 바이너리는 기존처럼 스트리밍
-    console.log(
-      `[risk-assessment ${rid}] POST upstreamStatus=${res.status} ct=${contentType} elapsed=${
-        Date.now() - started
-      }ms (stream)`,
-    );
+    // Binary 스트리밍 응답 (엑셀 등)
+    return new NextResponse(res.body, { status: res.status, headers: pickBackHeaders(res) });
 
-    return new NextResponse(res.body, {
-      status: res.status,
-      headers: pickBackHeaders(res),
-    });
   } catch (e: any) {
-    console.error(
-      `[risk-assessment ${rid}] POST fetch failed elapsed=${Date.now() - started}ms err=${
-        e?.message ?? String(e)
-      }`,
-    );
-
-    return NextResponse.json(
-      {
-        error: 'fetch failed',
-        reqUrl: req.url,
-        upstream: upstream.toString(),
-        message: e?.message ?? String(e),
-      },
-      { status: 502 },
-    );
+    console.error(`[risk-assessment ${rid}] POST failed: ${e}`);
+    return NextResponse.json({ error: 'fetch failed', message: String(e) }, { status: 502 });
   }
 }

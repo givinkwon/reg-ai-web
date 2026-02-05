@@ -1,403 +1,287 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, RefreshCw, Search, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { RefreshCw, Search, X, Sparkles, Check, Plus } from 'lucide-react';
 import s from './StepTasks.module.css';
 import AddDetailTaskModal from '../ui/AddDetailTaskModal';
 import type { RiskAssessmentDraft } from '../RiskAssessmentWizard';
 import { useUserStore } from '@/app/store/user';
-import { Button } from '@/app/components/ui/button'; // ✅ Button 컴포넌트 경로 확인 필요
-
-// ✅ GA Imports
+import { Button } from '@/app/components/ui/button';
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ GA Context 정의
 const GA_CTX = { page: 'Docs', section: 'RiskAssessment', area: 'StepTasks' } as const;
 
 type Props = {
   draft: RiskAssessmentDraft;
   setDraft: React.Dispatch<React.SetStateAction<RiskAssessmentDraft>>;
   minor?: string;
+  onAutoStart?: () => void; // ✅ 부모에게 자동 시작 신호 보내기용 Prop
 };
 
 const uid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
 const norm = (v?: string | null) => (v ?? '').trim();
 
-// =========================
-// ✅ localStorage cache (v2) - 기존 로직 유지
-// =========================
-const CACHE_PREFIX = 'regai:risk:stepTasks:v2';
-const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 180; // 180일
-const RETRY_COOLDOWN_MS = 1000 * 20; // 20초
-
-type StepTasksCache = {
-  v: 2;
-  ts: number;
-  user: string;
-  minor: string;
-  recommended: string[];
-  tasks: RiskAssessmentDraft['tasks'];
-};
-
-function cacheKey(userEmail: string | null | undefined, minorCategory: string | null | undefined) {
-  const u = norm(userEmail) || 'guest';
-  const m = norm(minorCategory) || 'ALL';
-  return `${CACHE_PREFIX}:${encodeURIComponent(u)}:${encodeURIComponent(m)}`;
-}
-
-function safeReadCache(key: string): StepTasksCache | null {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as StepTasksCache;
-    if (parsed?.v !== 2) return null;
-    if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function safeWriteCache(key: string, payload: StepTasksCache) {
-  try {
-    localStorage.setItem(key, JSON.stringify(payload));
-  } catch { /* ignore */ }
-}
-
-function findLatestCacheForUser(userEmail: string | null | undefined): { key: string; cache: StepTasksCache } | null {
-  try {
-    const u = norm(userEmail) || 'guest';
-    const prefix = `${CACHE_PREFIX}:${encodeURIComponent(u)}:`;
-    let best: { key: string; cache: StepTasksCache } | null = null;
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k || !k.startsWith(prefix)) continue;
-      const c = safeReadCache(k);
-      if (!c) continue;
-      if (!best || c.ts > best.cache.ts) best = { key: k, cache: c };
-    }
-    return best;
-  } catch { return null; }
-}
-
-export default function StepTasks({ draft, setDraft, minor }: Props) {
+export default function StepTasks({ draft, setDraft, onAutoStart }: Props) {
   const user = useUserStore((st) => st.user);
-
-  const overrideMinor = norm(minor);
-  const [minorCategory, setMinorCategory] = useState<string | null>(overrideMinor ? overrideMinor : null);
-
-  const [recoLoading, setRecoLoading] = useState(false);
-  const [recoError, setRecoError] = useState<string | null>(null);
+  
+  const [nlpText, setNlpText] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // 로딩 텍스트를 상태로 관리하여 단계별 안내 멘트 변경
+  const [loadingText, setLoadingText] = useState({ 
+    title: '작업 내용을 분석 중입니다', 
+    desc: '입력하신 내용을 바탕으로\n가장 적합한 표준 공종을 찾고 있습니다.' 
+  });
+  
   const [recommended, setRecommended] = useState<string[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // 로직 Refs
-  const autoAppliedRef = useRef<string | null>(null);
-  const cacheCheckedRef = useRef<string | null>(null);
-  const prevMinorRef = useRef<string | null>(null);
-  const prevScopeRef = useRef<string | null>(null);
-  const attemptRef = useRef<Map<string, number>>(new Map());
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const userEmail = (user?.email ?? '').trim();
-  const currentMinorNorm = norm(minorCategory) || 'ALL';
-  const scope = `${norm(userEmail) || 'guest'}|${currentMinorNorm}`;
+  const handleNLUSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const text = norm(nlpText);
+    if (!text) return;
 
-  // ✅ 1. 소분류 폴백
-  useEffect(() => {
-    if (overrideMinor) return;
-    if (minorCategory) return;
-    if (!user?.email) return;
+    setIsAnalyzing(true);
+    // 초기 로딩 멘트 설정
+    setLoadingText({ 
+      title: '작업 내용을 분석 중입니다', 
+      desc: '입력하신 내용을 바탕으로\n가장 적합한 표준 공종을 찾고 있습니다.' 
+    });
+    setError(null);
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/accounts/find-by-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: user.email }),
-        });
-        if (!res.ok) return;
-        const acc = await res.json().catch(() => null);
-        const minorFound = acc?.secondary_info?.subcategory?.name ?? acc?.subcategory?.name ?? null;
+    track(gaEvent(GA_CTX, 'RequestAIRec'), { ui_id: gaUiId(GA_CTX, 'RequestAIRec'), input_text: text });
 
-        if (!cancelled && typeof minorFound === 'string' && norm(minorFound)) {
-          setMinorCategory(norm(minorFound));
-        }
-      } catch { /* silent */ }
-    })();
-    return () => { cancelled = true; };
-  }, [user?.email, minorCategory, overrideMinor]);
-
-  // ✅ 2. 캐시 복원
-  useEffect(() => {
-    const uEmail = user?.email ?? null;
-    const userId = norm(uEmail) || 'guest';
-    let currentMinor = norm(minorCategory) || 'ALL';
-
-    const s = `${userId}|${currentMinor}`;
-    if (cacheCheckedRef.current === s) return;
-    
-    if (prevScopeRef.current && prevScopeRef.current !== s) {
-      setRecommended([]);
-      setRecoError(null);
-      setRecoLoading(false);
-      autoAppliedRef.current = null;
-    }
-    prevScopeRef.current = s;
-    cacheCheckedRef.current = s;
-
-    let key = cacheKey(uEmail, currentMinor);
-    let cached = safeReadCache(key);
-
-    if (!cached && uEmail) cached = safeReadCache(cacheKey(null, currentMinor));
-    if (!cached && (!norm(minorCategory) || currentMinor === 'ALL')) {
-      const latest = findLatestCacheForUser(uEmail) ?? findLatestCacheForUser(null);
-      if (latest?.cache) {
-        cached = latest.cache;
-        currentMinor = norm(cached.minor) || 'ALL';
-        if (!overrideMinor && !norm(minorCategory)) setMinorCategory(currentMinor);
-      }
-    }
-
-    if (!cached) return;
-
-    const resolvedScope = `${userId}|${currentMinor}`;
-    if (Array.isArray(cached.tasks) && cached.tasks.length > 0) {
-      setDraft((prev) => {
-        if (prev.tasks.length > 0) return prev; 
-        return { ...prev, tasks: cached.tasks };
+    try {
+      // 1. 인위적 딜레이 (사용자 경험용)
+      const delayPromise = new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      // 2. API 호출
+      const apiPromise = fetch('/api/risk-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: 'recommend-minors-nlu', text: text }),
       });
-      autoAppliedRef.current = resolvedScope;
-    }
 
-    const cachedReco = cached.recommended?.length > 0 ? cached.recommended : cached.tasks.map(t => norm(t.title));
-    setRecommended(Array.from(new Set(cachedReco.map(norm).filter(Boolean))));
-    setRecoLoading(false);
-  }, [minorCategory, user?.email, overrideMinor, setDraft]);
-
-  // ✅ 3. API 호출
-  useEffect(() => {
-    const currentMinor = norm(minorCategory);
-    if (!currentMinor || currentMinor === 'ALL') return;
-
-    const s = `${norm(user?.email) || 'guest'}|${currentMinor}`;
-    if (safeReadCache(cacheKey(user?.email, currentMinor))) return; 
-
-    const last = attemptRef.current.get(s);
-    if (last && Date.now() - last < RETRY_COOLDOWN_MS) return;
-    attemptRef.current.set(s, Date.now());
-
-    const ac = new AbortController();
-    (async () => {
-      setRecoLoading(true);
-      setRecoError(null);
-      try {
-        const qs = new URLSearchParams({ endpoint: 'detail-tasks', minor: currentMinor, limit: '50' });
-        const res = await fetch(`/api/risk-assessment?${qs.toString()}`, { cache: 'no-store', signal: ac.signal });
-        if (!res.ok) throw new Error('목록 로드 실패');
+      const [_, res] = await Promise.all([delayPromise, apiPromise]);
+      
+      if (!res.ok) throw new Error('추천 정보를 가져오지 못했습니다.');
+      
+      const data = await res.json();
+      const items: string[] = data.items || [];
+      const uniqueItems = Array.from(new Set(items));
+      
+      setRecommended(uniqueItems);
+      
+      if (uniqueItems.length === 0) {
+        setError('관련된 표준 작업을 찾지 못했습니다. 조금 더 구체적으로 적어주세요.');
+        setIsAnalyzing(false); // 실패 시 로딩 종료
+      } else {
+        // ✅ [성공 시 로직]
         
-        const data = await res.json();
-        const items = (data.items ?? []).map(norm).filter(Boolean);
-        setRecommended(Array.from(new Set(items)));
-      } catch (e: any) {
-        if (e.name !== 'AbortError') setRecoError('목록을 불러오지 못했습니다.');
-      } finally {
-        setRecoLoading(false);
+        // 1. 추천된 작업들을 draft에 모두 자동 추가
+        setDraft(prev => {
+          const exist = new Set(prev.tasks.map(t => norm(t.title)));
+          const merged = [...prev.tasks];
+          uniqueItems.forEach(raw => {
+            const v = norm(raw);
+            if (v && !exist.has(v)) {
+              merged.push({ id: uid(), title: v, processes: [] });
+            }
+          });
+          return { ...prev, tasks: merged };
+        });
+
+        // 2. 로딩 멘트 변경 (부모 화면으로 넘어가기 전 자연스러운 연결)
+        setLoadingText({ 
+          title: '공정 데이터 생성 중', 
+          desc: '선택된 작업에 대한\n위험성평가 데이터를 구성하고 있습니다...' 
+        });
+        
+        // 3. 잠시 후 부모에게 "자동 주행 시작" 신호 전달
+        setTimeout(() => {
+          // 여기서 setIsAnalyzing(false)를 하지 않음 -> 화면이 전환될 때까지 오버레이 유지
+          if (onAutoStart) onAutoStart();
+        }, 1000);
       }
-    })();
-    return () => ac.abort();
-  }, [minorCategory, user?.email]);
 
-  // ✅ 4. 자동 선택
-  useEffect(() => {
-    const currentMinor = norm(minorCategory) || 'ALL';
-    if (recoLoading || recoError || recommended.length === 0) return;
+    } catch (err) {
+      console.error(err);
+      setError('서버 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      setIsAnalyzing(false);
+    }
+  };
 
-    const s = `${norm(user?.email) || 'guest'}|${currentMinor}`;
-    if (autoAppliedRef.current === s) return;
-
-    setDraft((prev) => {
-      const exist = new Set(prev.tasks.map(t => norm(t.title)));
-      const merged = [...prev.tasks];
-      recommended.forEach(raw => {
-        const v = norm(raw);
-        if (v && !exist.has(v)) {
-          merged.push({ id: uid(), title: v, processes: [] });
-          exist.add(v);
-        }
-      });
-      return { ...prev, tasks: merged };
-    });
-    autoAppliedRef.current = s;
-  }, [minorCategory, recommended, recoLoading, recoError, user?.email, setDraft]);
-
-  // ✅ 5. 변경 사항 캐시 저장
-  useEffect(() => {
-    const currentMinor = norm(minorCategory) || 'ALL';
-    const key = cacheKey(user?.email, currentMinor);
-    const tasksToSave = draft.tasks ?? [];
-    
-    if (tasksToSave.length === 0 && recommended.length === 0) return;
-
-    safeWriteCache(key, {
-      v: 2,
-      ts: Date.now(),
-      user: norm(user?.email) || 'guest',
-      minor: currentMinor,
-      recommended: recommended.length > 0 ? recommended : tasksToSave.map(t => t.title),
-      tasks: tasksToSave,
-    });
-  }, [minorCategory, user?.email, draft.tasks, recommended]);
-
-  const displayList = useMemo(() => {
-    if (recommended.length > 0) return recommended;
-    return Array.from(new Set(draft.tasks.map(t => norm(t.title)).filter(Boolean)));
-  }, [recommended, draft.tasks]);
-
-  // ✅ GA: 작업 선택/해제 핸들러
   const toggleSelect = (title: string) => {
     const v = norm(title);
     if (!v) return;
-
-    // 현재 상태 확인 (Select vs Deselect)
     const exists = draft.tasks.some((t) => norm(t.title) === v);
-    const eventName = exists ? 'RemoveTask' : 'SelectTask';
-
-    track(gaEvent(GA_CTX, eventName), {
-      ui_id: gaUiId(GA_CTX, eventName),
-      task_title: v,
-    });
-
+    
     setDraft((prev) => {
       if (exists) return { ...prev, tasks: prev.tasks.filter((t) => norm(t.title) !== v) };
       return { ...prev, tasks: [...prev.tasks, { id: uid(), title: v, processes: [] }] };
     });
+
+    track(gaEvent(GA_CTX, exists ? 'RemoveTask' : 'SelectTask'), {
+      ui_id: gaUiId(GA_CTX, exists ? 'RemoveTask' : 'SelectTask'),
+      task_title: v,
+    });
   };
 
-  // ✅ GA: 직접 추가 핸들러
   const addManualTask = (title: string) => {
     const v = norm(title);
     if (!v) return;
     
     setDraft((prev) => {
       if (prev.tasks.some(t => norm(t.title) === v)) return prev;
-
-      // GA: 직접 추가 성공 시 추적
-      track(gaEvent(GA_CTX, 'AddManualTask'), {
-          ui_id: gaUiId(GA_CTX, 'AddManualTask'),
-          task_title: v
-      });
-
       return { ...prev, tasks: [...prev.tasks, { id: uid(), title: v, processes: [] }] };
     });
+    
+    setRecommended(prev => Array.from(new Set([v, ...prev])));
   };
 
   return (
     <div className={s.container}>
-      <div className={s.header}>
-        <div>
-          <h3 className={s.title}>작업 선택</h3>
-        </div>
-        {/* ✅ GA: 검색 모달 열기 버튼 */}
-        <Button 
-          variant="outline" 
-          className={s.addBtn}
-          onClick={() => {
-              track(gaEvent(GA_CTX, 'OpenSearchModal'), { ui_id: gaUiId(GA_CTX, 'OpenSearchModal') });
-              setAddOpen(true);
-          }}
-          data-ga-event="OpenSearchModal"
-          data-ga-id={gaUiId(GA_CTX, 'OpenSearchModal')}
-          data-ga-label="직접 검색/추가 버튼"
-        >
-          <Search size={16} className="mr-2" /> 직접 검색/추가
-        </Button>
-      </div>
-
-      {/* 하단 선택 요약 (칩) */}
-      <div className={s.summary}>
-        <span className={s.summaryLabel}>선택된 작업 ({draft.tasks.length})</span>
-        <div className={s.chipList}>
-          {draft.tasks.length === 0 ? (
-            <span className={s.emptyText}>선택된 작업이 없습니다.</span>
-          ) : (
-            draft.tasks.map(t => (
-              <span key={t.id} className={s.chip}>
-                {t.title}
-                {/* ✅ GA: 칩 삭제 버튼 */}
-                <button 
-                  className={s.chipRemove} 
-                  onClick={(e) => { e.stopPropagation(); toggleSelect(t.title); }}
-                  data-ga-event="RemoveTask"
-                  data-ga-id={gaUiId(GA_CTX, 'RemoveTask')}
-                  data-ga-label={t.title}
-                >
-                  ×
-                </button>
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* <div className={s.desc}>
-        {norm(minorCategory) ? (
-          <>소분류 <b className="text-purple-600 font-semibold">{minorCategory}</b> 기준으로 작업을 자동 추천해 드렸습니다.</>
-        ) : (
-          '진행할 작업을 선택하세요. 관련된 공정 데이터를 자동으로 불러옵니다.'
-        )}
-      </div> */}
-
-      {/* 로딩 상태 */}
-      {/* {recoLoading && (
-        <div className={s.loadingState}>
-          <RefreshCw className="animate-spin text-purple-500" />
-          <span>추천 작업을 불러오는 중...</span>
-        </div>
-      )} */}
-
-      {/* 에러 상태 */}
-      {/* {!recoLoading && recoError && (
-        <div className={s.errorState}>{recoError}</div>
-      )} */}
-
-      {/* 추천 목록 그리드 */}
-      {/* {!recoLoading && !recoError && displayList.length > 0 && (
-        <div className={s.grid}>
-          {displayList.map((item) => {
-            const title = norm(item);
-            const isSelected = draft.tasks.some(t => norm(t.title) === title);
-            return (
-              <button
-                key={title}
-                className={`${s.card} ${isSelected ? s.active : ''}`}
-                onClick={() => toggleSelect(title)}
-                // ✅ GA: 카드 선택/해제
-                data-ga-event={isSelected ? 'RemoveTask' : 'SelectTask'}
-                data-ga-id={gaUiId(GA_CTX, isSelected ? 'RemoveTask' : 'SelectTask')}
-                data-ga-label={title}
-              >
-                <div className={s.checkCircle}>
-                  {isSelected && <div className={s.checkDot} />}
-                </div>
-                <span className={s.cardText}>{title}</span>
-              </button>
-            );
-          })}
-        </div>
-      )} */}
-
-      {/* 빈 상태 */}
-      {!recoLoading && !recoError && displayList.length === 0 && (
-        <div className={s.loadingState}>
-          <span>추천 작업이 없습니다. 직접 추가해주세요.</span>
+      
+      {/* ✅ 로딩 오버레이 (멘트가 동적으로 바뀜) */}
+      {isAnalyzing && (
+        <div className={s.loadingOverlay}>
+          <div className={s.loadingPopup}>
+            <div className={s.spinnerWrapper}>
+              <RefreshCw size={36} className={s.spin} />
+              <div className={s.aiBadge}>
+                <Sparkles size={14} fill="#fff" /> AI
+              </div>
+            </div>
+            <div className={s.loadingTexts}>
+              <h3 className={s.loadingTitle}>{loadingText.title}</h3>
+              <p className={s.loadingDesc} style={{ whiteSpace: 'pre-wrap' }}>
+                {loadingText.desc}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* 1. 상단 자연어 입력 섹션 */}
+      <div className={s.nlpSection}>
+        <div className={s.nlpHeader}>
+          <div className={s.iconBox}>
+            <Sparkles size={20} className="text-blue-500" />
+          </div>
+          <div>
+            <h3 className={s.title}>어떤 작업을 진행하시나요?</h3>
+            <p className={s.desc}>작업 내용을 문장으로 입력하면 AI가 문서를 자동으로 완성합니다.</p>
+          </div>
+        </div>
+        
+        <form onSubmit={handleNLUSearch} className={s.searchBox}>
+          <div className={s.inputWrapper}>
+            <input 
+              ref={inputRef}
+              type="text" 
+              className={s.aiInput}
+              placeholder="예: 굴착기로 터파기 작업을 하고, 덤프트럭에 상차함"
+              value={nlpText}
+              onChange={(e) => setNlpText(e.target.value)}
+              disabled={isAnalyzing}
+            />
+            {nlpText && (
+              <button type="button" className={s.clearBtn} onClick={() => setNlpText('')}>
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <Button 
+            type="submit" 
+            disabled={isAnalyzing || !norm(nlpText)}
+            className={s.submitBtn}
+          >
+            <Search size={18} className="mr-2" />
+            AI 검색
+          </Button>
+        </form>
+      </div>
+
+      <hr className={s.divider} />
+
+      {/* 2. 결과 표시 섹션 */}
+      <div className={s.resultSection}>
+        <div className={s.sectionHeader}>
+          <h4 className={s.subTitle}>
+            {recommended.length > 0 ? '추천된 작업 (자동 선택됨)' : '선택된 작업 목록'}
+          </h4>
+          <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)} className={s.manualLink}>
+            <Plus size={14} className="mr-1" /> 직접 추가하기
+          </Button>
+        </div>
+
+        {error && (
+          <div className={s.errorBox}>
+            <p>{error}</p>
+          </div>
+        )}
+
+        {/* 추천 목록 그리드 */}
+        {recommended.length > 0 ? (
+          <div className={s.grid}>
+            {recommended.map((item) => {
+              const isSelected = draft.tasks.some(t => norm(t.title) === item);
+              return (
+                <button
+                  key={item}
+                  className={`${s.card} ${isSelected ? s.active : ''}`}
+                  onClick={() => toggleSelect(item)}
+                >
+                  <div className={s.checkCircle}>
+                    {isSelected && <Check size={14} strokeWidth={3} className="text-white" />}
+                  </div>
+                  <span className={s.cardText}>{item}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* 빈 상태 */
+          draft.tasks.length === 0 && !error && (
+            <div className={s.emptyBox}>
+              <Search size={48} className="text-slate-200 mb-3" />
+              <p className="text-slate-400 font-medium">
+                작업 내용을 입력하고 검색하면<br/>
+                자동으로 문서를 생성합니다.
+              </p>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* 3. 하단 선택 요약 (Chips) */}
+      {draft.tasks.length > 0 && (
+        <div className={s.summary}>
+          <span className={s.summaryLabel}>최종 선택된 작업 ({draft.tasks.length})</span>
+          <div className={s.chipList}>
+            {draft.tasks.map(t => (
+              <span key={t.id} className={s.chip}>
+                {t.title}
+                <button 
+                  className={s.chipRemove} 
+                  onClick={() => toggleSelect(t.title)}
+                  title="제거"
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 직접 추가 모달 */}
       <AddDetailTaskModal 
-        open={addOpen} 
-        minorCategory={minorCategory}
+        open={addOpen}
+        minorCategory={null} 
         onClose={() => setAddOpen(false)}
         onAdd={addManualTask}
       />

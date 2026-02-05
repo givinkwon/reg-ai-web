@@ -6,168 +6,350 @@
   gap: 1.5rem;
   margin: 0 auto;
   width: 100%;
+  padding-bottom: 2rem;
 }
 
-.header {
+/* =========================================
+   ✅ 로딩 오버레이 (StepControls와 동일)
+   ========================================= */
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.6); /* 밝은 반투명 */
+  backdrop-filter: blur(8px); /* 강력한 블러 효과 */
+  z-index: 9999;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
 }
 
-.title {
-  font-size: 1.2rem;
+.loadingPopup {
+  background-color: white;
+  padding: 2.5rem 3rem;
+  border-radius: 24px;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid rgba(0,0,0,0.05);
+  max-width: 90vw;
+  width: 380px;
+  text-align: center;
+  animation: popUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spinnerWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.spin {
+  color: #3b82f6; /* Blue-500 */
+  animation: spin 1s linear infinite;
+}
+
+.aiBadge {
+  position: absolute;
+  bottom: -6px;
+  right: -8px;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.loadingTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loadingTitle {
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #111; /* 명확한 블랙 */
-  margin-bottom: 0.5rem;
+  color: #1e293b;
+  margin: 0;
 }
 
-.desc {
+.loadingDesc {
   font-size: 0.95rem;
-  color: #666;
+  color: #64748b;
   line-height: 1.5;
+  margin: 0;
 }
 
-.addBtn {
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes popUp {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =========================================
+   1. 상단 자연어 입력 섹션
+   ========================================= */
+.nlpSection {
+  background: linear-gradient(to bottom, #ffffff, #f8fafc);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.nlpHeader {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 1.2rem;
+  align-items: flex-start;
+}
+
+.iconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #eff6ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-/* 로딩/에러 상태 */
-.loadingState, .errorState {
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.3rem 0;
+}
+
+.desc {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.searchBox {
+  display: flex;
+  gap: 10px;
+}
+
+.inputWrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.aiInput {
+  width: 100%;
+  height: 52px;
+  padding: 0 45px 0 16px; /* 우측 clearBtn 공간 확보 */
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  font-size: 1rem;
+  background-color: #fff;
+  transition: all 0.2s;
+  color: #333;
+}
+
+.aiInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.aiInput:disabled {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.clearBtn {
+  position: absolute;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.clearBtn:hover {
+  color: #ef4444;
+}
+
+.submitBtn {
+  height: 52px;
+  padding: 0 24px;
+  border-radius: 12px;
+  background-color: #2563eb;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.divider {
+  border: 0;
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 0.5rem 0;
+}
+
+/* =========================================
+   2. 결과 섹션
+   ========================================= */
+.resultSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 200px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.manualLink {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.manualLink:hover {
+  color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.errorBox {
+  padding: 1rem;
+  background-color: #fff1f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  color: #e11d48;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.emptyBox {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
-  gap: 1rem;
-  color: #888;
+  padding: 3rem 0;
   background-color: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 16px;
+  text-align: center;
 }
 
-/* 그리드 레이아웃 */
+/* 그리드 & 카드 스타일 */
 .grid {
   display: grid;
-  /* 카드가 너무 좁아지지 않도록 최소 너비 240px로 확보 */
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
 
-/* 선택 카드 (버튼 초기화 및 레이아웃) */
 .card {
-  /* 버튼 기본 스타일 리셋 */
   appearance: none;
-  -webkit-appearance: none;
   background-color: #fff;
   border: 1px solid #e2e8f0;
-  padding: 0; /* 내부 패딩은 아래에서 정의 */
-  margin: 0;
-  font-family: inherit;
-  
-  /* Flex 레이아웃 */
-  display: flex;
-  flex-direction: row;
-  align-items: center; /* 수직 중앙 정렬 */
-  justify-content: flex-start; /* 왼쪽 정렬 (중요) */
-  gap: 12px;
-  
-  /* 크기 및 여백 */
-  width: 100%;
-  min-height: 60px; /* 넉넉한 높이 */
-  height: auto; /* 내용에 따라 늘어나도록 설정 */
-  padding: 16px;
   border-radius: 12px;
-
-  padding-right: 25px;
-  
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  
-  /* 텍스트 줄바꿈 설정 (중요) */
-  white-space: normal;
   text-align: left;
+  width: 100%;
 }
 
 .card:hover {
-  border-color: #2388FF;
+  border-color: #3b82f6;
   background-color: #f0f9ff;
+  transform: translateY(-1px);
 }
 
-/* 활성화 상태 */
 .card.active {
-  border-color: #2388FF;
-  background-color: #e6f4ff; /* 더 명확한 활성 배경색 */
-  box-shadow: 0 0 0 1px #2388FF;
+  border-color: #2563eb;
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 1px #2563eb;
 }
 
-/* 카드 내부 텍스트 */
 .cardText {
-  flex: 1; /* 남은 공간 모두 차지 */
-  font-size: 15px;
+  flex: 1;
+  font-size: 0.95rem;
   font-weight: 500;
-  color: #333;
-  line-height: 1.5; /* 줄 간격 넉넉하게 */
-  
-  /* 줄바꿈 처리 */
-  /* word-break: keep-all; 한글 단어 끊김 방지 */
-  word-wrap: break-word; /* 긴 영문 강제 줄바꿈 */
-  overflow-wrap: break-word;
+  color: #1e293b;
+  word-break: keep-all;
+  line-height: 1.4;
 }
 
-/* 체크 아이콘 (원) */
 .checkCircle {
-  flex-shrink: 0; /* 텍스트가 길어도 찌그러짐 방지 (중요) */
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid #cbd5e1;
   background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  flex-shrink: 0;
+  transition: all 0.2s;
 }
 
 .card.active .checkCircle {
-  background-color: #2388FF;
-  border-color: #2388FF;
+  background-color: #2563eb;
+  border-color: #2563eb;
 }
 
-/* 체크 아이콘 내부 점 */
-.checkDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: white;
-  transform: scale(0);
-  transition: transform 0.2s ease;
-}
-
-.card.active .checkDot {
-  transform: scale(1);
-}
-
-/* --- 하단 요약 (Chips) --- */
+/* =========================================
+   3. 하단 요약 (Chips)
+   ========================================= */
 .summary {
-  margin-top: 1rem;
+  margin-top: auto;
   padding: 1.2rem;
   background-color: #f8fafc;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
 }
 
 .summaryLabel {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  color: #475569;
+  color: #64748b;
   margin-bottom: 0.8rem;
 }
 
 .chipList {
   display: flex;
-  flex-wrap: wrap; /* 여러 줄로 자연스럽게 넘어가도록 */
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -180,30 +362,23 @@
   border: 1px solid #e2e8f0;
   border-radius: 9999px;
   font-size: 0.9rem;
-  color: #2388FF;
+  color: #2563eb;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  
-  /* 칩 내부 텍스트 보호 */
-  max-width: 100%;
-  height: auto;
-  white-space: normal;
-  word-break: break-all;
 }
 
 .chipRemove {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: none;
+  width: 18px;
+  height: 18px;
+  background-color: #f1f5f9;
   border: none;
   border-radius: 50%;
   color: #94a3b8;
   cursor: pointer;
-  flex-shrink: 0; /* 버튼 찌그러짐 방지 */
+  transition: all 0.2s;
 }
 
 .chipRemove:hover {
@@ -211,21 +386,15 @@
   color: #ef4444;
 }
 
-.emptyText {
-  color: #94a3b8;
-  font-size: 0.9rem;
-}
-
 /* 모바일 대응 */
 @media (max-width: 600px) {
-  .header {
+  .searchBox {
     flex-direction: column;
-    align-items: flex-start;
   }
-  .addBtn {
+  .submitBtn {
     width: 100%;
   }
   .grid {
-    grid-template-columns: 1fr; /* 모바일에서는 1열로 보기 좋게 */
+    grid-template-columns: 1fr;
   }
 }
