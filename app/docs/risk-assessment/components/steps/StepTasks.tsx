@@ -30,7 +30,7 @@ export default function StepTasks({ draft, setDraft, onAutoStart }: Props) {
   // 로딩 텍스트를 상태로 관리하여 단계별 안내 멘트 변경
   const [loadingText, setLoadingText] = useState({ 
     title: '작업 내용을 분석 중입니다', 
-    desc: '입력하신 내용을 바탕으로\n가장 적합한 표준 공종을 찾고 있습니다.' 
+    desc: '입력하신 내용을 바탕으로\n가장 적합한 표준 공정을 찾고 있습니다.' 
   });
   
   const [recommended, setRecommended] = useState<string[]>([]);
@@ -48,7 +48,7 @@ export default function StepTasks({ draft, setDraft, onAutoStart }: Props) {
     // 초기 로딩 멘트 설정
     setLoadingText({ 
       title: '작업 내용을 분석 중입니다', 
-      desc: '입력하신 내용을 바탕으로\n가장 적합한 표준 공종을 찾고 있습니다.' 
+      desc: '입력하신 내용을 바탕으로\n가장 적합한 표준 공정을 찾고 있습니다.' 
     });
     setError(null);
 

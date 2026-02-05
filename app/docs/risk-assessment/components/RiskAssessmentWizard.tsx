@@ -67,7 +67,7 @@ const TAB_LABELS: { id: StepId; label: string; helper: string }[] = [
 ];
 
 const LOADING_MESSAGES: Record<StepId, { title: string; desc: string }> = {
-  tasks: { title: '작업 분석 중', desc: '표준 공종을 매칭하고 있습니다.' },
+  tasks: { title: '작업 분석 중', desc: '표준 공정을 매칭하고 있습니다.' },
   processes: { title: '공정 데이터 생성 중', desc: '선택된 작업의 표준 공정 흐름을\nAI가 분석하고 있습니다.' },
   hazards: { title: '위험요인 도출 중', desc: '각 공정별 잠재된 유해·위험요인을\n데이터베이스에서 찾고 있습니다.' },
   controls: { title: '안전대책 수립 중', desc: '위험성 수준을 판단하고\n최적의 감소 대책을 제안합니다.' },
