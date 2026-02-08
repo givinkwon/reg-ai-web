@@ -20,7 +20,13 @@ type DocItem = {
   id: string;
   name: string;
   createdAt: number;
-  meta?: { s3Key?: string; kind?: string }; 
+  // ✅ meta에 tbm_id 등이 포함될 수 있으므로 [key: string]: any 추가 혹은 tbm_id 명시
+  meta?: { 
+    s3Key?: string; 
+    kind?: string; 
+    tbm_id?: string; // 혹은 tbmId, 백엔드 응답 키값 확인 필요
+    [key: string]: any; 
+  }; 
   kind?: string;
 };
 
@@ -180,10 +186,20 @@ export default function DocsBoxPage() {
     setDownloadingId(doc.id);
 
     try {
+      // ✅ [수정 부분 1] doc.meta에서 tbm_id 추출 (없을 수도 있으므로 안전하게 접근)
+      // 백엔드에서 저장할 때 키가 'tbm_id'인지 'tbmId'인지 확실치 않을 때는 둘 다 체크
+      const tbmId = (doc.meta as any)?.tbm_id || (doc.meta as any)?.tbmId;
+
       const qs = new URLSearchParams({
         endpoint: 'download',
         key: doc.id, 
       });
+
+      // ✅ [수정 부분 2] tbmId가 존재하면 쿼리 파라미터에 추가
+      // 이 값이 넘어가야 백엔드에서 단순 다운로드가 아닌 '서명 재생성'을 수행함
+      if (tbmId) {
+        qs.append('tbmId', tbmId);
+      }
 
       const res = await fetch(`/api/docs?${qs.toString()}`, {
         method: 'GET',
