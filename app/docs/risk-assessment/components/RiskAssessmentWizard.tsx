@@ -13,6 +13,9 @@ import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 import { useRiskWizardStore } from '@/app/store/docs'; 
 
+// ✅ [수정] Navbar 컴포넌트 추가
+import Navbar from '@/app/docs/components/Navbar';
+
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
@@ -264,6 +267,8 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
   if (isCompleted) {
     return (
       <div className={s.wrap}>
+        {/* ✅ [수정] 완료 화면에서도 Navbar가 필요하면 여기에 추가 가능 */}
+        <Navbar />
         <CompleteView 
           onClose={() => onClose && onClose()} 
           onBack={handleBackFromComplete} 
@@ -279,7 +284,12 @@ export default function RiskAssessmentWizard({ open = true, onClose, onSubmit, o
     <>
       {open && (
         <div className={s.wrap}>
-          
+          {/* ✅ [수정] Navbar를 Wizard 내부 최상단에 추가 */}
+          {/* s.wrap이 전체 화면을 덮으므로, Navbar를 여기에 넣어야 보입니다. */}
+          <div style={{ position: 'relative', zIndex: 100 }}>
+             <Navbar />
+          </div>
+
           {/* 중앙 통제형 AI 로딩 오버레이 */}
           {(isAnalyzing && step !== 'tasks') && (
             <div className={s.loadingOverlay}>

@@ -160,10 +160,13 @@
 .tabs {
   flex-shrink: 0;
   display: flex;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #f8fafc;
+  padding: 0 2rem;
+  background-color: #ffffff;
   overflow-x: auto;
+  margin-left: auto;
+  margin-right:auto;
+  max-width: 1000px;
+  width: 100%;
 }
 
 .tab {
@@ -178,15 +181,15 @@
   color: #94a3b8;
   transition: all 0.2s;
   white-space: nowrap;
+  margin-top: 1vh;
 }
 
 .tab:hover {
-  color: #64748b;
+  color: white;
 }
 
 .tabActive {
   color: #2563eb;
-  border-bottom-color: #2563eb;
 }
 
 .tabPast {
@@ -241,7 +244,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 2rem;
-  border-top: 1px solid #e2e8f0;
+  margin-left: auto;
+  margin-right:auto;
+  max-width: 1000px;
+  width: 100%;
+  /* border-top: 1px solid #e2e8f0; */
   background-color: #fff;
   z-index: 10;
 }
