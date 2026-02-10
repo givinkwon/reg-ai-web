@@ -9,6 +9,9 @@ import StepBuildChecklist from './steps/StepBuildChecklist';
 import StepRunChecklist from './steps/StepRunChecklist';
 import CompleteView from './ui/CompleteView'; 
 
+// ✅ [추가] Navbar 컴포넌트 임포트
+import Navbar from '@/app/docs/components/Navbar';
+
 import { useUserStore } from '@/app/store/user';
 import { useRiskWizardStore } from '@/app/store/docs'; 
 import { track } from '@/app/lib/ga/ga';
@@ -153,13 +156,30 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
   };
 
   if (!open) return null;
-  if (isCompleted) return <div className={s.wrap}><CompleteView onClose={onClose} onBack={() => { setIsCompleted(false); setStep('run'); }} /></div>;
+
+  // ✅ [추가] 완료 화면에도 Navbar 삽입
+  if (isCompleted) {
+    return (
+      <div className={s.wrap}>
+        <div style={{ position: 'relative', zIndex: 100 }}>
+          <Navbar />
+        </div>
+        <CompleteView onClose={onClose} onBack={() => { setIsCompleted(false); setStep('run'); }} />
+      </div>
+    );
+  }
 
   const currentIdx = STEPS.findIndex(s => s.id === step);
   const loadingMsg = isAnalyzing ? { title: '분석 중', desc: '데이터를 처리하고 있습니다.' } : null; // 간소화
 
   return (
     <div className={s.wrap}>
+      
+      {/* ✅ [추가] 메인 화면 최상단에 Navbar 삽입 */}
+      <div style={{ position: 'relative', zIndex: 100 }}>
+        <Navbar />
+      </div>
+
       {(isAnalyzing || isPreparingRun || submitting) && (
         <div className={s.loadingOverlay}>
           <div className={s.loadingPopup}>

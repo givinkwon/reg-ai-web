@@ -7,6 +7,9 @@ import s from './TbmWizard.module.css';
 import CenteredAlertModal from './ui/AlertModal';
 import { useUserStore } from '@/app/store/user';
 
+// ✅ Navbar 추가
+import Navbar from '@/app/docs/components/Navbar';
+
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
@@ -92,9 +95,10 @@ export default function TbmWizard({
   const [accountCompanyName, setAccountCompanyName] = useState<string | null>(norm(companyNameProp) || null);
 
   // --- State: Alerts ---
-  // ✅ showClose가 필수 속성으로 정의되어 있습니다.
   const [alertOpen, setAlertOpen] = useState(false);
-  const [alertConfig, setAlertConfig] = useState({ title: '', lines: [] as string[], confirmText: '확인', showClose: false });
+  const [alertConfig, setAlertConfig] = useState<{ title: string; lines: string[]; confirmText: string; showClose: boolean }>({ 
+    title: '', lines: [], confirmText: '확인', showClose: false 
+  });
   const alertOnConfirmRef = useRef<(() => void) | null>(null);
 
   const scopeKey = useMemo(() => `${FORM_CACHE_PREFIX}:guest:${norm(minorFromProps) || 'ALL'}`, [minorFromProps]);
@@ -237,7 +241,6 @@ export default function TbmWizard({
 
     } catch (e: any) {
       console.warn('TBM Generation Failed', e);
-      // ✅ [수정] showClose: false 추가하여 타입 에러 해결
       openAlert({
         title: '생성 실패',
         lines: ['일지 생성 중 오류가 발생했습니다.', '잠시 후 다시 시도해주세요.'],
@@ -258,6 +261,10 @@ export default function TbmWizard({
   if (phase === 'complete') {
     return (
       <div className={s.wrap}>
+        {/* ✅ Navbar 추가 */}
+        <div style={{ position: 'relative', zIndex: 100 }}>
+          <Navbar />
+        </div>
         <div className={s.completeView}>
           <div className={s.completeIcon}>
             <Check size={42} strokeWidth={3} />
@@ -268,7 +275,7 @@ export default function TbmWizard({
             생성된 문서는 <span className={s.highlight}>문서함</span>과 <span className={s.highlight}>이메일</span>에서도<br/>
             확인하실 수 있습니다.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '400px' }}>
+          <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
             <button 
               className={s.submitBtn} 
               style={{ backgroundColor: '#fff', border: '1px solid #cbd5e1', color: '#475569' }}
@@ -294,27 +301,40 @@ export default function TbmWizard({
   return (
     <div className={s.wrap}>
       
+      {/* ✅ Navbar 추가: 최상단 고정 */}
+      <div style={{ position: 'relative', zIndex: 100 }}>
+        <Navbar />
+      </div>
+
       {phase === 'submitting' && (
         <div className={s.loadingOverlay}>
-          <RefreshCw size={40} className={s.spinner} />
-          <h3 className={s.loadingTitle}>AI가 TBM 일지를 작성 중입니다</h3>
-          <p className={s.loadingDesc}>
-            작업 내용을 분석하고 위험성평가 DB를 조회하여<br/>
-            최적의 안전 대책을 수립하고 있습니다.
-          </p>
+          <div className={s.loadingPopup}>
+             <RefreshCw size={40} className={s.spinner} />
+             <h3 className={s.loadingTitle}>AI가 TBM 일지를 작성 중입니다</h3>
+             <p className={s.loadingDesc}>
+               작업 내용을 분석하고 위험성평가 DB를 조회하여<br/>
+               최적의 안전 대책을 수립하고 있습니다.
+             </p>
+          </div>
         </div>
       )}
 
+      {/* ✅ Header: centerWrap 적용 */}
       <div className={s.header}>
-        <div className={s.headerLeft}>
-          <button className={s.closeBtn} onClick={onClose} disabled={phase === 'submitting'}>
-            <ArrowLeft size={20} /> 나가기
-          </button>
-          <h2 className={s.title}>AI TBM 작성</h2>
+        <div className={s.centerWrap}>
+          <div className={s.headerLeft}>
+            <button className={s.closeBtn} onClick={onClose} disabled={phase === 'submitting'}>
+              <ArrowLeft size={20} /> 나가기
+            </button>
+            <h2 className={s.title}>AI TBM 작성</h2>
+          </div>
         </div>
       </div>
 
+      {/* Content Area */}
       <div className={s.content}>
+        {/* s.container가 이미 max-width와 중앙 정렬을 가지고 있을 수 있지만, centerWrap 패턴에 맞추려면 아래처럼 감싸거나 s.container를 수정해야 합니다. */}
+        {/* 여기서는 s.content 자체에 패딩과 정렬이 있으므로 그대로 둡니다. */}
         <div className={s.container}>
           
           <div className={s.card}>
@@ -390,15 +410,18 @@ export default function TbmWizard({
         </div>
       </div>
 
+      {/* ✅ Footer: centerWrap 적용 */}
       <div className={s.footer}>
-        <button 
-          className={s.submitBtn} 
-          onClick={handleSubmit} 
-          disabled={!canSubmit}
-        >
-          <FileText size={20} />
-          {phase === 'submitting' ? '문서 생성 중...' : 'TBM 일지 생성하기'}
-        </button>
+        <div className={s.centerWrap}>
+          <button 
+            className={s.submitBtn} 
+            onClick={handleSubmit} 
+            disabled={!canSubmit}
+          >
+            <FileText size={20} />
+            {phase === 'submitting' ? '문서 생성 중...' : 'TBM 일지 생성하기'}
+          </button>
+        </div>
       </div>
 
       <CenteredAlertModal
