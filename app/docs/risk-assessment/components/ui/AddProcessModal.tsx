@@ -2,13 +2,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
-import s from './AddDetailTaskModal.module.css'; // CSS 모듈은 기존과 동일하게 사용한다고 가정
+import s from './AddDetailTaskModal.module.css'; 
 
 // ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 
-// ✅ GA Context: 공정 검색 모달
 const GA_CTX = { page: 'SafetyDocs', section: 'RiskAssessment', area: 'SearchProcessModal' } as const;
 
 type Props = {
@@ -33,14 +32,12 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<number | null>(null);
 
-  // ✅ 클라이언트 캐시 저장소
   const cacheRef = useRef<Map<string, string[]>>(new Map());
 
-  // 1. 모달이 열릴 때 상태 초기화 및 GA View
+  // 1. 초기화
   useEffect(() => {
     if (!open) return;
     
-    // ✅ GA: View 이벤트 (어떤 작업에 대한 공정 추가인지 식별)
     track(gaEvent(GA_CTX, 'View'), {
         ui_id: gaUiId(GA_CTX, 'View'),
         task_title: taskTitle 
@@ -50,12 +47,10 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
     setItems([]);
     setError(null);
     setSelected([]);
-    
-    // 다른 작업(taskTitle)을 위해 모달을 열었을 수 있으므로 캐시 초기화
     cacheRef.current.clear(); 
   }, [open, taskTitle]);
 
-  // 2. 검색 API 호출 (캐싱 + 즉시 로딩 적용)
+  // 2. 검색 API 호출 (수정됨)
   useEffect(() => {
     if (!open) return;
 
@@ -63,7 +58,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
-    // [1단계] 캐시 확인
     if (cacheRef.current.has(keyword)) {
       abortRef.current?.abort();
       setItems(cacheRef.current.get(keyword) || []);
@@ -72,11 +66,9 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
       return;
     }
 
-    // [2단계] 즉시 로딩 표시
     setLoading(true);
     setError(null);
 
-    // [3단계] Debounce 호출
     debounceRef.current = window.setTimeout(async () => {
       
       abortRef.current?.abort();
@@ -84,42 +76,64 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
       abortRef.current = ac;
 
       try {
-        const qs = new URLSearchParams({ 
+        const fetchPromises: Promise<Response>[] = [];
+
+        // 🟢 (1) 요청 1: 현재 작업(taskTitle)에 속한 공정 검색
+        // 예: "프레스 임가공" 작업 내의 "검사" 공정 검색
+        const qs1 = new URLSearchParams({ 
           endpoint: 'sub-processes',
-          process_name: norm(taskTitle),
+          process_name: norm(taskTitle), // ✅ 현재 작업명 기준 필터링
           q: keyword, 
-          limit: '50' 
+          limit: '50',
         });
         
-        if (minorCategory) qs.set('minor', minorCategory);
-
-        const res = await fetch(`/api/risk-assessment?${qs.toString()}`, {
-          method: 'GET',
-          signal: ac.signal,
-        });
-
-        if (!res.ok) throw new Error('데이터를 불러오지 못했습니다.');
-
-        const data = await res.json();
-        const next = Array.from<string>(new Set((data.items ?? []).map(norm).filter(Boolean)));
+        // 특정 카테고리가 있고, 그게 공통이 아니라면 필터 추가
+        if (minorCategory && norm(minorCategory) !== '공통') {
+            qs1.set('minor', minorCategory);
+        }
         
-        // [4단계] 결과 캐시에 저장
-        cacheRef.current.set(keyword, next);
+        fetchPromises.push(fetch(`/api/risk-assessment?${qs1.toString()}`, { signal: ac.signal }));
 
-        setItems(next);
+        // 🟢 (2) 요청 2: "공통" 카테고리 전체 검색
+        // 🔥 [핵심 수정] process_name을 넣지 않습니다.
+        // 이유: 공통 공정은 '프레스 임가공' 같은 특정 작업명에 묶여있지 않을 수 있기 때문입니다.
+        // 작업명 필터를 빼고 minor='공통'으로만 검색하면 DB의 모든 공통 공정을 가져옵니다.
+        const qs2 = new URLSearchParams({ 
+          endpoint: 'sub-processes',
+          // process_name: norm(taskTitle), // ❌ 제거함! 공통 데이터는 작업명 무관하게 검색
+          q: keyword, 
+          limit: '50',
+          minor: '공통' // ✅ 공통 카테고리 강제 지정
+        });
+        
+        fetchPromises.push(fetch(`/api/risk-assessment?${qs2.toString()}`, { signal: ac.signal }));
 
-        // ✅ GA: 검색 결과 로드 추적
+        // 🟢 (3) 결과 병합
+        const responses = await Promise.all(fetchPromises);
+        const results = await Promise.all(responses.map(async res => {
+            if (!res.ok) return [];
+            const json = await res.json();
+            return (json.items ?? []) as string[];
+        }));
+
+        // 중복 제거 및 정렬
+        const mergedItems = Array.from(new Set(results.flat().map(norm).filter(Boolean))).sort();
+        
+        cacheRef.current.set(keyword, mergedItems);
+        setItems(mergedItems);
+
         if (keyword) {
             track(gaEvent(GA_CTX, 'Search'), {
                 ui_id: gaUiId(GA_CTX, 'Search'),
                 query: keyword,
-                result_count: next.length,
+                result_count: mergedItems.length,
                 task_title: taskTitle
             });
         }
 
       } catch (e: any) {
         if (e.name !== 'AbortError') {
+          console.error(e);
           setError('목록을 불러오는 중 오류가 발생했습니다.');
         }
       } finally {
@@ -140,11 +154,8 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
 
     setSelected(prev => {
       const set = new Set(prev.map(norm));
-      // 해제
       if (set.has(v)) return prev.filter(x => norm(x) !== v);
       
-      // 선택
-      // ✅ GA: 아이템 선택 추적
       track(gaEvent(GA_CTX, 'SelectItem'), {
         ui_id: gaUiId(GA_CTX, 'SelectItem'),
         item_title: v,
@@ -159,7 +170,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
     const uniq = Array.from(new Set(selected.map(norm).filter(Boolean)));
     if (uniq.length === 0) return;
 
-    // ✅ GA: 확인 버튼 추적
     track(gaEvent(GA_CTX, 'ClickConfirm'), {
         ui_id: gaUiId(GA_CTX, 'ClickConfirm'),
         selected_count: uniq.length,
@@ -170,7 +180,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
     onClose();
   };
 
-  // ✅ GA: 직접 추가 핸들러
   const handleManualAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     track(gaEvent(GA_CTX, 'ClickManualAdd'), {
@@ -194,7 +203,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
               <span className="text-purple-600 font-bold">{taskTitle}</span> 작업의 세부 공정을 선택하세요.
             </div>
           </div>
-          {/* ✅ GA: 닫기 버튼 */}
           <button 
             type="button" 
             className={s.closeBtn} 
@@ -204,9 +212,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
                 onClose(); 
             }} 
             aria-label="닫기"
-            data-ga-event="Close"
-            data-ga-id={gaUiId(GA_CTX, 'Close')}
-            data-ga-label="닫기 버튼"
           >
             <X size={20} />
           </button>
@@ -264,9 +269,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
                         e.preventDefault();
                         toggleSelect(v);
                     }}
-                    data-ga-event={isSelected ? 'DeselectItem' : 'SelectItem'}
-                    data-ga-id={gaUiId(GA_CTX, isSelected ? 'DeselectItem' : 'SelectItem')}
-                    data-ga-label={v}
                   >
                     <span className={s.itemText}>{v}</span>
                     {isSelected && <span className={s.pick}>선택됨</span>}
@@ -285,9 +287,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
                     type="button"
                     className={s.createBtn}
                     onClick={handleManualAdd}
-                    data-ga-event="ClickManualAdd"
-                    data-ga-id={gaUiId(GA_CTX, 'ClickManualAdd')}
-                    data-ga-label={`'{q}' 직접 추가하기 버튼`}
                   >
                     '{q}' 직접 추가하기
                   </button>
@@ -312,9 +311,6 @@ export default function AddProcessModal({ open, taskTitle, minorCategory, onClos
             className={s.confirm} 
             onClick={handleConfirm} 
             disabled={selected.length === 0}
-            data-ga-event="ClickConfirm"
-            data-ga-id={gaUiId(GA_CTX, 'ClickConfirm')}
-            data-ga-label="확인 버튼"
           >
             확인 {selected.length > 0 && `(${selected.length})`}
           </button>
