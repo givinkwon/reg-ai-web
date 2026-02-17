@@ -1,6 +1,9 @@
 /* app/docs/monthly-inspection/components/MonthlyInspectionWizard.module.css */
 
+/* 공통 변수: 컨텐츠 너비를 여기서 조절하면 헤더/본문/푸터가 같이 움직입니다 */
 .wrap {
+  --content-width: 900px;
+  
   position: fixed;
   inset: 0;
   background-color: #ffffff;
@@ -11,19 +14,34 @@
   animation: fadeIn 0.2s ease-out;
 }
 
-/* --- Header --- */
+/* =========================================
+   1. 헤더 (Header)
+   ========================================= */
 .header {
   flex-shrink: 0;
   height: 60px;
+  background-color: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center; /* 내부 컨텐츠 중앙 정렬 */
+  padding: 0 1rem; /* 모바일 좌우 여백 */
+}
+
+/* 헤더 내용물을 감싸는 래퍼 (본문과 라인 맞춤) */
+.headerInner {
+  width: 100%;
+  max-width: var(--content-width);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #fff;
+  height: 100%;
 }
 
-.headerLeft { display: flex; align-items: center; gap: 1rem; }
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 
 .closeBtn {
   font-size: 0.95rem;
@@ -34,16 +52,23 @@
   padding: 0.5rem;
   border-radius: 6px;
   transition: all 0.2s;
-  display: flex; align-items: center; gap: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
 }
-.closeBtn:hover { background-color: #f1f5f9; color: #334155; }
+.closeBtn:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
 
 .title {
   font-size: 1.1rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
-  display: flex; align-items: center; gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .progressText {
@@ -55,34 +80,48 @@
   border-radius: 20px;
 }
 
-/* --- Content --- */
+/* =========================================
+   2. 본문 (Content)
+   ========================================= */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 2rem 1rem; /* 상하 2rem, 좌우 1rem */
   background-color: #f8fafc;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center; /* 내부 container 중앙 정렬 */
 }
 
 .container {
   width: 100%;
-  max-width: 900px;
+  max-width: var(--content-width); /* 헤더와 동일한 최대 너비 */
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* --- Footer --- */
+/* =========================================
+   3. 푸터 (Footer)
+   ========================================= */
 .footer {
   flex-shrink: 0;
   height: 70px;
   background: white;
   border-top: 1px solid #e2e8f0;
   display: flex;
+  justify-content: center; /* 내부 컨텐츠 중앙 정렬 */
+  padding: 0 1rem;
+}
+
+/* 푸터 내용물을 감싸는 래퍼 */
+.footerInner {
+  width: 100%;
+  max-width: var(--content-width); /* 헤더/본문과 동일한 너비 */
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
+  height: 100%;
 }
 
 .footerMessage {
@@ -96,11 +135,15 @@
 .loadingText {
   animation: pulse 1.5s infinite;
   font-weight: 500;
+  color: #2563eb;
 }
 
-.footerBtns { display: flex; gap: 0.8rem; }
+.footerBtns {
+  display: flex;
+  gap: 0.8rem;
+}
 
-/* Buttons */
+/* Buttons Styling */
 .navBtn {
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
@@ -146,7 +189,9 @@
 
 .wrap button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
-/* --- Loading Overlay --- */
+/* =========================================
+   4. 로딩 오버레이 & 애니메이션
+   ========================================= */
 .loadingOverlay {
   position: absolute;
   inset: 0;
@@ -159,6 +204,7 @@
   justify-content: center;
   animation: fadeIn 0.3s;
 }
+
 .loadingPopup {
   background: white;
   padding: 2.5rem;
@@ -168,14 +214,17 @@
   width: 340px;
   border: 1px solid rgba(0,0,0,0.05);
 }
+
 .spinnerWrapper { position: relative; display: inline-flex; margin-bottom: 1.5rem; }
 .spin { color: #3b82f6; animation: spin 1s linear infinite; }
+
 .aiBadge {
   position: absolute; bottom: -5px; right: -5px;
   background: linear-gradient(135deg, #6366f1, #a855f7);
   color: white; font-size: 0.7rem; font-weight: 800;
   padding: 2px 7px; border-radius: 12px;
 }
+
 .loadingTitle { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
 .loadingDesc { font-size: 0.95rem; color: #64748b; line-height: 1.5; white-space: pre-wrap; }
 
@@ -183,9 +232,8 @@
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* Mobile */
+/* Mobile Response */
 @media (max-width: 600px) {
-  .content { padding: 1rem; }
-  .footer { padding: 0 1rem; }
+  .wrap { --content-width: 100%; } /* 모바일에서는 꽉 차게 */
   .footerBtns button { font-size: 0.85rem; padding: 0.5rem 0.8rem; }
 }

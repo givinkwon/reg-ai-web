@@ -2,14 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { Sparkles, RefreshCw, ArrowLeft } from 'lucide-react';
-import s from './MonthlyInspectionWizard.module.css';
+import s from './MonthlyInspectionWizard.module.css'; // CSS 모듈 임포트
 
 import StepInspectionTasks from './steps/StepInspectionTasks';
 import StepBuildChecklist from './steps/StepBuildChecklist';
 import StepRunChecklist from './steps/StepRunChecklist';
 import CompleteView from './ui/CompleteView'; 
 
-// ✅ [추가] Navbar 컴포넌트 임포트
 import Navbar from '@/app/docs/components/Navbar';
 
 import { useUserStore } from '@/app/store/user';
@@ -62,7 +61,6 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
 
   useEffect(() => { if (open) track(gaEvent(GA_CTX, 'View'), { ui_id: gaUiId(GA_CTX, 'View'), step }); }, [open, step]);
 
-  // ✅ [수정됨] Auto Pilot Logic
   useEffect(() => {
     if (!autoSequence || isCompleted || isAnalyzing || isPreparingRun) return;
 
@@ -70,8 +68,6 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
       if (step === 'build') {
         goToRunStep();
       }
-      // 🔴 삭제됨: else if (step === 'run') setAutoSequence(false); 
-      // 이유: Run 단계에서도 자동 모드를 유지해야 자식 컴포넌트가 완료 처리를 할 수 있음
     }, 1200);
 
     return () => clearTimeout(timer);
@@ -146,7 +142,7 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
       a.remove();
 
       setIsCompleted(true);
-      setAutoSequence(false); // ✅ 여기서 비로소 자동 모드 종료
+      setAutoSequence(false); 
     } catch (e) {
       console.error(e);
       alert('문서 생성 중 오류가 발생했습니다.');
@@ -157,7 +153,6 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
 
   if (!open) return null;
 
-  // ✅ [추가] 완료 화면에도 Navbar 삽입
   if (isCompleted) {
     return (
       <div className={s.wrap}>
@@ -170,15 +165,14 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
   }
 
   const currentIdx = STEPS.findIndex(s => s.id === step);
-  const loadingMsg = isAnalyzing ? { title: '분석 중', desc: '데이터를 처리하고 있습니다.' } : null; // 간소화
 
   return (
     <div className={s.wrap}>
       
-      {/* ✅ [추가] 메인 화면 최상단에 Navbar 삽입 */}
       <div style={{ position: 'relative', zIndex: 100 }}>
         <Navbar />
       </div>
+      
 
       {(isAnalyzing || isPreparingRun || submitting) && (
         <div className={s.loadingOverlay}>
@@ -195,17 +189,39 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
           </div>
         </div>
       )}
+      
 
+      {/* Header: s.headerInner를 추가하여 내부 컨텐츠 너비 제한 */}
       <div className={s.header}>
-        <div className={s.headerLeft}>
-          <button className={s.closeBtn} onClick={onClose} disabled={submitting || autoSequence}><ArrowLeft size={18} /> 나가기</button>
-          <h2 className={s.title}>
-            {autoSequence ? <span className="flex items-center gap-2 text-blue-600"><Sparkles size={18} className="animate-pulse" /> AI 자동 생성 중...</span> : '월 순회점검표 작성'}
-          </h2>
+        <div className={s.headerInner}>
+          <div className={s.headerLeft}>
+            <button className={s.closeBtn} onClick={onClose} disabled={submitting || autoSequence}><ArrowLeft size={18} /> 나가기</button>
+            <h2 className={s.title}>
+              {autoSequence ? <span style={{display:'flex', gap:'8px', alignItems:'center', color:'#2563eb'}}><Sparkles size={18} className={s.spin} /> AI 자동 생성 중...</span> : '월 순회점검표 작성'}
+            </h2>
+          </div>
+          <div className={s.progressText}>{currentIdx + 1} / 3 단계</div>
         </div>
-        <div className={s.progressText}>{currentIdx + 1} / 3 단계</div>
       </div>
 
+      {/* Footer: s.footerInner를 추가하여 내부 컨텐츠 너비 제한 */}
+      <div className={s.footer}>
+        <div className={s.footerInner}>
+          <div className={s.footerMessage}>
+            {autoSequence && !submitting && !isAnalyzing && !isPreparingRun && <span className={s.loadingText}>✨ 자동으로 작성하고 있습니다...</span>}
+          </div>
+          {!autoSequence && (
+            <div className={s.footerBtns}>
+              {step !== 'tasks' && <button className={s.navBtn} onClick={() => setStep(prev => STEPS[Math.max(0, currentIdx - 1)].id as StepId)} disabled={submitting}>이전</button>}
+              {step === 'tasks' ? <button className={s.navBtnPrimary} onClick={() => handleCreateChecklist(undefined, false)} disabled={detailTasks.length === 0}>다음 단계</button>
+              : step === 'build' ? <button className={s.navBtnPrimary} onClick={goToRunStep}>다음 단계</button>
+              : <button className={s.submitBtn} onClick={handleFinish} disabled={submitting}>점검 완료</button>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Content: container는 이미 max-width가 잡혀 있음 */}
       <div className={s.content}>
         <div className={s.container}>
           {step === 'tasks' && (
@@ -229,25 +245,10 @@ export default function MonthlyInspectionWizard({ open, onClose, onSubmit, onReq
               onBack={() => setStep('build')}
               onFinish={handleFinish}
               finishDisabled={submitting || isPreparingRun}
-              // ✅ [핵심] 자동 모드 상태를 전달
               isAutoRun={autoSequence} 
             />
           )}
         </div>
-      </div>
-
-      <div className={s.footer}>
-        <div className={s.footerMessage}>
-          {autoSequence && !submitting && !isAnalyzing && !isPreparingRun && <span className={s.loadingText} style={{color:'#2563eb'}}>✨ 자동으로 작성하고 있습니다...</span>}
-        </div>
-        {!autoSequence && (
-          <div className={s.footerBtns}>
-            {step !== 'tasks' && <button className={s.navBtn} onClick={() => setStep(prev => STEPS[Math.max(0, currentIdx - 1)].id as StepId)} disabled={submitting}>이전</button>}
-            {step === 'tasks' ? <button className={s.navBtnPrimary} onClick={() => handleCreateChecklist(undefined, false)} disabled={detailTasks.length === 0}>다음 단계</button>
-            : step === 'build' ? <button className={s.navBtnPrimary} onClick={goToRunStep}>다음 단계</button>
-            : <button className={s.submitBtn} onClick={handleFinish} disabled={submitting}>점검 완료</button>}
-          </div>
-        )}
       </div>
     </div>
   );

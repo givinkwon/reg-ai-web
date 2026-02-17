@@ -176,7 +176,7 @@ export default function StepTasks({ draft, setDraft, onAutoStart }: Props) {
               ref={inputRef}
               type="text" 
               className={s.aiInput}
-              placeholder="자동자 부품 제조 현장에서 프레스 가공, 용접 공정을 진행하는데, 이에 대한 위험성 평가 해줘"
+              placeholder="자동차 부품 제조 공장 위험성 평가 진행해줘 (공정을 자세히 적을수록 정확히 나옵니다)"
               value={nlpText}
               onChange={(e) => setNlpText(e.target.value)}
               disabled={isAnalyzing}
