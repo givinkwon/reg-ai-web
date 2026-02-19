@@ -40,7 +40,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
   const slackSentRef = useRef(false);
   const gaViewSentRef = useRef(false);
 
-  // ✅ (NEW) 모달이 열릴 때 슬랙 알림 및 GA View 전송 (1회만)
+  // ✅ (수정) 모달이 마운트될 때 최초 1회만 실행되도록 의존성 정리
   useEffect(() => {
     // 1. 슬랙 알림
     if (!slackSentRef.current && !showExtraModal) {
@@ -55,29 +55,25 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
     }
   }, [showExtraModal]);
 
-  // ✅ (1) 새로고침/복원된 user가 "가입 미완료"면 자동으로 추가정보 모달 오픈
-  useEffect(() => {
-    if (!initialized) return;
-    if (!user?.email) return;
-
-    if (user.isSignupComplete === false) {
-      setAccountEmail(user.email);
-      setShowExtraModal(true);
-    }
-  }, [initialized, user?.email, user?.isSignupComplete]);
-
-  // ✅ (2) 가입 완료된 로그인 상태면 자동 close
+  // ✅ (통합 및 수정) 유저 상태에 따른 모달 제어 로직
+  // 75번 라인과 278번 라인의 중복 로직을 하나로 합쳤습니다.
   useEffect(() => {
     if (!initialized) return;
     if (loading) return;
-    if (!user) return;
 
-    if (showExtraModal) return;
+    // 1. 가입 미완료 상태인 경우 추가정보 모달로 전환
+    if (user?.email && user.isSignupComplete === false) {
+      setAccountEmail(user.email);
+      setShowExtraModal(true);
+      return; // 추가 정보 모달을 보여줘야 하므로 여기서 종료
+    }
 
-    if (user.isSignupComplete !== false) {
+    // 2. 가입이 완료된 유저이거나, 이미 로그인된 상태면 팝업 닫기
+    // 단, 추가 정보 입력 중(showExtraModal)에는 닫지 않음
+    if (user && user.isSignupComplete !== false && !showExtraModal) {
       onClose();
     }
-  }, [initialized, user, showExtraModal, loading, onClose]);
+  }, [initialized, user, user?.email, user?.isSignupComplete, showExtraModal, loading, onClose]);
 
   // ✅ GA: 닫기 버튼 핸들러
   const handleCloseClick = () => {
@@ -299,12 +295,7 @@ export default function LoginPromptModal({ onClose }: LoginPromptModalProps) {
     onClose(); 
   };
 
-  useEffect(() => {
-    if (!initialized) return;
-    if (user?.email && user.isSignupComplete === false) {
-      setShowExtraModal(true);
-    }
-  }, [initialized, user?.email, user?.isSignupComplete]);
+  // ⚠️ 278번 라인에 있던 중복 useEffect는 위쪽의 통합 로직으로 옮기고 삭제했습니다.
 
   return (
     <>
