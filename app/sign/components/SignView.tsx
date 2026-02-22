@@ -87,7 +87,7 @@ export default function SignView({
 
       // ✅ [핵심 수정] 제출 API 엔드포인트를 Docs-Sign 전용으로 변경
       // payload 파라미터 중 백엔드가 받는 이름인 'signature'로 매핑해서 보냅니다.
-      const res = await fetch('/api/docs-sign/sign/submit', {
+      const res = await fetch('/api/docs-sign-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

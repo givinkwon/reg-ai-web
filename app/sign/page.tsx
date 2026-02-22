@@ -100,7 +100,7 @@ export default function DocsSignPage() {
 
       try {
         // 기존 TBM API가 아닌 문서 서명(Docs-Sign) 프록시 API 호출
-        const res = await fetch(`/api/docs-sign/sign/init?token=${encodeURIComponent(token)}`, {
+        const res = await fetch(`/api/docs-sign-init?token=${encodeURIComponent(token)}`, {
           cache: 'no-store',
         });
 
