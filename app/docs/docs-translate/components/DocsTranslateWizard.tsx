@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Globe, Download, X } from 'lucide-react';
+import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Globe, Send, X } from 'lucide-react';
 import s from './DocsTranslateWizard.module.css';
 
 import Navbar from '@/app/docs/components/Navbar';
 import CompleteView from './ui/CompleteView';
 
-// 🚀 [추가됨] 현재 로그인한 유저 정보를 가져오기 위한 스토어 임포트
+// 🚀 현재 로그인한 유저 정보를 가져오기 위한 스토어 임포트
 import { useUserStore } from '@/app/store/user';
 
 type StepId = 'upload' | 'select' | 'download';
@@ -15,7 +15,7 @@ type StepId = 'upload' | 'select' | 'download';
 const STEPS: { id: StepId; label: string }[] = [
   { id: 'upload', label: '교안 업로드' },
   { id: 'select', label: '언어 선택' },
-  { id: 'download', label: '문서 변환' },
+  { id: 'download', label: '번역 요청' },
 ];
 
 const SUPPORTED_LANGS = ['영어', '중국어', '베트남어', '태국어', '몽골어', '우즈베크어', '캄보디아어', '인도네시아어', '네팔어'];
@@ -26,7 +26,6 @@ type Props = {
 };
 
 export default function DocsTranslateWizard({ open, onClose }: Props) {
-  // 🚀 [추가됨] 유저 정보 가져오기
   const user = useUserStore((st) => st.user);
 
   const [step, setStep] = useState<StepId>('upload');
@@ -38,9 +37,7 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, currentLang: '' });
 
-  // ✅ 드래그 앤 드롭 상태
   const [isDragging, setIsDragging] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
@@ -58,7 +55,6 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
     }
   };
 
-  // --- ✅ 드래그 앤 드롭 핸들러 ---
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -108,6 +104,7 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
     else if (step === 'download') setStep('select');
   };
 
+  // 🚀 비동기 처리(Background Tasks)에 맞춘 빠른 요청 로직
   const handleTranslateAndDownload = async () => {
     setIsTranslating(true);
     setProgress({ current: 0, total: selectedLangs.length, currentLang: '' });
@@ -120,39 +117,25 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
         const formData = new FormData();
         if (file) formData.append('file', file);
         formData.append('target_language', lang);
-        
-        // 🚀 [핵심 수정] 서버에 유저 이메일 전달! (없으면 guest 처리)
         formData.append('user_email', user?.email || 'guest@reg.ai.kr');
 
+        // 🚨 [수정됨] 404 에러의 원인이었던 /process 주소를 제거하고 원래 프론트엔드 API 주소로 롤백했습니다!
         const res = await fetch('/api/docs-translate', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error(`${lang} 번역 실패`);
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
         
-        let filename = `${file?.name.split('.')[0]}_${lang}.${file?.name.split('.').pop()}`;
-        
-        // PDF 변환 시 확장자 강제 변경 로직 대응
-        if (file?.name.toLowerCase().endsWith('.pdf')) {
-            filename = `${file?.name.split('.')[0]}_${lang}.pdf`;
-        }
+        if (!res.ok) throw new Error(`${lang} 번역 요청 실패`);
 
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
+        // 서버가 0.1초 만에 반환한 JSON 접수 메시지 확인
+        const data = await res.json();
+        console.log(`[${lang}] 서버 응답:`, data.message);
 
       } catch (error) {
         console.error(error);
-        alert(`${lang} 번역 중 오류가 발생했습니다.`);
+        alert(`${lang} 번역 요청 중 오류가 발생했습니다.`);
       }
     }
 
     setIsTranslating(false);
-    setIsCompleted(true);
+    setIsCompleted(true); 
   };
 
   if (isCompleted) {
@@ -170,6 +153,7 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
     <div className={s.wrap}>
       <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div>
 
+      {/* 로딩 오버레이 (서버 응답이 0.1초라 아주 잠깐 스쳐 지나갑니다) */}
       {isTranslating && (
         <div className={s.loadingOverlay}>
           <div className={s.loadingPopup}>
@@ -178,9 +162,9 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
               <div className={s.aiBadge}><Sparkles size={14} fill="#fff" /> AI</div>
             </div>
             <div className={s.loadingTexts}>
-              <h3 className={s.loadingTitle}>다국어 번역 중... ({progress.current}/{progress.total})</h3>
+              <h3 className={s.loadingTitle}>서버에 번역 요청 중... ({progress.current}/{progress.total})</h3>
               <p className={s.loadingDesc}>
-                현재 <strong>{progress.currentLang}</strong>로 원본 문서 양식을 유지하며 번역하고 있습니다.<br/>
+                <strong>{progress.currentLang}</strong> 번역을 안전하게 백그라운드로 접수하고 있습니다.<br/>
               </p>
             </div>
           </div>
@@ -277,11 +261,14 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
 
           {step === 'download' && (
             <div className={s.card} style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-              <Download size={56} color="#3b82f6" style={{ margin: '0 auto 1.5rem' }} />
+              <Send size={56} color="#3b82f6" style={{ margin: '0 auto 1.5rem' }} />
               <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#334155' }}>모든 준비가 완료되었습니다!</h3>
               <p style={{ color: '#64748b', marginBottom: '2rem', lineHeight: '1.6' }}>
                 선택하신 <strong>{selectedLangs.join(', ')}</strong> ({selectedLangs.length}개 국어)로<br/>
-                문서 변환을 시작하고 파일을 다운로드 받으시겠습니까?
+                문서 변환을 요청하시겠습니까?<br/>
+                <span style={{ fontSize: '0.9rem', color: '#3b82f6', marginTop: '0.5rem', display: 'inline-block' }}>
+                  작업이 완료되면 시스템 문서함에 저장되며, 이메일로 알림을 보내드립니다.
+                </span>
               </p>
             </div>
           )}
@@ -302,7 +289,7 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
               </button>
             ) : (
               <button className={s.submitBtn} onClick={handleTranslateAndDownload} disabled={isTranslating}>
-                번역 및 다운로드 시작
+                번역 요청 시작
               </button>
             )}
           </div>
