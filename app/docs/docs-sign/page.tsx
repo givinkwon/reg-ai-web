@@ -96,10 +96,6 @@ export default function DocsSignPage() {
   return (
     <div className={s.container}>
       
-      <div style={{ position: 'relative', zIndex: 100, width: '100%' }}>
-        <Navbar />
-      </div>
-      
       {!isWriting ? (
         <>
           <section className={s.actionSection}>

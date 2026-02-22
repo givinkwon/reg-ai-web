@@ -6,17 +6,17 @@ export async function GET(req: NextRequest) {
 
   try {
     let backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://35.76.230.177:8008';
-    if (!backendUrl.startsWith('http')) backendUrl = `http://${backendUrl}`;
+    if (!/^https?:\/\//i.test(backendUrl)) backendUrl = `http://${backendUrl}`;
     
     const response = await fetch(`${backendUrl}/docs-sign/sign/init?token=${token}`, { cache: 'no-store' });
     const data = await response.json();
     
     if (!response.ok) return NextResponse.json({ message: data.detail }, { status: response.status });
 
-    // ✅ TBM의 기존 UI가 그려질 수 있도록 데이터를 조작해서 반환!
+    // ✅ TBM UI 템플릿에 맞게 데이터 매핑
     const tbmCompatibleData = {
       title: '안전 문서 서명',
-      company: '안전 보건 교육',
+      company: '안전 보건 자료',
       siteName: data.filename || '업로드된 문서',
       dateISO: data.createdAt ? data.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
       workSummary: data.summary?.join('\n') || '요약 내용이 없습니다.',
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(tbmCompatibleData);
   } catch (error: any) {
+    console.error('Docs Sign Init Error:', error);
     return NextResponse.json({ message: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }

@@ -12,7 +12,7 @@ import SignaturePad from './SignaturePad';
 export default function SignView({
   data,
   token,
-  signType, // ✅ [추가] 부모로부터 현재 문서의 타입('tbm' 또는 'docs')을 전달받습니다.
+  signType,
   isMock,
 }: {
   data: TbmSignData;
@@ -34,12 +34,10 @@ export default function SignView({
   const closeScreenOrFallback = () => {
     setSuccessOpen(false);
 
-    // 1) window.close 시도 (스크립트로 열린 창이 아니면 막힐 수 있음)
     try {
       window.close();
     } catch {}
 
-    // 2) 폴백: history back → 안 되면 홈
     setTimeout(() => {
       try {
         if (window.history.length > 1) {
@@ -56,14 +54,12 @@ export default function SignView({
     }, 250);
   };
 
-  // 팝업 오픈 후 자동 종료 시도(가능한 브라우저에서만 닫힘)
   useEffect(() => {
     if (!successOpen) return;
     const t = window.setTimeout(() => {
       closeScreenOrFallback();
     }, 1200);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [successOpen]);
 
   async function submit() {
@@ -87,12 +83,11 @@ export default function SignView({
         return;
       }
 
-      // ✅ [핵심 분기 처리] 서명 타입에 따라 호출할 백엔드 API URL 설정
+      // ✅ [수정 포인트] 제출 API 엔드포인트를 Docs-Sign 폴더 구조에 맞춤
       const submitApiUrl = signType === 'docs' 
-        ? '/api/docs-sign/sign/submit' 
+        ? '/api/docs-sign/submit' 
         : '/api/tbm-sign/submit';
 
-      // 두 API 모두 같은 payload 구조를 사용하도록 설계됨
       const res = await fetch(submitApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +123,6 @@ export default function SignView({
     }
   }
 
-  // ✅ 편의성을 위해 분기 변수 할당
   const isDocs = signType === 'docs';
 
   return (
@@ -144,7 +138,6 @@ export default function SignView({
       <div className={s.card}>
         <div className={s.headerRow}>
           <div>
-            {/* ✅ [수정] 헤더 타이틀 문구 동적 변경 */}
             <h1 className={s.h1}>{data.title || (isDocs ? '안전 문서 서명' : 'TBM 서명')}</h1>
             <div className={s.sub}>
               <span className={s.badge}>{data.company || '—'}</span>
@@ -176,7 +169,6 @@ export default function SignView({
 
         <div className={s.grid}>
           <div className={s.block}>
-            {/* ✅ [수정] 블록 타이틀 동적 변경 */}
             <div className={s.blockTitle}>{isDocs ? '문서 핵심 요약' : '금일 작업'}</div>
             <div className={s.blockBody}>{data.workSummary}</div>
           </div>

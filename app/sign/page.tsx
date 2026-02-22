@@ -19,7 +19,7 @@ export default function SignPage() {
   const [token, setToken] = useState('');
   const [manualToken, setManualToken] = useState('');
   
-  // ✅ [수정 포인트] URL에서 서명 타입(tbm vs docs)을 읽어와서 저장합니다. 기본값은 'tbm'
+  // URL에서 서명 타입(tbm vs docs)을 읽어와서 저장합니다. 기본값은 'tbm'
   const [signType, setSignType] = useState('tbm');
 
   const [pass, setPass] = useState('');
@@ -87,7 +87,7 @@ export default function SignPage() {
     return 'NO_ACCESS';
   }, [token, unlocked]);
 
-  // ✅ [수정 포인트] token과 signType에 따라 알맞은 API를 호출하여 데이터 로드
+  // token과 signType에 따라 알맞은 API를 호출하여 데이터 로드
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -99,9 +99,9 @@ export default function SignPage() {
       setData(null);
 
       try {
-        // 타입(docs vs tbm)에 따른 API 엔드포인트 분기
+        // ✅ [수정 포인트] 타입(docs vs tbm)에 따른 API 폴더 구조 엔드포인트 매핑
         const apiUrl = signType === 'docs'
-          ? `/api/docs-sign/sign/init?token=${encodeURIComponent(token)}`
+          ? `/api/docs-sign/init?token=${encodeURIComponent(token)}`
           : `/api/tbm-sign/get?token=${encodeURIComponent(token)}`;
 
         const res = await fetch(apiUrl, { cache: 'no-store' });
@@ -131,7 +131,7 @@ export default function SignPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, signType]); // signType 변경 시에도 재호출되도록 의존성 추가
+  }, [token, signType]);
 
   const goWithManualToken = () => {
     const t = manualToken.trim();
@@ -189,7 +189,6 @@ export default function SignPage() {
             </div>
           </div>
         ) : data ? (
-          // ✅ 자식 컴포넌트(SignView)에게 signType을 전달하여 화면 라벨과 제출 API 분기를 맡김
           <SignView data={data} token={token} signType={signType} />
         ) : (
           <div className={s.card}>
