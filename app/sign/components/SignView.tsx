@@ -85,12 +85,14 @@ export default function SignView({
         return;
       }
 
-      const res = await fetch('/api/tbm-sign/submit', {
+      // ✅ [핵심 수정] 제출 API 엔드포인트를 Docs-Sign 전용으로 변경
+      // payload 파라미터 중 백엔드가 받는 이름인 'signature'로 매핑해서 보냅니다.
+      const res = await fetch('/api/docs-sign/sign/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          signaturePngDataUrl: sigUrl,
+          signature: sigUrl, 
           attendeeName: data.attendeeName || undefined,
         }),
       });
@@ -133,7 +135,8 @@ export default function SignView({
       <div className={s.card}>
         <div className={s.headerRow}>
           <div>
-            <h1 className={s.h1}>{data.title || 'TBM 서명'}</h1>
+            {/* ✅ [수정] 헤더 타이틀 문구 변경 */}
+            <h1 className={s.h1}>{data.title || '안전 문서 서명'}</h1>
             <div className={s.sub}>
               <span className={s.badge}>{data.company || '—'}</span>
               {data.siteName ? (
@@ -163,12 +166,13 @@ export default function SignView({
         </div>
 
         <div className={s.grid}>
+          {/* ✅ [수정] 블록 타이틀을 문서 요약 맥락에 맞게 변경 */}
           <div className={s.block}>
-            <div className={s.blockTitle}>금일 작업</div>
+            <div className={s.blockTitle}>문서 핵심 내용</div>
             <div className={s.blockBody}>{data.workSummary}</div>
           </div>
           <div className={s.block}>
-            <div className={s.blockTitle}>주요 위험요인</div>
+            <div className={s.blockTitle}>서약 사항</div>
             <div className={s.blockBody}>{data.hazardSummary}</div>
           </div>
           <div className={s.block}>

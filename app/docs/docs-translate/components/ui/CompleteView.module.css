@@ -1,0 +1,120 @@
+/* app/chat/risk/ui/CompleteView.module.css */
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  animation: fadeIn 0.5s ease-out;
+  background: #fff;
+  height: 100%;
+}
+
+.iconWrapper {
+  width: 80px;
+  height: 80px;
+  background-color: #dcfce7; /* Green-100 */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.2);
+  animation: popUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #111;
+  margin: 0 0 0.8rem 0;
+}
+
+.desc {
+  font-size: 1.05rem;
+  color: #666;
+  line-height: 1.6;
+  max-width: 420px;
+  margin: 0 auto 2.5rem auto;
+}
+
+.highlight {
+  color: #2563eb;
+  font-weight: 600;
+  background-color: #eff6ff;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+/* 버튼 그룹 */
+.btnGroup {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.confirmBtn {
+  padding: 0.8rem 2.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  background-color: #2563eb;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
+}
+
+.confirmBtn:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px -3px rgba(37, 99, 235, 0.3);
+}
+
+.backBtn {
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #64748b;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.backBtn:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes popUp {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .title {
+    font-size: 1.5rem;
+  }
+  .btnGroup {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+  .confirmBtn, .backBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}

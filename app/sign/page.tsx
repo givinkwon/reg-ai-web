@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import s from './page.module.css';
+import s from './page.module.css'; // 필요 시 본인의 CSS 경로로 맞춰주세요.
 
 import SignView from './components/SignView';
 import type { TbmSignData } from './components/types';
@@ -15,7 +15,7 @@ import {
 const DEV_UI = true;
 const DEV_PASSPHRASE = 'dev-open';
 
-export default function SignPage() {
+export default function DocsSignPage() {
   const [token, setToken] = useState('');
   const [manualToken, setManualToken] = useState('');
 
@@ -64,15 +64,16 @@ export default function SignPage() {
     };
   }, []);
 
+  // DEV 모드 테스트용 가짜 데이터 (문서 서명용 텍스트로 변경)
   const mockData: TbmSignData = useMemo(
     () => ({
-      title: 'TBM 활동일지 서명(테스트)',
-      company: '테스트사업장(DEV)',
-      siteName: '본사 사업장',
+      title: '안전 문서 서명(테스트)',
+      company: '안전 보건 자료',
+      siteName: '테스트문서.pdf',
       dateISO: '2026-01-11',
-      workSummary: '고소작업대 이동 및 점검, 현장 자재 운반 작업을 진행함.',
-      hazardSummary: '추락/협착 위험, 이동 동선 충돌 위험이 있음.',
-      complianceSummary: '안전모·안전대 착용, 작업 전 점검, 동선 통제 및 신호수 배치.',
+      workSummary: '1. 안전모 등 개인보호구를 반드시 착용할 것\n2. 작업 전 안전점검을 실시할 것',
+      hazardSummary: '상단 문서 요약 내용을 숙지하였습니다.',
+      complianceSummary: '해당 문서의 안전 수칙을 준수할 것을 서약합니다.',
       attendeeName: '홍길동',
       alreadySigned: false,
       expiresAt: '',
@@ -86,7 +87,7 @@ export default function SignPage() {
     return 'NO_ACCESS';
   }, [token, unlocked]);
 
-  // token이 있으면 데이터 로드
+  // ✅ [수정 포인트] token이 있으면 데이터를 로드하는 로직 (TBM API -> Docs-Sign API 변경)
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -98,7 +99,8 @@ export default function SignPage() {
       setData(null);
 
       try {
-        const res = await fetch(`/api/tbm-sign/get?token=${encodeURIComponent(token)}`, {
+        // 기존 TBM API가 아닌 문서 서명(Docs-Sign) 프록시 API 호출
+        const res = await fetch(`/api/docs-sign/sign/init?token=${encodeURIComponent(token)}`, {
           cache: 'no-store',
         });
 
@@ -204,9 +206,10 @@ export default function SignPage() {
   return (
     <main className={s.wrap}>
       <div className={s.card}>
-        <h1 className={s.h1}>TBM 서명</h1>
+        {/* ✅ [수정] 텍스트 변경 */}
+        <h1 className={s.h1}>안전 문서 서명</h1>
         <div className={s.sub}>
-          문자 링크로 접속하면 <span className={s.mono}>/sign?token=...</span> 형태입니다.
+          문자 링크로 접속하면 <span className={s.mono}>/sign-doc?token=...</span> 형태입니다.
         </div>
 
         <div className={s.section}>
