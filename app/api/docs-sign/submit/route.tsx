@@ -13,9 +13,9 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await response.json();
-    if (!response.ok) return NextResponse.json({ message: data.detail }, { status: response.status });
+    if (!response.ok) return NextResponse.json({ detail: data.detail }, { status: response.status });
     return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ message: '서버 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json({ detail: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }
