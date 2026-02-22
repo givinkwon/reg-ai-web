@@ -7,6 +7,9 @@ import s from './DocsTranslateWizard.module.css';
 import Navbar from '@/app/docs/components/Navbar';
 import CompleteView from './ui/CompleteView';
 
+// 🚀 [추가됨] 현재 로그인한 유저 정보를 가져오기 위한 스토어 임포트
+import { useUserStore } from '@/app/store/user';
+
 type StepId = 'upload' | 'select' | 'download';
 
 const STEPS: { id: StepId; label: string }[] = [
@@ -23,6 +26,9 @@ type Props = {
 };
 
 export default function DocsTranslateWizard({ open, onClose }: Props) {
+  // 🚀 [추가됨] 유저 정보 가져오기
+  const user = useUserStore((st) => st.user);
+
   const [step, setStep] = useState<StepId>('upload');
   
   const [file, setFile] = useState<File | null>(null);
@@ -114,6 +120,9 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
         const formData = new FormData();
         if (file) formData.append('file', file);
         formData.append('target_language', lang);
+        
+        // 🚀 [핵심 수정] 서버에 유저 이메일 전달! (없으면 guest 처리)
+        formData.append('user_email', user?.email || 'guest@reg.ai.kr');
 
         const res = await fetch('/api/docs-translate', { method: 'POST', body: formData });
         if (!res.ok) throw new Error(`${lang} 번역 실패`);
@@ -124,6 +133,12 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
         a.href = url;
         
         let filename = `${file?.name.split('.')[0]}_${lang}.${file?.name.split('.').pop()}`;
+        
+        // PDF 변환 시 확장자 강제 변경 로직 대응
+        if (file?.name.toLowerCase().endsWith('.pdf')) {
+            filename = `${file?.name.split('.')[0]}_${lang}.pdf`;
+        }
+
         a.download = filename;
         document.body.appendChild(a);
         a.click();
@@ -209,7 +224,6 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
             <div className={s.card}>
               <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#1e293b' }}>원본 교안을 업로드하세요</h3>
               
-              {/* ✅ 드래그 앤 드롭 영역 */}
               <div 
                 className={`${s.dropZone} ${isDragging ? s.dropZoneDragging : ''}`}
                 onDragEnter={handleDragEnter}
@@ -223,8 +237,8 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
                   이곳으로 파일을 드래그하여 놓거나 클릭하여 업로드하세요
                 </p>
                 <p style={{ color: '#64748b', margin: 0, lineHeight: '1.5' }}>
-                  지원 형식: PPT, Word, Excel<br/>
-                  (PDF는 텍스트 추출만 가능하여 원본 레이아웃 유지가 어렵습니다)
+                  지원 형식: PPT, Word, Excel, PDF<br/>
+                  (PDF는 텍스트 추출 시 레이아웃이 다소 변경될 수 있습니다)
                 </p>
                 
                 <input 
