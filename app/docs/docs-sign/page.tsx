@@ -193,7 +193,7 @@ export default function DocsSignPage() {
                 <p>작업자는 수신된 링크를 통해 요약본을 확인하고,<br/>화면에서 바로 서명 제출을 진행합니다.<br/>수합된 서명은 관리자에게 실시간 연동됩니다.</p>
               </div>
             </div>
-            <div className={`${s.previewRow} ${s.reverse}`}>
+            <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
                   src="/docs/서명.png" 
