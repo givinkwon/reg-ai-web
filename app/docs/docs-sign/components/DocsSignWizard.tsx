@@ -28,7 +28,7 @@ const STEPS: { id: StepId; label: string }[] = [
 type Props = {
   open: boolean;
   onClose: () => void;
-  onRequireLogin?: () => void; // ✅ 로그인 트리거 추가
+  onRequireLogin?: () => void; 
 };
 
 export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props) {
@@ -38,6 +38,10 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<string[]>([]);
+  
+  // ✅ [수정] 서버에서 생성된 파일 경로를 임시 보관할 상태 추가
+  const [originalPath, setOriginalPath] = useState<string | null>(null);
+  
   const [attendees, setAttendees] = useState<Attendee[]>([{ name: '', contact: '' }]);
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -50,14 +54,12 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
 
   if (!open) return null;
 
-  // ✅ [핵심] 무료 1회 사용 제한 체크 함수 (캐시 기반)
   const checkUsageLimit = () => {
-    if (user?.email) return true; // 로그인된 회원은 통과 (서버단 과금/구독 로직으로 위임)
-    
+    if (user?.email) return true; 
     const count = parseInt(localStorage.getItem('docs_sign_usage_count') || '0', 10);
     if (count >= 1) {
       if (onRequireLogin) onRequireLogin();
-      return false; // 1회 이상 사용했으면 로그인 모달 띄우고 진행 중단
+      return false; 
     }
     return true;
   };
@@ -85,8 +87,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   const handleNext = async () => {
     if (step === 'upload') {
       if (!file) return alert('파일을 선택해주세요.');
-      
-      // ✅ AI 요약을 돌리기 전에 캐시(사용 횟수) 체크!
       if (!checkUsageLimit()) return;
 
       track(gaEvent(GA_CTX, 'ClickNext_Upload'), { ui_id: gaUiId(GA_CTX, 'ClickNext_Upload'), file_name: file.name });
@@ -101,9 +101,13 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
         
         const data = await res.json();
         setSummary(data.summary || []);
-        setStep('summary');
+        
+        // ✅ [수정] 백엔드가 알려준 파일 경로를 상태에 저장함 (이게 핵심!)
+        if (data.original_path) {
+          setOriginalPath(data.original_path);
+        }
 
-        // ✅ 분석이 성공적으로 끝나면 무료 1회 차감
+        setStep('summary');
         incrementUsageLimit();
 
       } catch (error) {
@@ -129,8 +133,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     
     const validAttendees = attendees.filter(a => a.name.trim() && a.contact.trim());
     if(validAttendees.length === 0) return alert('이름과 연락처를 1명 이상 정확히 입력해주세요.');
-
-    // 💡 참고: 여기서는 비회원 차단을 해제했습니다. (위의 handleNext에서 이미 카운트를 깎고 넘어왔기 때문)
     
     setSubmitting(true);
     try {
@@ -141,8 +143,9 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
           filename: file?.name || '안전_관련_문서',
           summary: summary,
           attendees: validAttendees,
-          // 비회원일 경우 guest 처리를 하여 백엔드에서 이메일 전송을 우회하도록 합니다.
-          user_email: user?.email || 'guest@reg.ai.kr'
+          user_email: user?.email || 'guest@reg.ai.kr',
+          // ✅ [수정] 보관해뒀던 파일 경로를 백엔드에 전달하여 DB에 저장하게 함!
+          original_path: originalPath 
         }),
       });
 
@@ -151,8 +154,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
          throw new Error(errData.message || '서명 발송 실패');
       }
       
-      const data = await res.json();
-      console.log('서명 요청 성공:', data);
       setIsCompleted(true);
       
     } catch (e: any) {
@@ -230,7 +231,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
         </div>
       </div>
 
-      {/* 컨텐츠 */}
       <div className={s.content}>
         <div className={s.container}>
           
@@ -326,7 +326,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
         </div>
       </div>
 
-      {/* 푸터 */}
       <div className={s.footer}>
         <div className={s.centerWrap}>
           <div className={s.footerMessage}></div>
