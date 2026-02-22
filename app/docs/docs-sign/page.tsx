@@ -162,7 +162,7 @@ export default function DocsSignPage() {
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
-                  src="/docs/TBM 회의록.png" 
+                  src="/docs/서명첫번째.png" 
                   alt="AI 요약 예시" 
                   width={500} 
                   height={700}
@@ -196,7 +196,7 @@ export default function DocsSignPage() {
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
-                  src="/docs/서명.png" 
+                  src="/docs/서명세번째.png" 
                   alt="모바일 서명 화면" 
                   width={500} 
                   height={700} 
