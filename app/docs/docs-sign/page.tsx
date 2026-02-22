@@ -10,7 +10,6 @@ import {
 import { Button } from '@/app/components/ui/button';
 import s from './page.module.css';
 
-// ✅ Wizard 컴포넌트 Import
 import DocsSignWizard from './components/DocsSignWizard'; 
 import LoginPromptModal from '../components/LoginPromptModal';
 import SignupExtraInfoModal from '../components/SignupExtraInfoModal';
@@ -18,13 +17,11 @@ import SignupExtraInfoModal from '../components/SignupExtraInfoModal';
 import { useUserStore } from '@/app/store/user';
 import { useChatStore } from '@/app/store/chat';
 
-// ✅ GA Imports
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 import Footer from '@/app/components/landing/Footer';
 import Navbar from '@/app/docs/components/Navbar';
 
-// ✅ GA Context
 const GA_CTX = { page: 'DocsSign', section: 'Sign', area: 'Landing' } as const;
 
 export default function DocsSignPage() {
@@ -40,7 +37,6 @@ export default function DocsSignPage() {
   const [forceExtraOpen, setForceExtraOpen] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
 
-  // ✅ GA: Page View Tracking
   const viewTracked = useRef(false);
   
   useEffect(() => {
@@ -52,7 +48,6 @@ export default function DocsSignPage() {
     });
   }, [initialized, user?.email]);
 
-  // 유저 상태 확인 로직
   useEffect(() => {
     if (!initialized) return;
 
@@ -89,7 +84,6 @@ export default function DocsSignPage() {
 
   const showExtraModal = forceExtraOpen && !!accountEmail;
 
-  // ✅ 시작 버튼 핸들러
   const handleStartClick = () => {
     track(gaEvent(GA_CTX, 'ClickStart'), {
       ui_id: gaUiId(GA_CTX, 'ClickStart'),
@@ -102,10 +96,12 @@ export default function DocsSignPage() {
   return (
     <div className={s.container}>
       
-      {/* 위저드가 실행 중이 아닐 때만 랜딩 페이지 표시 */}
+      <div style={{ position: 'relative', zIndex: 100, width: '100%' }}>
+        <Navbar />
+      </div>
+      
       {!isWriting ? (
         <>
-          {/* 1. 상단 액션 섹션 (Hero) */}
           <section className={s.actionSection}>
             <div className={s.actionBox}>
               <div className={s.iconWrapper}>
@@ -132,7 +128,6 @@ export default function DocsSignPage() {
             </div>
           </section>
 
-          {/* 2. 상단 특징 3가지 */}
           <section className={s.featureSection}>
             <div className={s.featureGrid}>
               <div className={s.featureCard}>
@@ -165,15 +160,13 @@ export default function DocsSignPage() {
             </div>
           </section>
 
-          {/* 3. 무엇을 할 수 있나요? (미리보기) */}
-          {/* 이미지는 기존 TBM 것을 차용하거나, 향후 교체하실 수 있도록 틀을 맞춰두었습니다. */}
           <section className={s.previewSection}>
             <h2 className={s.sectionHeader}>무엇을 할 수 있나요?</h2>
             
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
-                  src="/docs/TBM 회의록.png" // TODO: 추후 적절한 이미지로 교체
+                  src="/docs/TBM 회의록.png" 
                   alt="AI 요약 예시" 
                   width={500} 
                   height={700}
@@ -191,7 +184,7 @@ export default function DocsSignPage() {
             <div className={`${s.previewRow} ${s.reverse}`}>
               <div className={s.previewImageWrapper}>
                 <Image 
-                  src="/docs/서명.png" // TODO: 추후 적절한 이미지로 교체
+                  src="/docs/서명.png" 
                   alt="모바일 서명 화면" 
                   width={500} 
                   height={700} 
@@ -206,7 +199,6 @@ export default function DocsSignPage() {
             </div>
           </section>
 
-          {/* 4. 사용 방법 */}
           <section className={s.guideSection}>
             <h2 className={s.sectionHeader}>사용 방법</h2>
             <div className={s.guideGrid}>
@@ -246,7 +238,7 @@ export default function DocsSignPage() {
           <Footer />
         </>
       ) : (
-        /* ✅ Wizard 모달 실행 */
+        /* ✅ [수정] 로그인 모달 팝업 함수 전달 */
         <DocsSignWizard
           open={isWriting}
           onClose={() => {
@@ -255,6 +247,7 @@ export default function DocsSignPage() {
             });
             setIsWriting(false);
           }}
+          onRequireLogin={() => setShowLoginModal(true)}
         />
       )}
 

@@ -2,13 +2,18 @@
 
 import React, { useState, useRef } from 'react';
 import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Users, Plus, X } from 'lucide-react';
-import s from './DocsSignWizard.module.css'; // 본인의 css 파일명으로 유지
+import s from './DocsSignWizard.module.css';
 
 import Navbar from '@/app/docs/components/Navbar';
 import CompleteView from './ui/CompleteView'; 
 
-// ✅ [추가] 유저 정보 스토어 임포트
 import { useUserStore } from '@/app/store/user';
+
+// ✅ GA 로직 임포트
+import { track } from '@/app/lib/ga/ga';
+import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+
+const GA_CTX = { page: 'DocsSign', section: 'Sign', area: 'Wizard' } as const;
 
 export type Attendee = { name: string; contact: string };
 
@@ -16,17 +21,17 @@ type StepId = 'upload' | 'summary' | 'sign';
 
 const STEPS: { id: StepId; label: string }[] = [
   { id: 'upload', label: '문서 업로드' },
-  { id: 'summary', label: '문서 내용 확인' },
+  { id: 'summary', label: '문서 내용 확인' }, 
   { id: 'sign', label: '서명 요청' },
 ];
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  onRequireLogin?: () => void; // ✅ 로그인 트리거 추가
 };
 
-export default function DocsSignWizard({ open, onClose }: Props) {
-  // ✅ 유저 정보 가져오기
+export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props) {
   const user = useUserStore((st) => st.user);
 
   const [step, setStep] = useState<StepId>('upload');
@@ -45,31 +50,46 @@ export default function DocsSignWizard({ open, onClose }: Props) {
 
   if (!open) return null;
 
+  // ✅ [핵심] 무료 1회 사용 제한 체크 함수 (캐시 기반)
+  const checkUsageLimit = () => {
+    if (user?.email) return true; // 로그인된 회원은 통과 (서버단 과금/구독 로직으로 위임)
+    
+    const count = parseInt(localStorage.getItem('docs_sign_usage_count') || '0', 10);
+    if (count >= 1) {
+      if (onRequireLogin) onRequireLogin();
+      return false; // 1회 이상 사용했으면 로그인 모달 띄우고 진행 중단
+    }
+    return true;
+  };
+
+  const incrementUsageLimit = () => {
+    if (user?.email) return;
+    const count = parseInt(localStorage.getItem('docs_sign_usage_count') || '0', 10);
+    localStorage.setItem('docs_sign_usage_count', String(count + 1));
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
     }
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setIsDragging(true);
-  };
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setIsDragging(true);
-  };
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-  };
+  const handleDragEnter = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setFile(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0]);
   };
 
   const handleNext = async () => {
     if (step === 'upload') {
       if (!file) return alert('파일을 선택해주세요.');
+      
+      // ✅ AI 요약을 돌리기 전에 캐시(사용 횟수) 체크!
+      if (!checkUsageLimit()) return;
+
+      track(gaEvent(GA_CTX, 'ClickNext_Upload'), { ui_id: gaUiId(GA_CTX, 'ClickNext_Upload'), file_name: file.name });
       
       setIsAnalyzing(true);
       try {
@@ -82,6 +102,10 @@ export default function DocsSignWizard({ open, onClose }: Props) {
         const data = await res.json();
         setSummary(data.summary || []);
         setStep('summary');
+
+        // ✅ 분석이 성공적으로 끝나면 무료 1회 차감
+        incrementUsageLimit();
+
       } catch (error) {
         console.error(error);
         alert('문서 분석 중 오류가 발생했습니다.');
@@ -89,21 +113,25 @@ export default function DocsSignWizard({ open, onClose }: Props) {
         setIsAnalyzing(false);
       }
     } else if (step === 'summary') {
+      track(gaEvent(GA_CTX, 'ClickNext_Summary'), { ui_id: gaUiId(GA_CTX, 'ClickNext_Summary') });
       setStep('sign');
     }
   };
 
   const handlePrev = () => {
+    track(gaEvent(GA_CTX, 'ClickPrev'), { ui_id: gaUiId(GA_CTX, 'ClickPrev'), current_step: step });
     if (step === 'summary') setStep('upload');
     else if (step === 'sign') setStep('summary');
   };
 
-  // ✅ [수정] 실제 API 호출 및 이메일/SMS 연동 로직
   const handleFinish = async () => {
+    track(gaEvent(GA_CTX, 'ClickSubmit'), { ui_id: gaUiId(GA_CTX, 'ClickSubmit') });
+    
     const validAttendees = attendees.filter(a => a.name.trim() && a.contact.trim());
     if(validAttendees.length === 0) return alert('이름과 연락처를 1명 이상 정확히 입력해주세요.');
-    if (!user?.email) return alert('서명 요청을 발송하려면 로그인이 필요합니다.');
 
+    // 💡 참고: 여기서는 비회원 차단을 해제했습니다. (위의 handleNext에서 이미 카운트를 깎고 넘어왔기 때문)
+    
     setSubmitting(true);
     try {
       const res = await fetch('/api/docs-sign/request', {
@@ -113,17 +141,18 @@ export default function DocsSignWizard({ open, onClose }: Props) {
           filename: file?.name || '안전_관련_문서',
           summary: summary,
           attendees: validAttendees,
-          user_email: user.email // 작성자 이메일 전송
+          // 비회원일 경우 guest 처리를 하여 백엔드에서 이메일 전송을 우회하도록 합니다.
+          user_email: user?.email || 'guest@reg.ai.kr'
         }),
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || '서명 발송 실패');
+         const errData = await res.json();
+         throw new Error(errData.message || '서명 발송 실패');
       }
       
       const data = await res.json();
-      console.log('서명 발송 결과:', data);
+      console.log('서명 요청 성공:', data);
       setIsCompleted(true);
       
     } catch (e: any) {
@@ -170,7 +199,13 @@ export default function DocsSignWizard({ open, onClose }: Props) {
       <div className={s.header}>
         <div className={s.centerWrap}>
           <div className={s.headerLeft}>
-            <button className={s.closeBtn} onClick={onClose} disabled={isAnalyzing || submitting}>
+            <button 
+              className={s.closeBtn} 
+              onClick={onClose} 
+              disabled={isAnalyzing || submitting}
+              data-ga-event="ClickClose"
+              data-ga-id={gaUiId(GA_CTX, 'ClickClose')}
+            >
               <ArrowLeft size={18} /> 나가기
             </button>
             <h2 className={s.title}>문서 요약 및 서명 요청</h2>
@@ -209,7 +244,12 @@ export default function DocsSignWizard({ open, onClose }: Props) {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  track(gaEvent(GA_CTX, 'ClickUploadBox'), { ui_id: gaUiId(GA_CTX, 'ClickUploadBox') });
+                  fileInputRef.current?.click();
+                }}
+                data-ga-event="ClickUploadBox"
+                data-ga-id={gaUiId(GA_CTX, 'ClickUploadBox')}
               >
                 <UploadCloud size={56} color={isDragging ? '#3b82f6' : '#94a3b8'} style={{ marginBottom: '1rem' }} />
                 <p style={{ color: '#334155', fontWeight: 'bold', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>
@@ -259,7 +299,14 @@ export default function DocsSignWizard({ open, onClose }: Props) {
                 <span style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', fontWeight: 'bold' }}>
                   <Users size={20} color="#3b82f6" /> 서명 대상자 지정
                 </span>
-                <button className={s.addBtn} onClick={() => setAttendees([...attendees, { name: '', contact: '' }])}>
+                <button 
+                  className={s.addBtn} 
+                  onClick={() => {
+                    track(gaEvent(GA_CTX, 'ClickAddAttendee'), { ui_id: gaUiId(GA_CTX, 'ClickAddAttendee') });
+                    setAttendees([...attendees, { name: '', contact: '' }]);
+                  }}
+                  data-ga-event="ClickAddAttendee"
+                >
                   <Plus size={16} /> 인원 추가
                 </button>
               </div>
@@ -284,14 +331,36 @@ export default function DocsSignWizard({ open, onClose }: Props) {
         <div className={s.centerWrap}>
           <div className={s.footerMessage}></div>
           <div className={s.footerBtns}>
-            {step !== 'upload' && <button className={s.navBtn} onClick={handlePrev} disabled={isAnalyzing || submitting}>이전</button>}
+            {step !== 'upload' && (
+              <button 
+                className={s.navBtn} 
+                onClick={handlePrev} 
+                disabled={isAnalyzing || submitting}
+                data-ga-event="ClickPrev"
+                data-ga-id={gaUiId(GA_CTX, 'ClickPrev')}
+              >
+                이전
+              </button>
+            )}
             
             {step !== 'sign' ? (
-              <button className={s.navBtnPrimary} onClick={handleNext} disabled={isAnalyzing || (!file && step === 'upload')}>
+              <button 
+                className={s.navBtnPrimary} 
+                onClick={handleNext} 
+                disabled={isAnalyzing || (!file && step === 'upload')}
+                data-ga-event="ClickNext"
+                data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
+              >
                 다음 단계
               </button>
             ) : (
-              <button className={s.submitBtn} onClick={handleFinish} disabled={submitting}>
+              <button 
+                className={s.submitBtn} 
+                onClick={handleFinish} 
+                disabled={submitting}
+                data-ga-event="ClickSubmit"
+                data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
+              >
                 서명 요청 발송
               </button>
             )}
