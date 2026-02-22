@@ -103,10 +103,10 @@ export default function DocsSignPage() {
               <div className={s.iconWrapper}>
                 <FileSignature size={40} color="white" strokeWidth={1.5} />
               </div>
-              <h1 className={s.title}>안전 문서 핵심 요약 & 디지털 서명</h1>
+              <h1 className={s.title}>안전 문서 요약 & 서명 발송</h1>
               <p className={s.desc}>
-                수십 장의 복잡한 안전 문서를 AI가 3초 만에 핵심 수칙으로 요약해줍니다.<br />
-                근로자에게 요약된 내용을 모바일로 발송하고, 간편하게 서명까지 받아보세요.
+                복잡한 안전 문서를 AI 로 요약하여 참석자에게 제공하고<br />
+                간편하게 서명을 수합하세요.
               </p>
               
               <div className={s.btnGroup}>
@@ -115,10 +115,10 @@ export default function DocsSignPage() {
                   onClick={handleStartClick}
                   data-ga-event="ClickStart"
                   data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
-                  data-ga-label="안전 문서 요약 및 서명 시작하기"
+                  data-ga-label="문서 요약·서명 시작"
                 >
                   <CheckSquare size={20} className="mr-2" />
-                  문서 서명 프로세스 시작
+                  문서 요약·서명 시작
                 </Button>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function DocsSignPage() {
                 </div>
                 <h3 className={s.featureTitle}>AI 핵심 내용 요약</h3>
                 <p className={s.featureDesc}>
-                  PDF, Word, Excel 등 어떤 문서든 업로드만 하세요. AI가 현장 근로자가 반드시 알아야 할 핵심 안전 수칙 3~5가지를 정확하게 추출합니다.
+                  PDF, Word Excel 등 어던 문서든 업로드만 하세요. 문서를 짧고 명확한 현장용 안내로 바꿔줍니다
                 </p>
               </div>
               <div className={s.featureCard}>
@@ -150,7 +150,7 @@ export default function DocsSignPage() {
                 </div>
                 <h3 className={s.featureTitle}>증빙 시트 자동 병합</h3>
                 <p className={s.featureDesc}>
-                  근로자 전원의 서명이 완료되면, 원본 문서의 맨 뒷장에 서명 내역이 포함된 증빙 시트가 자동으로 병합되어 파일로 제공됩니다.
+                  완료된 근로자의 서명은 자동으로 문서의 맨 뒷 장에 추가되어 한 파일로 제공됩니다. 서명된 문서는 문서함에서 다운로드 가능합니다.
                 </p>
               </div>
             </div>
@@ -172,8 +172,8 @@ export default function DocsSignPage() {
                 <div className={s.caption}>1. AI 문서 요약 추출</div>
               </div>
               <div className={s.previewContent}>
-                <h3>방대한 안전보건 교안도<br/>단 3초 만에 핵심만!</h3>
-                <p>근로자들이 수십 장의 문서를 모두 읽기란 어렵습니다.<br/>AI가 문서의 문맥을 파악하여 가장 중요한<br/>안전 수칙만을 뽑아냅니다.</p>
+                <h3>방대한 문서도<br/>핵심만 요약!</h3>
+                <p>AI가 문서의 핵심만 요약하여 참가자들에게<br/>서명 요청과 함께 제공합니다.</p>
               </div>
             </div>
 
@@ -193,6 +193,22 @@ export default function DocsSignPage() {
                 <p>작업자는 수신된 링크를 통해 요약본을 확인하고,<br/>화면에서 바로 서명 제출을 진행합니다.<br/>수합된 서명은 관리자에게 실시간 연동됩니다.</p>
               </div>
             </div>
+            <div className={`${s.previewRow} ${s.reverse}`}>
+              <div className={s.previewImageWrapper}>
+                <Image 
+                  src="/docs/서명.png" 
+                  alt="모바일 서명 화면" 
+                  width={500} 
+                  height={700} 
+                  className={s.previewImg}
+                />
+                <div className={s.caption}>3. 작성된 서명은 자동 기입</div>
+              </div>
+              <div className={s.previewContent}>
+                <h3>참가자가 서명을 완료하면<br/>작성된 서명은 문서에</h3>
+                <p>자동으로 기입됩니다.<br/>(이메일과 문서함에서 확인)</p>
+              </div>
+            </div>
           </section>
 
           <section className={s.guideSection}>
@@ -206,12 +222,12 @@ export default function DocsSignPage() {
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><UploadCloud size={32} /></div>
                 <h4>2. 문서 업로드</h4>
-                <p>교육이 필요한 안전 문서(PDF, Word, Excel) 원본을 업로드합니다.</p>
+                <p>서명이 필요한 안전 문서(PDF, Word, Excel) 원본을 업로드합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Sparkles size={32} /></div>
                 <h4>3. AI 요약 확인</h4>
-                <p>AI가 추출한 3~5가지 핵심 안전 수칙을 검토합니다.</p>
+                <p>AI가 요약한 문서를 확인합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Users size={32} /></div>
@@ -221,7 +237,7 @@ export default function DocsSignPage() {
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Bell size={32} /></div>
                 <h4>5. 알림톡 발송 및 서명 대기</h4>
-                <p>근로자에게 알림톡이 발송되며, 서명이 완료될 때까지 대기합니다.</p>
+                <p>근로자에게 서명 요청이 문자로 발송되며, 서명이 완료를 기다립니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Download size={32} /></div>

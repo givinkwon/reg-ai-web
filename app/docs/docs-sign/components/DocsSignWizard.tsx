@@ -177,7 +177,7 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
 
   return (
     <div className={s.wrap}>
-      <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div>
+      {/* <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div> */}
 
       {(isAnalyzing || submitting) && (
         <div className={s.loadingOverlay}>

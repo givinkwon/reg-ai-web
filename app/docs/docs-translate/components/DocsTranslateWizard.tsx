@@ -151,7 +151,7 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
 
   return (
     <div className={s.wrap}>
-      <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div>
+      {/* <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div> */}
 
       {/* 로딩 오버레이 (서버 응답이 0.1초라 아주 잠깐 스쳐 지나갑니다) */}
       {isTranslating && (

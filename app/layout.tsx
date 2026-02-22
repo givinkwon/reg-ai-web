@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import GAEventBridge from "./components/analytics/GAEventBridge";
 import Navbar from "./docs/components/Navbar"; 
 import FloatingSupport from "./components/landing/FloatingSupport";
+import ConditionalNavbar from "./docs/components/ConditionalNavbar";
 
 export const metadata: Metadata = {
   title: "reg-ai-web",
@@ -131,7 +132,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* 메인 레이아웃 구조 */}
         <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
-          <Navbar />
+          <ConditionalNavbar />
           <main className="flex-1 flex flex-col relative">
             {children}
           </main>
