@@ -12,10 +12,12 @@ import SignaturePad from './SignaturePad';
 export default function SignView({
   data,
   token,
+  signType, // ✅ [추가] 부모로부터 현재 문서의 타입('tbm' 또는 'docs')을 전달받습니다.
   isMock,
 }: {
   data: TbmSignData;
   token: string;
+  signType: string;
   isMock?: boolean;
 }) {
   const router = useRouter();
@@ -85,14 +87,18 @@ export default function SignView({
         return;
       }
 
-      // ✅ [핵심 수정] 제출 API 엔드포인트를 Docs-Sign 전용으로 변경
-      // payload 파라미터 중 백엔드가 받는 이름인 'signature'로 매핑해서 보냅니다.
-      const res = await fetch('/api/docs-sign-submit', {
+      // ✅ [핵심 분기 처리] 서명 타입에 따라 호출할 백엔드 API URL 설정
+      const submitApiUrl = signType === 'docs' 
+        ? '/api/docs-sign/sign/submit' 
+        : '/api/tbm-sign/submit';
+
+      // 두 API 모두 같은 payload 구조를 사용하도록 설계됨
+      const res = await fetch(submitApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          signature: sigUrl, 
+          signaturePngDataUrl: sigUrl,
           attendeeName: data.attendeeName || undefined,
         }),
       });
@@ -122,6 +128,9 @@ export default function SignView({
     }
   }
 
+  // ✅ 편의성을 위해 분기 변수 할당
+  const isDocs = signType === 'docs';
+
   return (
     <>
       <CenteredAlertModal
@@ -135,8 +144,8 @@ export default function SignView({
       <div className={s.card}>
         <div className={s.headerRow}>
           <div>
-            {/* ✅ [수정] 헤더 타이틀 문구 변경 */}
-            <h1 className={s.h1}>{data.title || '안전 문서 서명'}</h1>
+            {/* ✅ [수정] 헤더 타이틀 문구 동적 변경 */}
+            <h1 className={s.h1}>{data.title || (isDocs ? '안전 문서 서명' : 'TBM 서명')}</h1>
             <div className={s.sub}>
               <span className={s.badge}>{data.company || '—'}</span>
               {data.siteName ? (
@@ -166,13 +175,13 @@ export default function SignView({
         </div>
 
         <div className={s.grid}>
-          {/* ✅ [수정] 블록 타이틀을 문서 요약 맥락에 맞게 변경 */}
           <div className={s.block}>
-            <div className={s.blockTitle}>문서 핵심 내용</div>
+            {/* ✅ [수정] 블록 타이틀 동적 변경 */}
+            <div className={s.blockTitle}>{isDocs ? '문서 핵심 요약' : '금일 작업'}</div>
             <div className={s.blockBody}>{data.workSummary}</div>
           </div>
           <div className={s.block}>
-            <div className={s.blockTitle}>서약 사항</div>
+            <div className={s.blockTitle}>{isDocs ? '서약 사항' : '주요 위험요인'}</div>
             <div className={s.blockBody}>{data.hazardSummary}</div>
           </div>
           <div className={s.block}>
