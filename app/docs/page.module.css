@@ -212,3 +212,65 @@
     gap: 2rem;
   }
 }
+
+/* ========================================================
+   다크모드 색상 전용 오버라이드 (레이아웃 건드리지 않음)
+   ======================================================== */
+@media (prefers-color-scheme: dark) {
+  .shell {
+    background-color: #0f172a; 
+    color: #f8fafc;
+  }
+  .sideDesktop {
+    background-color: #1e293b;
+    border-right-color: #334155;
+  }
+  .overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  .sideFloat {
+    background-color: #1e293b;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.5);
+  }
+  .main {
+    background-color: #0f172a;
+  }
+  .heroSection {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+    color: #fff;
+  }
+  .card {
+    background-color: #1e293b;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  .card:hover {
+    box-shadow: 0 12px 24px rgba(59, 130, 246, 0.4);
+    border-color: #3b82f6;
+  }
+  .cardIconBox {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+  .cardPrimary .cardIconBox {
+    background-color: #3b82f6;
+    color: #fff;
+  }
+  .cardTitle {
+    color: #f8fafc;
+  }
+  .cardDesc {
+    color: #cbd5e1;
+  }
+  .infoSection {
+    border-top-color: #334155;
+  }
+  .infoIcon {
+    color: #3b82f6;
+  }
+  .infoTitle {
+    color: #f8fafc;
+  }
+  .infoDesc {
+    color: #94a3b8;
+  }
+}

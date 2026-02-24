@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta
           name="theme-color"
           media="(prefers-color-scheme: dark)"
-          content="#0b1120"
+          content="#0f172a"
         />
 
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -130,8 +130,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {!GA_DISABLED && <GAEventBridge />}
 
-        {/* 메인 레이아웃 구조 */}
-        <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
+        {/* 🚀 핵심 수정 부분: bg-white 지우고 Tailwind 다크모드 대응 속성(dark:bg-...) 추가 */}
+        <div className="min-h-screen flex flex-col font-sans bg-white text-gray-900 dark:bg-[#0f172a] dark:text-slate-50 transition-colors duration-300">
           <ConditionalNavbar />
           <main className="flex-1 flex flex-col relative">
             {children}

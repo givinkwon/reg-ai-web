@@ -1,12 +1,63 @@
 /* Navbar 전체 띠 */
 .nav {
+  /* --- Light Mode Variables --- */
+  --nav-bg: rgba(255, 255, 255, 0.95);
+  --nav-border: #e5e7eb;
+  --nav-logo-text: #111111;
+  
+  --nav-link: #666666;
+  --nav-link-hover: #2388FF;
+  
+  --nav-text-main: #333333;
+  --nav-text-sub: #555555;
+  
+  --nav-primary: #2388FF;
+  --nav-primary-hover: #1b6cd9;
+  
+  --nav-danger-text: #e11d48;
+  --nav-danger-bg: #ffe4e6;
+  
+  --nav-mobile-menu-bg: #ffffff;
+  --nav-mobile-divider: #f3f4f6;
+  --nav-mobile-icon: #cccccc;
+  
+  --nav-shadow: rgba(0, 0, 0, 0.1);
+
   position: sticky;
   top: 0;
   z-index: 50;
   width: 100%;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--nav-border);
+  background-color: var(--nav-bg);
   backdrop-filter: blur(8px);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .nav {
+    --nav-bg: rgba(15, 23, 42, 0.95);      /* Slate 900 (투명도 유지) */
+    --nav-border: #334155;                 /* Slate 700 */
+    --nav-logo-text: #f8fafc;              /* Slate 50 */
+    
+    --nav-link: #94a3b8;                   /* Slate 400 */
+    --nav-link-hover: #3b82f6;             /* Blue 500 */
+    
+    --nav-text-main: #f8fafc;
+    --nav-text-sub: #cbd5e1;               /* Slate 300 */
+    
+    --nav-primary: #3b82f6;
+    --nav-primary-hover: #60a5fa;
+    
+    --nav-danger-text: #fca5a5;            /* Rose 300 */
+    --nav-danger-bg: rgba(225, 29, 72, 0.15); /* 반투명 붉은 배경 */
+    
+    --nav-mobile-menu-bg: #1e293b;         /* Slate 800 */
+    --nav-mobile-divider: #334155;
+    --nav-mobile-icon: #64748b;            /* Slate 500 */
+    
+    --nav-shadow: rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* ✅ Navbar 내부 컨테이너 (수정사항 4번 핵심) */
@@ -26,10 +77,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #2388FF; /* 브랜드 컬러 */
+  color: var(--nav-primary); /* 브랜드 컬러 */
   text-decoration: none;
   font-weight: 700;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, color 0.3s ease;
 }
 
 .logo:hover {
@@ -39,7 +90,8 @@
 .logoText {
   font-size: 1.25rem;
   letter-spacing: -0.5px;
-  color: #111;
+  color: var(--nav-logo-text);
+  transition: color 0.3s ease;
 }
 
 /* --- 데스크톱 메뉴 --- */
@@ -58,17 +110,17 @@
 .navLink {
   font-size: 0.95rem;
   font-weight: 500;
-  color: #666;
+  color: var(--nav-link);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .navLink:hover {
-  color: #2388FF;
+  color: var(--nav-link-hover);
 }
 
 .active {
-  color: #2388FF;
+  color: var(--nav-primary);
   font-weight: 700;
 }
 
@@ -98,17 +150,21 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #333;
+  color: var(--nav-text-main);
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .logoutBtn {
-  color: #666;
+  color: var(--nav-link);
+  transition: color 0.2s, background-color 0.2s;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
 .logoutBtn:hover {
-  color: #e11d48; /* 로그아웃 시 붉은색 틴트 */
-  background-color: #ffe4e6;
+  color: var(--nav-danger-text); /* 로그아웃 시 붉은색 틴트 */
+  background-color: var(--nav-danger-bg);
 }
 
 /* 로그아웃 상태 */
@@ -126,17 +182,22 @@
 
 .loginBtn {
   font-weight: 500;
-  color: #555;
+  color: var(--nav-text-sub);
+  transition: color 0.3s ease;
+}
+.loginBtn:hover {
+  color: var(--nav-text-main);
 }
 
 .trialBtn {
-  background-color: #2388FF;
-  color: white;
+  background-color: var(--nav-primary);
+  color: white; /* 돋보이는 버튼은 항상 흰색 텍스트 유지 */
   font-weight: 600;
+  transition: background-color 0.2s ease;
 }
 
 .trialBtn:hover {
-  background-color: #1b6cd9;
+  background-color: var(--nav-primary-hover);
 }
 
 /* --- 모바일 토글 --- */
@@ -146,7 +207,8 @@
   border: none;
   cursor: pointer;
   padding: 4px;
-  color: #333;
+  color: var(--nav-text-main);
+  transition: color 0.3s ease;
 }
 
 @media (max-width: 768px) {
@@ -161,14 +223,15 @@
   top: 64px; /* Navbar 높이만큼 아래 */
   left: 0;
   width: 100%;
-  background-color: white;
-  border-bottom: 1px solid #e5e7eb;
+  background-color: var(--nav-mobile-menu-bg);
+  border-bottom: 1px solid var(--nav-border);
   padding: 1rem 1.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px var(--nav-shadow);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   animation: slideDown 0.2s ease-out;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 @keyframes slideDown {
@@ -188,9 +251,10 @@
   justify-content: space-between;
   padding: 0.75rem 0;
   font-size: 1rem;
-  color: #333;
-  border-bottom: 1px solid #f3f4f6;
+  color: var(--nav-text-main);
+  border-bottom: 1px solid var(--nav-mobile-divider);
   text-decoration: none;
+  transition: color 0.2s ease, border-color 0.3s ease;
 }
 
 .mobileLink:last-child {
@@ -198,12 +262,13 @@
 }
 
 .mobileActive {
-  color: #2388FF;
+  color: var(--nav-primary);
   font-weight: 700;
 }
 
 .mobileLinkIcon {
-  color: #ccc;
+  color: var(--nav-mobile-icon);
+  transition: color 0.3s ease;
 }
 
 .mobileActions {
@@ -221,8 +286,9 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
-  color: #333;
+  color: var(--nav-text-main);
   margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
 }
 
 .mobileFullBtn {

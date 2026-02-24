@@ -1,7 +1,7 @@
-// app/docs/page.tsx (예시 경로)
+// app/docs/page.tsx
 'use client';
 
-import React, { useEffect } from 'react'; // ✅ React Hook 추가
+import React, { useEffect } from 'react'; 
 import Link from 'next/link';
 import { FolderOpen, AlertTriangle, Users, CalendarCheck, ArrowRight } from 'lucide-react';
 import s from './page.module.css';
@@ -12,9 +12,6 @@ import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
 import Footer from './components/landing/Footer';
 
 // ✅ GA Context 정의
-// page: SafetyDocs (전체 안전 문서 섹션)
-// section: Dashboard (대시보드 화면)
-// area: MenuGrid (메뉴 목록 영역)
 const GA_CTX = { page: 'SafetyDocs', section: 'Dashboard', area: 'MenuGrid' } as const;
 
 const MENU_ITEMS = [
@@ -85,12 +82,12 @@ export default function DashboardPage() {
             <Link
               key={item.id}
               href={item.href}
-              className={s.linkWrapper}
-              onClick={() => handleClickMenu(item)} // ✅ 클릭 이벤트 연결
+              // 🚀 핵심 수정 부분: group 클래스를 추가하여 Tailwind의 group-hover 작동
+              className={`group ${s.linkWrapper || ''}`}
+              onClick={() => handleClickMenu(item)} 
             >
               <div
                 className={`${s.card} ${item.isPrimary ? s.cardPrimary : ''}`}
-                // (선택 사항) data-속성을 유지하고 싶다면 아래처럼 추가 가능합니다.
                 data-ga-event={gaEvent(GA_CTX, 'ClickMenu')}
                 data-ga-id={gaUiId(GA_CTX, 'ClickMenu')}
                 data-ga-label={item.title}
@@ -99,7 +96,8 @@ export default function DashboardPage() {
                 <div className={s.cardIconBox}>{item.icon}</div>
                 <h3 className={s.cardTitle}>{item.title}</h3>
                 <p className={s.cardDesc}>{item.desc}</p>
-                <div className="mt-4 text-sm font-semibold flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                {/* 🚀 다크모드에서도 잘 보이도록 text-blue-500 추가 */}
+                <div className="mt-4 text-sm font-semibold flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 text-blue-600 dark:text-blue-400">
                   바로가기 <ArrowRight size={14} />
                 </div>
               </div>
