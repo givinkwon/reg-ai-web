@@ -42,10 +42,27 @@ export default function DocsTranslateWizard({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const validateAndSetFile = (selectedFile: File) => {
-    if(selectedFile.name.toLowerCase().endsWith('.pdf')) {
-      alert("PDF 파일은 레이아웃 유지가 어렵습니다. PPT, Word, Excel 파일을 권장합니다.");
+const validateAndSetFile = (selectedFile: File) => {
+    const fileName = selectedFile.name.toLowerCase();
+
+    // 1. HWP 전용 경고 팝업 (기획서 반영)
+    if (fileName.endsWith('.hwp')) {
+      alert("현재 HWP 파일은 지원 준비 중입니다. PDF로 변환하여 업로드해 주세요.");
+      return;
     }
+
+    // 2. 허용된 확장자 리스트
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+    
+    // 현재 파일이 허용된 확장자 중 하나로 끝나는지 검사
+    const isValid = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!isValid) {
+      alert("지원하지 않는 파일 형식입니다.\n(지원 형식: PDF, Word, Excel, PPT)");
+      return;
+    }
+
+    // 모든 검사를 통과했을 때만 파일 세팅
     setFile(selectedFile);
   };
 
