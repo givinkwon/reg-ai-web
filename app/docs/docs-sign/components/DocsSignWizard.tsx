@@ -11,6 +11,7 @@ import { useUserStore } from '@/app/store/user';
 // ✅ GA 로직 임포트
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
+import Navbar from '../../components/Navbar';
 
 const GA_CTX = { page: 'DocsSign', section: 'Sign', area: 'Wizard' } as const;
 
@@ -325,6 +326,10 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
 
   return (
     <div className={s.wrap}>
+
+      <div style={{ position: 'relative', zIndex: 100 }}>
+        <Navbar />
+      </div>
 
       {(isAnalyzing || submitting) && (
         <div className={s.loadingOverlay}>

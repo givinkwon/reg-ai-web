@@ -45,6 +45,7 @@ export default function Navbar() {
 
   const NAV_LINKS = [
     { name: '문서함', href: '/docs/docs-box' },
+    { name: '안전문서 단체서명', href: '/docs/docs-sign' },
     { name: '위험성평가', href: '/docs/risk-assessment' },
     { name: 'TBM', href: '/docs/tbm' },
     { name: '순회점검표', href: '/docs/monthly-inspection' },
