@@ -1,4 +1,4 @@
-/* app/docs/components/DocsWizard.module.css */
+/* app/docs/components/DocsSignWizard.module.css */
 
 .wrap {
   --content-width: 900px;
@@ -165,6 +165,73 @@
   border: 1px solid #e2e8f0;
 }
 
+/* 요약본 뷰 영역 */
+.summaryCard {
+  background: #f8fafc;
+  border-left: 4px solid #3b82f6;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+.summaryTitle {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: bold;
+}
+.summaryDesc {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+.summaryList {
+  padding-left: 1.5rem;
+  color: #334155;
+  line-height: 1.8;
+  margin: 0;
+}
+.summaryList li {
+  margin-bottom: 0.5rem;
+}
+
+/* 파일 업로드 뷰 영역 */
+.fileCardTitle {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+.fileUploadedBox {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #eff6ff;
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fileName {
+  font-weight: bold;
+  color: #1e40af;
+}
+.fileRemoveBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 4px;
+}
+.fileRemoveBtn:hover {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+
 /* =========================================
    4. 푸터 (Footer)
    ========================================= */
@@ -184,12 +251,6 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.loadingText {
-  animation: pulse 1.5s infinite;
-  font-weight: 500;
-  color: #2563eb;
 }
 
 .footerBtns {
@@ -285,18 +346,134 @@
 .loadingTitle { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
 .loadingDesc { font-size: 0.95rem; color: #64748b; line-height: 1.5; white-space: pre-wrap; }
 
-/* 참석자 입력 폼 테이블 스타일 */
-.attendeeHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.addBtn { background: none; border: 1px solid #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
-.addBtn:hover { background: #f8fafc; }
-.table { display: flex; flex-direction: column; gap: 0.5rem; }
+/* =========================================
+   6. 참석자 입력 폼 & 그룹 관리 UI
+   ========================================= */
+.attendeeHeader { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 1.5rem; 
+  flex-wrap: wrap; 
+  gap: 1rem; 
+}
+.attendeeTitle {
+  font-size: 1.1rem; 
+  display: flex; 
+  align-items: center; 
+  gap: 0.5rem; 
+  color: #1e293b; 
+  font-weight: bold;
+}
+
+/* 그룹 버튼 래퍼 */
+.groupActionWrapper {
+  display: flex; 
+  gap: 0.5rem; 
+  align-items: center; 
+  flex-wrap: wrap;
+}
+
+.groupSelect {
+  padding: 0.5rem; 
+  border-radius: 6px; 
+  border: 1px solid #cbd5e1; 
+  font-size: 0.9rem; 
+  outline: none; 
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+.groupSelect:focus {
+  border-color: #3b82f6;
+}
+
+.saveGroupBtn {
+  padding: 0.5rem 1rem; 
+  border-radius: 6px; 
+  border: 1px solid #e2e8f0; 
+  background: #fff; 
+  font-size: 0.9rem; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  gap: 0.3rem; 
+  color: #334155;
+  transition: all 0.2s;
+}
+.saveGroupBtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.addBtn { 
+  padding: 0.5rem 1rem; 
+  border-radius: 6px; 
+  background: #3b82f6; 
+  color: #fff; 
+  font-size: 0.9rem; 
+  font-weight: bold; 
+  border: none; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  gap: 0.3rem; 
+  transition: all 0.2s;
+}
+.addBtn:hover { background: #2563eb; }
+
+/* 테이블 및 행 스타일 */
+.emptyState {
+  text-align: center; 
+  padding: 3rem 0; 
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.table { display: flex; flex-direction: column; gap: 0.75rem; }
 .trow { display: flex; gap: 0.5rem; align-items: center; }
-.inputCell { flex: 1; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+
+.rowNum {
+  width: 2rem; 
+  text-align: center; 
+  color: #94a3b8; 
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.inputCell { 
+  flex: 1; 
+  padding: 0.75rem; 
+  border: 1px solid #cbd5e1; 
+  border-radius: 8px; 
+  outline: none; 
+  transition: border-color 0.2s;
+  color: #1e293b;
+}
 .inputCell:focus { border-color: #3b82f6; }
-.removeBtn { background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem; }
+.inputCellLarge {
+  flex: 2;
+}
+
+.removeBtn { 
+  background: none; 
+  border: none; 
+  color: #ef4444; 
+  cursor: pointer; 
+  padding: 0.75rem; 
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.removeBtn:hover {
+  background-color: #fef2f2;
+}
+
 
 /* =========================================
-   6. 드래그 앤 드롭 업로드 영역
+   7. 드래그 앤 드롭 업로드 영역
    ========================================= */
 .dropZone {
   border: 2px dashed #cbd5e1;
@@ -317,12 +494,112 @@
   border-color: #94a3b8;
 }
 
+.dropZoneTitle {
+  color: #334155; 
+  font-weight: bold; 
+  font-size: 1.1rem; 
+  margin: 0 0 0.5rem 0;
+}
+.dropZoneDesc {
+  color: #64748b; 
+  margin: 0; 
+  line-height: 1.5;
+}
+
 /* 드래그 중일 때 시각적 강조 효과 */
 .dropZoneDragging {
   border-color: #3b82f6;
   background-color: #eff6ff;
 }
 
+/* =========================================
+   8. 모달 (Modal) 스타일
+   ========================================= */
+.modalOverlay {
+  position: fixed; 
+  inset: 0; 
+  background: rgba(15, 23, 42, 0.6); 
+  backdrop-filter: blur(2px);
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  background: #fff; 
+  padding: 2rem; 
+  border-radius: 16px; 
+  width: 100%;
+  max-width: 420px; 
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  margin: 0 1rem;
+}
+
+.modalTitle {
+  margin-top: 0; 
+  margin-bottom: 0.5rem; 
+  color: #1e293b;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.modalDesc {
+  color: #64748b; 
+  font-size: 0.9rem; 
+  margin-bottom: 1.5rem;
+}
+
+.modalInput {
+  width: 100%; 
+  padding: 0.8rem; 
+  border-radius: 8px; 
+  border: 1px solid #cbd5e1; 
+  margin-bottom: 1.5rem; 
+  outline: none; 
+  box-sizing: border-box;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+.modalInput:focus {
+  border-color: #3b82f6;
+}
+
+.modalActionBox {
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 0.5rem;
+}
+
+.modalCancelBtn {
+  padding: 0.6rem 1.2rem; 
+  border-radius: 8px; 
+  border: 1px solid #cbd5e1; 
+  background: #fff; 
+  cursor: pointer; 
+  color: #475569;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.modalCancelBtn:hover {
+  background: #f1f5f9;
+}
+
+.modalConfirmBtn {
+  padding: 0.6rem 1.2rem; 
+  border-radius: 8px; 
+  border: none; 
+  background: #3b82f6; 
+  color: #fff; 
+  font-weight: bold; 
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.modalConfirmBtn:hover {
+  background: #2563eb;
+}
+
+/* Animations */
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -333,4 +610,8 @@
   .footerBtns button { font-size: 0.85rem; padding: 0.5rem 0.8rem; }
   .tabLabel { display: none; }
   .card { padding: 1.5rem 1rem; }
+  
+  .attendeeHeader { flex-direction: column; align-items: flex-start; }
+  .groupActionWrapper { width: 100%; justify-content: space-between; }
+  .groupSelect { flex: 1; }
 }

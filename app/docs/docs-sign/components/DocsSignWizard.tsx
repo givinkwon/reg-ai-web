@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Users, Plus, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Users, Plus, X, Save, FileText } from 'lucide-react';
 import s from './DocsSignWizard.module.css';
 
 import Navbar from '@/app/docs/components/Navbar';
@@ -17,12 +17,16 @@ const GA_CTX = { page: 'DocsSign', section: 'Sign', area: 'Wizard' } as const;
 
 export type Attendee = { name: string; contact: string };
 
-type StepId = 'upload' | 'summary' | 'sign';
+type AttendeeGroup = {
+  groupName: string;
+  attendees: Attendee[];
+};
+
+type StepId = 'upload' | 'request';
 
 const STEPS: { id: StepId; label: string }[] = [
   { id: 'upload', label: '문서 업로드' },
-  { id: 'summary', label: '문서 내용 확인' }, 
-  { id: 'sign', label: '서명 요청' },
+  { id: 'request', label: '요청 정보 입력' },
 ];
 
 type Props = {
@@ -38,12 +42,14 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<string[]>([]);
-  
-  // ✅ [수정] 서버에서 생성된 파일 경로를 임시 보관할 상태 추가
   const [originalPath, setOriginalPath] = useState<string | null>(null);
   
   const [attendees, setAttendees] = useState<Attendee[]>([{ name: '', contact: '' }]);
   
+  const [savedGroups, setSavedGroups] = useState<AttendeeGroup[]>([]);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -51,6 +57,19 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      const storedGroups = localStorage.getItem('regai_attendee_groups');
+      if (storedGroups) {
+        try {
+          setSavedGroups(JSON.parse(storedGroups));
+        } catch (e) {
+          console.error("그룹 불러오기 실패", e);
+        }
+      }
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -70,9 +89,17 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     localStorage.setItem('docs_sign_usage_count', String(count + 1));
   };
 
+  const validateAndSetFile = (selectedFile: File) => {
+    if (selectedFile.name.toLowerCase().endsWith('.hwp')) {
+      alert("현재 HWP 파일은 지원 준비 중입니다. PDF로 변환하여 업로드해 주세요.");
+      return;
+    }
+    setFile(selectedFile);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      validateAndSetFile(e.target.files[0]);
     }
   };
 
@@ -81,7 +108,43 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation(); setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) validateAndSetFile(e.dataTransfer.files[0]);
+  };
+
+  const handleSaveGroup = () => {
+    if (!newGroupName.trim()) return alert("그룹 이름을 입력해주세요.");
+    
+    const validAttendees = attendees.filter(a => a.name.trim() && a.contact.trim());
+    if (validAttendees.length === 0) return alert("저장할 인원이 없습니다. (이름과 연락처를 확인해주세요)");
+
+    const newGroup: AttendeeGroup = {
+      groupName: newGroupName.trim(),
+      attendees: validAttendees.map(a => ({ name: a.name, contact: a.contact }))
+    };
+
+    const updatedGroups = [...savedGroups, newGroup];
+    setSavedGroups(updatedGroups);
+    localStorage.setItem('regai_attendee_groups', JSON.stringify(updatedGroups));
+    
+    setNewGroupName('');
+    setIsGroupModalOpen(false);
+    alert(`'${newGroup.groupName}' 그룹이 저장되었습니다.`);
+  };
+
+  const handleLoadGroup = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedGroupName = e.target.value;
+    if (!selectedGroupName) return;
+
+    const group = savedGroups.find(g => g.groupName === selectedGroupName);
+    if (group) {
+      const isConfirmed = window.confirm(`'${selectedGroupName}' 그룹의 인원(${group.attendees.length}명)을 불러오시겠습니까?\n기존 명단 아래에 추가됩니다.`);
+      
+      if (isConfirmed) {
+        const currentValid = attendees.filter(a => a.name.trim() || a.contact.trim());
+        setAttendees([...currentValid, ...group.attendees]);
+      }
+    }
+    e.target.value = ""; 
   };
 
   const handleNext = async () => {
@@ -102,12 +165,11 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
         const data = await res.json();
         setSummary(data.summary || []);
         
-        // ✅ [수정] 백엔드가 알려준 파일 경로를 상태에 저장함 (이게 핵심!)
         if (data.original_path) {
           setOriginalPath(data.original_path);
         }
 
-        setStep('summary');
+        setStep('request'); 
         incrementUsageLimit();
 
       } catch (error) {
@@ -116,16 +178,12 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
       } finally {
         setIsAnalyzing(false);
       }
-    } else if (step === 'summary') {
-      track(gaEvent(GA_CTX, 'ClickNext_Summary'), { ui_id: gaUiId(GA_CTX, 'ClickNext_Summary') });
-      setStep('sign');
     }
   };
 
   const handlePrev = () => {
     track(gaEvent(GA_CTX, 'ClickPrev'), { ui_id: gaUiId(GA_CTX, 'ClickPrev'), current_step: step });
-    if (step === 'summary') setStep('upload');
-    else if (step === 'sign') setStep('summary');
+    if (step === 'request') setStep('upload');
   };
 
   const handleFinish = async () => {
@@ -144,7 +202,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
           summary: summary,
           attendees: validAttendees,
           user_email: user?.email || 'guest@reg.ai.kr',
-          // ✅ [수정] 보관해뒀던 파일 경로를 백엔드에 전달하여 DB에 저장하게 함!
           original_path: originalPath 
         }),
       });
@@ -167,8 +224,7 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   if (isCompleted) {
     return (
       <div className={s.wrap}>
-        <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div>
-        <CompleteView onClose={onClose} onBack={() => { setIsCompleted(false); setStep('sign'); }} />
+        <CompleteView onClose={onClose} onBack={() => { setIsCompleted(false); setStep('request'); }} />
       </div>
     );
   }
@@ -177,7 +233,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
 
   return (
     <div className={s.wrap}>
-      {/* <div style={{ position: 'relative', zIndex: 100 }}><Navbar /></div> */}
 
       {(isAnalyzing || submitting) && (
         <div className={s.loadingOverlay}>
@@ -209,9 +264,9 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
             >
               <ArrowLeft size={18} /> 나가기
             </button>
-            <h2 className={s.title}>문서 요약 및 서명 요청</h2>
+            <h2 className={s.title}>안전 문서 단체 서명 받기</h2>
           </div>
-          <div className={s.progressText}>{currentIdx + 1} / 3 단계</div>
+          <div className={s.progressText}>{currentIdx + 1} / 2 단계</div>
         </div>
       </div>
 
@@ -236,7 +291,7 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
           
           {step === 'upload' && (
             <div className={s.card}>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#1e293b' }}>서명이 필요한 문서를 업로드하세요</h3>
+              <h3 className={s.fileCardTitle}>서명이 필요한 문서를 업로드하세요</h3>
               
               <div 
                 className={`${s.dropZone} ${isDragging ? s.dropZoneDragging : ''}`}
@@ -252,79 +307,140 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
                 data-ga-id={gaUiId(GA_CTX, 'ClickUploadBox')}
               >
                 <UploadCloud size={56} color={isDragging ? '#3b82f6' : '#94a3b8'} style={{ marginBottom: '1rem' }} />
-                <p style={{ color: '#334155', fontWeight: 'bold', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>
+                <p className={s.dropZoneTitle}>
                   이곳으로 파일을 드래그하여 놓거나 클릭하여 업로드하세요
                 </p>
-                <p style={{ color: '#64748b', margin: 0 }}>지원 형식: PDF, Word, Excel</p>
+                <p className={s.dropZoneDesc}>지원 형식: PDF, Word, Excel, PPT</p>
                 
                 <input 
                   type="file" 
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
                   style={{ display: 'none' }} 
-                  accept=".pdf,.doc,.docx,.xls,.xlsx" 
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
                 />
               </div>
 
               {file && (
-                <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 'bold', color: '#1e40af' }}>📁 {file.name}</span>
-                  <button onClick={() => setFile(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={18} /></button>
+                <div className={s.fileUploadedBox}>
+                  <span className={s.fileName}>📁 {file.name}</span>
+                  <button className={s.fileRemoveBtn} onClick={() => setFile(null)}>
+                    <X size={18} />
+                  </button>
                 </div>
               )}
             </div>
           )}
 
-          {step === 'summary' && (
-            <div className={s.card}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', marginBottom: '1rem', color: '#1e293b' }}>
-                <Sparkles size={20} color="#3b82f6" /> AI 문서 핵심 요약
-              </h3>
-              <p style={{ fontSize: '0.95rem', color: '#64748b', marginBottom: '1rem' }}>
-                아래 요약된 내용이 대상자에게 발송되어 서명 전 안내됩니다.
-              </p>
-              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <ul style={{ paddingLeft: '1.5rem', color: '#334155', lineHeight: '1.8', margin: 0 }}>
+          {step === 'request' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              <div className={s.summaryCard}>
+                <h3 className={s.summaryTitle}>
+                  <Sparkles size={20} color="#3b82f6" /> AI 문서 핵심 요약
+                </h3>
+                <p className={s.summaryDesc}>
+                  아래 요약된 내용이 대상자에게 발송되어 서명 전 안내됩니다.
+                </p>
+                <ul className={s.summaryList}>
                   {summary.map((txt, idx) => (
-                    <li key={idx} style={{ marginBottom: '0.5rem' }}>{txt}</li>
+                    <li key={idx}>{txt}</li>
                   ))}
                 </ul>
               </div>
-            </div>
-          )}
 
-          {step === 'sign' && (
-            <div className={s.card}>
-              <div className={s.attendeeHeader}>
-                <span style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', fontWeight: 'bold' }}>
-                  <Users size={20} color="#3b82f6" /> 서명 대상자 지정
-                </span>
-                <button 
-                  className={s.addBtn} 
-                  onClick={() => {
-                    track(gaEvent(GA_CTX, 'ClickAddAttendee'), { ui_id: gaUiId(GA_CTX, 'ClickAddAttendee') });
-                    setAttendees([...attendees, { name: '', contact: '' }]);
-                  }}
-                  data-ga-event="ClickAddAttendee"
-                >
-                  <Plus size={16} /> 인원 추가
-                </button>
-              </div>
-              
-              <div className={s.table}>
-                {attendees.map((a, i) => (
-                  <div key={i} className={s.trow}>
-                    <input className={s.inputCell} placeholder="이름" value={a.name} onChange={e => { const n = [...attendees]; n[i].name = e.target.value; setAttendees(n); }} />
-                    <input className={s.inputCell} style={{ flex: 2 }} placeholder="연락처 (알림톡 발송용)" value={a.contact} onChange={e => { const n = [...attendees]; n[i].contact = e.target.value; setAttendees(n); }} />
-                    <button className={s.removeBtn} onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}><X size={20} /></button>
+              <div className={s.card}>
+                <div className={s.attendeeHeader}>
+                  <span className={s.attendeeTitle}>
+                    <Users size={20} color="#3b82f6" /> 서명 대상자 지정
+                  </span>
+                  
+                  <div className={s.groupActionWrapper}>
+                    <select 
+                      className={s.groupSelect}
+                      onChange={handleLoadGroup}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>그룹 선택(불러오기)</option>
+                      {savedGroups.map(g => (
+                        <option key={g.groupName} value={g.groupName}>{g.groupName} ({g.attendees.length}명)</option>
+                      ))}
+                    </select>
+                    
+                    <button className={s.saveGroupBtn} onClick={() => setIsGroupModalOpen(true)}>
+                      <Save size={16} /> 현재 입력을 그룹으로 저장
+                    </button>
+
+                    <button 
+                      className={s.addBtn} 
+                      onClick={() => {
+                        track(gaEvent(GA_CTX, 'ClickAddAttendee'), { ui_id: gaUiId(GA_CTX, 'ClickAddAttendee') });
+                        setAttendees([...attendees, { name: '', contact: '' }]);
+                      }}
+                      data-ga-event="ClickAddAttendee"
+                    >
+                      <Plus size={16} /> 인원 추가
+                    </button>
                   </div>
-                ))}
+                </div>
+                
+                {attendees.length === 0 ? (
+                  <div className={s.emptyState}>
+                    등록된 서명 대상자가 없습니다. <br/>인원을 추가하거나 그룹을 불러와주세요.
+                  </div>
+                ) : (
+                  <div className={s.table}>
+                    {attendees.map((a, i) => (
+                      <div key={i} className={s.trow}>
+                        <div className={s.rowNum}>{i + 1}</div>
+                        <input 
+                          className={s.inputCell} 
+                          placeholder="이름" 
+                          value={a.name} 
+                          onChange={e => { const n = [...attendees]; n[i].name = e.target.value; setAttendees(n); }} 
+                        />
+                        <input 
+                          className={`${s.inputCell} ${s.inputCellLarge}`} 
+                          placeholder="연락처 (알림톡 발송용)" 
+                          value={a.contact} 
+                          onChange={e => { const n = [...attendees]; n[i].contact = e.target.value; setAttendees(n); }} 
+                        />
+                        <button 
+                          className={s.removeBtn} 
+                          onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
         </div>
       </div>
+
+      {isGroupModalOpen && (
+        <div className={s.modalOverlay}>
+          <div className={s.modalContent}>
+            <h3 className={s.modalTitle}>그룹 저장</h3>
+            <p className={s.modalDesc}>현재 입력된 명단을 나중에도 쉽게 불러올 수 있습니다.</p>
+            <input 
+              type="text" 
+              placeholder="예) 지게차팀, 야간조, 협력사A" 
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+              className={s.modalInput}
+            />
+            <div className={s.modalActionBox}>
+              <button className={s.modalCancelBtn} onClick={() => setIsGroupModalOpen(false)}>취소</button>
+              <button className={s.modalConfirmBtn} onClick={handleSaveGroup}>저장하기</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={s.footer}>
         <div className={s.centerWrap}>
@@ -342,11 +458,11 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
               </button>
             )}
             
-            {step !== 'sign' ? (
+            {step === 'upload' ? (
               <button 
                 className={s.navBtnPrimary} 
                 onClick={handleNext} 
-                disabled={isAnalyzing || (!file && step === 'upload')}
+                disabled={isAnalyzing || !file}
                 data-ga-event="ClickNext"
                 data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
               >

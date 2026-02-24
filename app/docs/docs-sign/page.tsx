@@ -87,7 +87,7 @@ export default function DocsSignPage() {
   const handleStartClick = () => {
     track(gaEvent(GA_CTX, 'ClickStart'), {
       ui_id: gaUiId(GA_CTX, 'ClickStart'),
-      button_label: '안전 문서 요약 및 서명 시작하기',
+      button_label: '서명 요청 만들기',
       is_logged_in: !!user?.email,
     });
     setIsWriting(true);
@@ -103,7 +103,8 @@ export default function DocsSignPage() {
               <div className={s.iconWrapper}>
                 <FileSignature size={40} color="white" strokeWidth={1.5} />
               </div>
-              <h1 className={s.title}>안전 문서 요약 & 서명 발송</h1>
+              {/* 🚀 기획서 반영: 메인 타이틀 변경 */}
+              <h1 className={s.title}>안전 문서 단체 서명 받기</h1>
               <p className={s.desc}>
                 복잡한 안전 문서를 AI 로 요약하여 참석자에게 제공하고<br />
                 간편하게 서명을 수합하세요.
@@ -115,10 +116,11 @@ export default function DocsSignPage() {
                   onClick={handleStartClick}
                   data-ga-event="ClickStart"
                   data-ga-id={gaUiId(GA_CTX, 'ClickStart')}
-                  data-ga-label="문서 요약·서명 시작"
+                  data-ga-label="서명 요청 만들기"
                 >
                   <CheckSquare size={20} className="mr-2" />
-                  문서 요약·서명 시작
+                  {/* 🚀 기획서 반영: 버튼 문구 변경 */}
+                  서명 요청 만들기
                 </Button>
               </div>
             </div>
@@ -132,7 +134,7 @@ export default function DocsSignPage() {
                 </div>
                 <h3 className={s.featureTitle}>AI 핵심 내용 요약</h3>
                 <p className={s.featureDesc}>
-                  PDF, Word Excel 등 어던 문서든 업로드만 하세요. 문서를 짧고 명확한 현장용 안내로 바꿔줍니다
+                  PDF, Word Excel 등 어떤 문서든 업로드만 하세요. 문서를 짧고 명확한 현장용 안내로 바꿔줍니다.
                 </p>
               </div>
               <div className={s.featureCard}>
@@ -163,17 +165,19 @@ export default function DocsSignPage() {
               <div className={s.previewImageWrapper}>
                 <Image 
                   src="/docs/서명첫번째.png" 
-                  alt="AI 요약 예시" 
+                  alt="단체 서명 요청 지원 예시" 
                   width={500} 
                   height={700}
                   className={s.previewImg}
                   priority
                 />
-                <div className={s.caption}>1. AI 문서 요약 추출</div>
+                {/* 🚀 기획서 반영: 캡션 변경 */}
+                <div className={s.caption}>1. 단체 서명 요청 지원</div>
               </div>
               <div className={s.previewContent}>
-                <h3>방대한 문서도<br/>핵심만 요약!</h3>
-                <p>AI가 문서의 핵심만 요약하여 참가자들에게<br/>서명 요청과 함께 제공합니다.</p>
+                {/* 🚀 기획서 반영: 제목 및 본문 변경 */}
+                <h3>명단만 넣으면,<br/>서명요청을 자동 발송합니다</h3>
+                <p>팀 명단을 붙여넣거나 그룹 템플릿으로 불러와<br/>한번에 간편하게 전송하세요.</p>
               </div>
             </div>
 
@@ -193,20 +197,23 @@ export default function DocsSignPage() {
                 <p>작업자는 수신된 링크를 통해 요약본을 확인하고,<br/>화면에서 바로 서명 제출을 진행합니다.<br/>수합된 서명은 관리자에게 실시간 연동됩니다.</p>
               </div>
             </div>
+            
             <div className={s.previewRow}>
               <div className={s.previewImageWrapper}>
                 <Image 
                   src="/docs/서명세번째.png" 
-                  alt="모바일 서명 화면" 
+                  alt="자동 기입 화면" 
                   width={500} 
                   height={700} 
                   className={s.previewImg}
                 />
-                <div className={s.caption}>3. 작성된 서명은 자동 기입</div>
+                {/* 🚀 기획서 반영: 캡션 변경 */}
+                <div className={s.caption}>3. 실시간 서명 업데이트</div>
               </div>
               <div className={s.previewContent}>
-                <h3>참가자가 서명을 완료하면<br/>작성된 서명은 문서에</h3>
-                <p>자동으로 기입됩니다.<br/>(이메일과 문서함에서 확인)</p>
+                {/* 🚀 기획서 반영: 제목 및 본문 변경 */}
+                <h3>작성된 서명은 실시간으로<br/>자동 기입됩니다.</h3>
+                <p>참가자가 서명을 완료하면 작성된 서명은 문서에<br/>자동으로 기입됩니다. (문서함에서 확인 가능)</p>
               </div>
             </div>
           </section>
@@ -217,31 +224,27 @@ export default function DocsSignPage() {
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><MousePointerClick size={32} /></div>
                 <h4>1. 프로세스 시작</h4>
-                <p>문서 서명 시작하기 버튼을 눌러 작업을 시작하세요.</p>
+                {/* 🚀 기획서 반영: 프로세스 시작 문구 변경 */}
+                <p>서명 요청 만들기 버튼을 눌러 작업을 시작하세요.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><UploadCloud size={32} /></div>
                 <h4>2. 문서 업로드</h4>
-                <p>서명이 필요한 안전 문서(PDF, Word, Excel) 원본을 업로드합니다.</p>
-              </div>
-              <div className={s.guideItem}>
-                <div className={s.guideIcon}><Sparkles size={32} /></div>
-                <h4>3. AI 요약 확인</h4>
-                <p>AI가 요약한 문서를 확인합니다.</p>
+                <p>서명이 필요한 안전 문서(PDF, Word, Excel, PPT) 원본을 업로드합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Users size={32} /></div>
-                <h4>4. 참석자 지정</h4>
-                <p>서명이 필요한 근로자 명단(이름, 연락처)을 입력합니다.</p>
+                <h4>3. 요청 정보 입력</h4>
+                <p>AI가 요약한 핵심 내용을 확인하고, 서명 대상자(그룹)를 지정합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Bell size={32} /></div>
-                <h4>5. 알림톡 발송 및 서명 대기</h4>
-                <p>근로자에게 서명 요청이 문자로 발송되며, 서명이 완료를 기다립니다.</p>
+                <h4>4. 알림톡 발송 및 서명 대기</h4>
+                <p>근로자에게 서명 요청이 발송되며, 서명 완료를 실시간으로 확인합니다.</p>
               </div>
               <div className={s.guideItem}>
                 <div className={s.guideIcon}><Download size={32} /></div>
-                <h4>6. 증빙 문서 다운로드</h4>
+                <h4>5. 증빙 문서 다운로드</h4>
                 <p>서명이 모두 수합되면, 서명 시트가 병합된 최종 PDF를 다운로드합니다.</p>
               </div>
             </div>
@@ -250,7 +253,6 @@ export default function DocsSignPage() {
           <Footer />
         </>
       ) : (
-        /* ✅ [수정] 로그인 모달 팝업 함수 전달 */
         <DocsSignWizard
           open={isWriting}
           onClose={() => {
