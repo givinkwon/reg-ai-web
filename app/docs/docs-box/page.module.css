@@ -8,6 +8,7 @@
   
   --sl-text-main: #1e293b;
   --sl-text-sub: #64748b;
+  --sl-text-muted: #94a3b8;
   --sl-border: #e2e8f0;
   
   --sl-primary: #3b82f6;
@@ -36,17 +37,19 @@
   min-height: 80vh;
   font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
   color: var(--sl-text-main);
+  background-color: transparent;
 }
 
 /* --- Dark Mode Variables --- */
 @media (prefers-color-scheme: dark) {
   .container {
-    --sl-bg-main: #0f172a;
-    --sl-bg-sub: #1e293b;
+    --sl-bg-main: #1e293b;
+    --sl-bg-sub: #0f172a;
     --sl-bg-hover: #334155;
     
     --sl-text-main: #f8fafc;
     --sl-text-sub: #94a3b8;
+    --sl-text-muted: #64748b;
     --sl-border: #334155;
     
     --sl-primary: #3b82f6;
@@ -76,6 +79,13 @@
   margin-bottom: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--sl-border);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.headerTitles {
+  flex: 1;
+  min-width: 280px;
 }
 
 .title {
@@ -106,6 +116,7 @@
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .dot {
@@ -152,11 +163,13 @@
 /* --- Desktop Table --- */
 .desktopView {
   display: block;
+  overflow-x: auto; /* 테이블 넘침 방지 */
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px;
 }
 
 .table th {
@@ -189,6 +202,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  max-width: 400px; /* 너무 길어지지 않게 조정 */
 }
 
 .iconBox {
@@ -207,12 +221,16 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow: hidden;
 }
 
 .docName {
   font-weight: 500;
   color: var(--sl-text-main);
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* 문서명이 너무 길면 ... 처리 */
 }
 
 /* 서명 진행상태 뱃지 */
@@ -220,11 +238,12 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 12px;
   width: fit-content;
+  white-space: nowrap;
 }
 .signBadgeProgress {
   background-color: var(--sl-badge-prog-bg);
@@ -250,6 +269,7 @@
 .downloadBtn {
   color: var(--sl-text-sub);
   gap: 6px;
+  white-space: nowrap;
 }
 .downloadBtn:hover {
   color: var(--sl-primary);
@@ -257,13 +277,25 @@
 }
 
 .statusBtn {
-  color: var(--sl-primary);
+  color: #0ea5e9;
   gap: 6px;
-  border: 1px solid var(--sl-primary);
+  border: 1px solid #bae6fd;
   background-color: transparent;
+  white-space: nowrap;
 }
 .statusBtn:hover {
-  background-color: var(--sl-primary-bg);
+  background-color: #f0f9ff;
+}
+
+/* 다크모드 statusBtn 보정 */
+@media (prefers-color-scheme: dark) {
+  .statusBtn {
+    color: #38bdf8;
+    border-color: #0369a1;
+  }
+  .statusBtn:hover {
+    background-color: rgba(14, 165, 233, 0.1);
+  }
 }
 
 .emptyCell {
@@ -304,25 +336,31 @@
   margin-bottom: 16px;
   line-height: 1.4;
   color: var(--sl-text-main);
+  word-break: break-all;
 }
 
 .mobileActionBtns {
   display: flex;
   gap: 8px;
+  width: 100%;
 }
 
 .mobileBtn {
   flex: 1;
-  gap: 8px;
+  gap: 6px;
+  font-size: 13px;
   color: var(--sl-text-sub);
   border-color: var(--sl-border);
+  padding: 8px 4px;
 }
 .mobileBtnStatus {
   flex: 1;
-  gap: 8px;
-  border-color: var(--sl-primary);
-  color: var(--sl-primary);
+  gap: 6px;
+  font-size: 13px;
+  border-color: #bae6fd;
+  color: #0ea5e9;
   background-color: transparent;
+  padding: 8px 4px;
 }
 
 /* --- Footer & Misc --- */
@@ -398,7 +436,6 @@
   animation: fadeIn 0.2s;
 }
 
-/* 다크모드일 때 모달 배경 오버레이 조금 더 진하게 */
 @media (prefers-color-scheme: dark) {
   .modalOverlay {
     background-color: rgba(0, 0, 0, 0.8);
@@ -415,14 +452,16 @@
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  border: 1px solid var(--sl-border);
 }
 
 .modalHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  padding: 1.2rem 1.5rem;
   border-bottom: 1px solid var(--sl-border);
+  background-color: var(--sl-bg-main);
 }
 .modalTitle {
   font-size: 1.25rem;
@@ -442,6 +481,8 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
+  display: flex;
+  align-items: center;
 }
 .closeModalBtn:hover {
   background-color: var(--sl-bg-hover);
@@ -451,11 +492,12 @@
 .modalBody {
   padding: 1.5rem;
   overflow-y: auto;
+  background-color: var(--sl-bg-main);
 }
 
 .statsGrid {
   display: flex;
-  gap: 1rem;
+  gap: 12px;
   margin-bottom: 1rem;
 }
 .statBox {
@@ -463,17 +505,17 @@
   background-color: var(--sl-bg-sub);
   border: 1px solid var(--sl-border);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 12px;
   text-align: center;
 }
 .statLabel {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--sl-text-sub);
-  margin-bottom: 0.3rem;
+  margin-bottom: 4px;
   display: block;
 }
 .statValue {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--sl-text-main);
 }
@@ -498,13 +540,13 @@
 .attendeeList {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 .attendeeItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 12px;
   border: 1px solid var(--sl-border);
   border-radius: 12px;
   background-color: var(--sl-bg-main);
@@ -512,29 +554,33 @@
 .attendeeInfo {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  overflow: hidden;
 }
 .attendeeName {
   font-weight: 700;
   color: var(--sl-text-main);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .attendeeDesc {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--sl-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .attendeeActions {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
+  flex-shrink: 0;
 }
 
-/* 개별 상태 뱃지 */
 .attBadge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: 6px;
 }
 .attComplete { background-color: var(--sl-badge-comp-bg); color: var(--sl-badge-comp-txt); }
@@ -542,9 +588,9 @@
 .attFail { background-color: var(--sl-badge-fail-bg); color: var(--sl-badge-fail-txt); }
 
 .resendBtn {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
   border: 1px solid var(--sl-border);
   background-color: var(--sl-bg-main);
   color: var(--sl-text-main);
@@ -567,22 +613,28 @@
   .header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
   }
   
   .headerActions {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobileActionBtns {
+    flex-direction: row; /* 버튼 두 개를 한 줄에 배치 */
   }
   
-  .btnText {
-    display: none; /* 모바일에서 '새로고침' 텍스트 숨김 */
+  .mobileBtn, .mobileBtnStatus {
+    font-size: 12px;
+    padding: 10px 2px;
   }
 
   .statsGrid {
-    gap: 0.5rem;
+    gap: 8px;
   }
-  .statBox {
-    padding: 0.8rem;
+  .statValue {
+    font-size: 1.1rem;
   }
 }

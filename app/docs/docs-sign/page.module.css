@@ -1,19 +1,63 @@
 /* app/docs-sign/page.module.css */
 
 .container {
+  /* --- Light Mode Variables --- */
+  --ds-bg-main: #ffffff;
+  --ds-bg-sub: #f8f9fa;
+  --ds-bg-preview: #F8FAFE;
+  
+  --ds-text-main: #111827; /* 거의 검은색 */
+  --ds-text-sub: #4b5563;  /* 중간 회색 */
+  --ds-text-muted: #6b7280; /* 연한 회색 */
+  
+  --ds-primary: #2388FF;
+  --ds-primary-hover: #1a6edb;
+  
+  --ds-border: #e5e7eb;
+  --ds-border-dashed: #cbd5e1;
+  
+  --ds-card-bg: #ffffff;
+  --ds-shadow: rgba(0, 0, 0, 0.1);
+  --ds-shadow-heavy: rgba(35, 136, 255, 0.25);
+
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  background-color: #fff;
+  background-color: var(--ds-bg-main);
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+  color: var(--ds-text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .container {
+    --ds-bg-main: #0f172a;    /* 깊은 남색 배경 */
+    --ds-bg-sub: #1e293b;     /* 섹션 구분 배경 */
+    --ds-bg-preview: #111e36; /* 프리뷰 섹션 배경 */
+    
+    --ds-text-main: #f8fafc;  /* 밝은 글자 */
+    --ds-text-sub: #cbd5e1;   /* 밝은 회색 */
+    --ds-text-muted: #94a3b8; /* 흐린 회색 */
+    
+    --ds-primary: #3b82f6;    /* 조금 더 밝은 블루 */
+    --ds-primary-hover: #60a5fa;
+    
+    --ds-border: #334155;
+    --ds-border-dashed: #475569;
+    
+    --ds-card-bg: #1e293b;
+    --ds-shadow: rgba(0, 0, 0, 0.3);
+    --ds-shadow-heavy: rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* === 1. Hero Section === */
 .actionSection {
   width: 100%;
-  background-color: #f8f9fa;
+  background-color: var(--ds-bg-sub);
   padding: 4rem 1.5rem;
   display: flex;
   justify-content: center;
@@ -21,14 +65,14 @@
 }
 
 .actionBox {
-  background: linear-gradient(135deg, #2388FF 0%, #2388FF 100%);
+  background: linear-gradient(135deg, #2388FF 0%, #1a6edb 100%);
   width: 100%;
   max-width: 900px;
   border-radius: 20px;
   padding: 3.5rem 2rem;
   text-align: center;
   color: white;
-  box-shadow: 0 20px 40px rgba(35, 136, 255, 0.25);
+  box-shadow: 0 20px 40px var(--ds-shadow-heavy);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -51,6 +95,7 @@
   font-weight: 800;
   margin-bottom: 1rem;
   letter-spacing: -0.5px;
+  color: #ffffff; /* 히어로는 항상 흰색 */
 }
 
 .desc {
@@ -60,6 +105,7 @@
   line-height: 1.6;
   opacity: 0.95;
   font-weight: 400;
+  color: #ffffff;
 }
 
 .btnGroup {
@@ -76,10 +122,11 @@
   font-size: 1.05rem !important;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   border-radius: 8px;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .whiteBtn:hover {
@@ -110,18 +157,19 @@
 
 .featureIconBox {
   margin-bottom: 1.5rem;
+  color: var(--ds-primary);
 }
 
 .featureTitle {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #2388FF;
+  color: var(--ds-primary);
   margin-bottom: 1rem;
 }
 
 .featureDesc {
   font-size: 0.95rem;
-  color: #555;
+  color: var(--ds-text-sub);
   line-height: 1.6;
   word-break: keep-all;
 }
@@ -129,17 +177,19 @@
 /* === 3. Preview Section (Images) === */
 .previewSection {
   width: 100%;
-  background-color: #F8FAFE;
+  background-color: var(--ds-bg-preview);
   padding: 6rem 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  border-top: 1px solid var(--ds-border);
+  border-bottom: 1px solid var(--ds-border);
 }
 
 .sectionHeader {
   font-size: 2rem;
   font-weight: 800;
-  color: #2388FF;
+  color: var(--ds-primary);
   margin-bottom: 5rem;
   text-align: center;
 }
@@ -154,7 +204,6 @@
   margin-bottom: 7rem;
 }
 
-/* 텍스트 왼쪽, 이미지 오른쪽 (지그재그) */
 .previewRow.reverse {
   flex-direction: row-reverse;
 }
@@ -170,15 +219,16 @@
   width: 100%;
   height: auto;
   object-fit: contain;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 30px var(--ds-shadow);
   border-radius: 12px;
-  background-color: #fff;
+  background-color: var(--ds-card-bg);
+  border: 1px solid var(--ds-border);
 }
 
 .caption {
   margin-top: 1.5rem;
   font-size: 1.2rem;
-  color: #2388FF;
+  color: var(--ds-primary);
   font-weight: 700;
 }
 
@@ -190,7 +240,7 @@
 .previewContent h3 {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #222;
+  color: var(--ds-text-main);
   margin-bottom: 1.2rem;
   line-height: 1.4;
   word-break: keep-all;
@@ -198,7 +248,7 @@
 
 .previewContent p {
   font-size: 1.15rem;
-  color: #555;
+  color: var(--ds-text-sub);
   line-height: 1.7;
   word-break: keep-all;
 }
@@ -206,7 +256,7 @@
 /* === 4. Guide Section === */
 .guideSection {
   width: 100%;
-  background-color: #fff;
+  background-color: var(--ds-bg-main);
   padding: 5rem 1.5rem 8rem;
 }
 
@@ -227,50 +277,54 @@
 }
 
 .guideIcon {
-  color: #2388FF;
+  color: var(--ds-primary);
   margin-bottom: 1.2rem;
 }
 
 .guideItem h4 {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #2388FF;
+  color: var(--ds-primary);
   margin-bottom: 0.8rem;
 }
 
 .guideItem p {
   font-size: 0.95rem;
-  color: #666;
+  color: var(--ds-text-muted);
   line-height: 1.6;
   word-break: keep-all;
 }
 
-/* =========================================
-   6. 드래그 앤 드롭 업로드 영역
-   ========================================= */
+/* === 5. Dropzone Area === */
 .dropZone {
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--ds-border-dashed);
   border-radius: 12px;
   padding: 4rem 2rem;
   text-align: center;
-  background-color: #f8fafc;
+  background-color: var(--ds-bg-sub);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  color: var(--ds-text-sub);
 }
 
 .dropZone:hover {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
+  background-color: var(--ds-bg-hover);
+  border-color: var(--ds-text-muted);
 }
 
-/* 드래그 중일 때 시각적 강조 효과 */
 .dropZoneDragging {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
+  border-color: var(--ds-primary);
+  background-color: var(--ds-primary-bg);
+}
+
+/* === Animations === */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* === Responsive === */
@@ -302,5 +356,10 @@
 
   .previewImageWrapper {
     width: 100%;
+  }
+
+  .sectionHeader {
+    font-size: 1.6rem;
+    margin-bottom: 3rem;
   }
 }
