@@ -1,13 +1,32 @@
 /* app/docs/docs-box/page.module.css */
 
 .container {
-  /* --- Local Variables --- */
-  --sl-primary: #3b82f6;      /* RegAI Blue */
+  /* --- Light Mode Variables --- */
+  --sl-bg-main: #ffffff;
+  --sl-bg-sub: #f8fafc;
+  --sl-bg-hover: #f1f5f9;
+  
+  --sl-text-main: #1e293b;
+  --sl-text-sub: #64748b;
+  --sl-border: #e2e8f0;
+  
+  --sl-primary: #3b82f6;
   --sl-primary-hover: #2563eb;
-  --sl-bg: #f8f9fa;           /* Light Gray Background */
-  --sl-text-main: #111827;
-  --sl-text-sub: #6b7280;
-  --sl-border: #e5e7eb;
+  --sl-primary-bg: #eff6ff;
+
+  /* Badge & Status Colors */
+  --sl-badge-prog-bg: #fef9c3;
+  --sl-badge-prog-txt: #b45309;
+  --sl-badge-prog-border: #fef08a;
+
+  --sl-badge-comp-bg: #dcfce7;
+  --sl-badge-comp-txt: #166534;
+  --sl-badge-comp-border: #bbf7d0;
+
+  --sl-badge-fail-bg: #fee2e2;
+  --sl-badge-fail-txt: #991b1b;
+  
+  --sl-stat-fail-txt: #ef4444;
 
   /* --- Layout --- */
   width: 100%;
@@ -16,6 +35,37 @@
   padding: 40px 20px;
   min-height: 80vh;
   font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+  color: var(--sl-text-main);
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .container {
+    --sl-bg-main: #0f172a;
+    --sl-bg-sub: #1e293b;
+    --sl-bg-hover: #334155;
+    
+    --sl-text-main: #f8fafc;
+    --sl-text-sub: #94a3b8;
+    --sl-border: #334155;
+    
+    --sl-primary: #3b82f6;
+    --sl-primary-hover: #60a5fa;
+    --sl-primary-bg: rgba(59, 130, 246, 0.15);
+
+    --sl-badge-prog-bg: rgba(180, 83, 9, 0.2);
+    --sl-badge-prog-txt: #fde047;
+    --sl-badge-prog-border: rgba(180, 83, 9, 0.4);
+
+    --sl-badge-comp-bg: rgba(22, 101, 52, 0.2);
+    --sl-badge-comp-txt: #86efac;
+    --sl-badge-comp-border: rgba(22, 101, 52, 0.4);
+
+    --sl-badge-fail-bg: rgba(153, 27, 27, 0.2);
+    --sl-badge-fail-txt: #fca5a5;
+
+    --sl-stat-fail-txt: #f87171;
+  }
 }
 
 /* --- Header --- */
@@ -50,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #eff6ff;
+  background: var(--sl-primary-bg);
   color: var(--sl-primary);
   padding: 6px 12px;
   border-radius: 20px;
@@ -80,11 +130,23 @@
 
 /* --- Content --- */
 .content {
-  background: #ffffff;
+  background: var(--sl-bg-main);
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   border: 1px solid var(--sl-border);
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--sl-text-sub);
+}
+.primaryIcon {
+  color: var(--sl-primary);
 }
 
 /* --- Desktop Table --- */
@@ -98,7 +160,7 @@
 }
 
 .table th {
-  background-color: #f9fafb;
+  background-color: var(--sl-bg-sub);
   color: var(--sl-text-sub);
   font-weight: 600;
   font-size: 14px;
@@ -120,7 +182,7 @@
 }
 
 .table tr:hover {
-  background-color: #f9fafb;
+  background-color: var(--sl-bg-hover);
 }
 
 .docNameWrapper {
@@ -133,7 +195,7 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background-color: #eff6ff;
+  background-color: var(--sl-primary-bg);
   color: var(--sl-primary);
   display: flex;
   align-items: center;
@@ -149,7 +211,7 @@
 
 .docName {
   font-weight: 500;
-  color: #1e293b;
+  color: var(--sl-text-main);
   line-height: 1.4;
 }
 
@@ -165,14 +227,14 @@
   width: fit-content;
 }
 .signBadgeProgress {
-  background-color: #fef9c3;
-  color: #b45309;
-  border: 1px solid #fef08a;
+  background-color: var(--sl-badge-prog-bg);
+  color: var(--sl-badge-prog-txt);
+  border: 1px solid var(--sl-badge-prog-border);
 }
 .signBadgeComplete {
-  background-color: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background-color: var(--sl-badge-comp-bg);
+  color: var(--sl-badge-comp-txt);
+  border: 1px solid var(--sl-badge-comp-border);
 }
 
 .textCenter {
@@ -191,18 +253,17 @@
 }
 .downloadBtn:hover {
   color: var(--sl-primary);
-  background-color: #eff6ff;
+  background-color: var(--sl-primary-bg);
 }
 
 .statusBtn {
-  color: #0ea5e9;
+  color: var(--sl-primary);
   gap: 6px;
-  border: 1px solid #bae6fd;
-  background-color: #f0f9ff;
+  border: 1px solid var(--sl-primary);
+  background-color: transparent;
 }
 .statusBtn:hover {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--sl-primary-bg);
 }
 
 .emptyCell {
@@ -218,7 +279,7 @@
 }
 
 .mobileCard {
-  background: #fff;
+  background: var(--sl-bg-main);
   border: 1px solid var(--sl-border);
   border-radius: 12px;
   padding: 16px;
@@ -242,6 +303,7 @@
   font-weight: 600;
   margin-bottom: 16px;
   line-height: 1.4;
+  color: var(--sl-text-main);
 }
 
 .mobileActionBtns {
@@ -252,13 +314,15 @@
 .mobileBtn {
   flex: 1;
   gap: 8px;
+  color: var(--sl-text-sub);
+  border-color: var(--sl-border);
 }
 .mobileBtnStatus {
   flex: 1;
   gap: 8px;
-  border-color: #bae6fd;
-  color: #0ea5e9;
-  background-color: #f0f9ff;
+  border-color: var(--sl-primary);
+  color: var(--sl-primary);
+  background-color: transparent;
 }
 
 /* --- Footer & Misc --- */
@@ -271,11 +335,11 @@
 
 .errorBox {
   padding: 16px;
-  background-color: #fef2f2;
-  color: #ef4444;
+  background-color: var(--sl-badge-fail-bg);
+  color: var(--sl-stat-fail-txt);
   text-align: center;
   font-size: 14px;
-  border-bottom: 1px solid #fee2e2;
+  border-bottom: 1px solid var(--sl-border);
 }
 
 /* --- Login Screen --- */
@@ -284,7 +348,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: white;
+  background: var(--sl-bg-main);
   padding: 60px 20px;
   border-radius: 16px;
   border: 1px solid var(--sl-border);
@@ -301,6 +365,7 @@
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 12px;
+  color: var(--sl-text-main);
 }
 
 .loginDesc {
@@ -333,15 +398,22 @@
   animation: fadeIn 0.2s;
 }
 
+/* 다크모드일 때 모달 배경 오버레이 조금 더 진하게 */
+@media (prefers-color-scheme: dark) {
+  .modalOverlay {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+}
+
 .modalContent {
-  background-color: #ffffff;
+  background-color: var(--sl-bg-main);
   border-radius: 16px;
   width: 100%;
   max-width: 500px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
@@ -350,30 +422,30 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 1.5rem 1rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--sl-border);
 }
 .modalTitle {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #1e293b;
+  color: var(--sl-text-main);
   margin: 0;
 }
 .modalTime {
   font-size: 0.85rem;
-  color: #3b82f6;
+  color: var(--sl-primary);
   font-weight: 600;
 }
 .closeModalBtn {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--sl-text-sub);
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
 }
 .closeModalBtn:hover {
-  background-color: #f1f5f9;
-  color: #1e293b;
+  background-color: var(--sl-bg-hover);
+  color: var(--sl-text-main);
 }
 
 .modalBody {
@@ -388,28 +460,31 @@
 }
 .statBox {
   flex: 1;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--sl-bg-sub);
+  border: 1px solid var(--sl-border);
   border-radius: 12px;
   padding: 1rem;
   text-align: center;
 }
 .statLabel {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--sl-text-sub);
   margin-bottom: 0.3rem;
   display: block;
 }
 .statValue {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #1e293b;
+  color: var(--sl-text-main);
+}
+.statFail {
+  color: var(--sl-stat-fail-txt);
 }
 
 .progressTrack {
   width: 100%;
   height: 8px;
-  background-color: #e2e8f0;
+  background-color: var(--sl-border);
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 1.5rem;
@@ -430,9 +505,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--sl-border);
   border-radius: 12px;
-  background-color: #ffffff;
+  background-color: var(--sl-bg-main);
 }
 .attendeeInfo {
   display: flex;
@@ -441,12 +516,12 @@
 }
 .attendeeName {
   font-weight: 700;
-  color: #1e293b;
+  color: var(--sl-text-main);
   font-size: 1rem;
 }
 .attendeeDesc {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--sl-text-sub);
 }
 .attendeeActions {
   display: flex;
@@ -462,21 +537,21 @@
   padding: 3px 8px;
   border-radius: 6px;
 }
-.attComplete { background-color: #dcfce7; color: #166534; }
-.attPending { background-color: #f1f5f9; color: #475569; }
-.attFail { background-color: #fee2e2; color: #991b1b; }
+.attComplete { background-color: var(--sl-badge-comp-bg); color: var(--sl-badge-comp-txt); }
+.attPending { background-color: var(--sl-bg-sub); color: var(--sl-text-sub); }
+.attFail { background-color: var(--sl-badge-fail-bg); color: var(--sl-badge-fail-txt); }
 
 .resendBtn {
   font-size: 0.75rem;
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  color: #334155;
+  border: 1px solid var(--sl-border);
+  background-color: var(--sl-bg-main);
+  color: var(--sl-text-main);
   cursor: pointer;
 }
 .resendBtn:hover {
-  background-color: #f8fafc;
+  background-color: var(--sl-bg-hover);
 }
 
 /* --- Responsive Media Queries --- */

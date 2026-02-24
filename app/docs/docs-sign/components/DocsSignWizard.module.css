@@ -3,14 +3,59 @@
 .wrap {
   --content-width: 900px;
   
+  /* --- Light Mode Variables --- */
+  --sl-bg-main: #ffffff;
+  --sl-bg-sub: #f8fafc;
+  --sl-bg-hover: #f1f5f9;
+  
+  --sl-text-main: #1e293b;
+  --sl-text-sub: #64748b;
+  --sl-text-muted: #94a3b8;
+  
+  --sl-border: #e2e8f0;
+  --sl-border-focus: #cbd5e1;
+  
+  --sl-primary: #3b82f6;
+  --sl-primary-hover: #2563eb;
+  --sl-primary-bg: #eff6ff;
+  --sl-primary-border: #bfdbfe;
+  
+  --sl-danger: #ef4444;
+  --sl-danger-bg: #fef2f2;
+  
   position: fixed;
   inset: 0;
-  background-color: #ffffff;
+  background-color: var(--sl-bg-main);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: fadeIn 0.2s ease-out;
+  color: var(--sl-text-main);
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .wrap {
+    --sl-bg-main: #0f172a;
+    --sl-bg-sub: #1e293b;
+    --sl-bg-hover: #334155;
+    
+    --sl-text-main: #f8fafc;
+    --sl-text-sub: #94a3b8;
+    --sl-text-muted: #64748b;
+    
+    --sl-border: #334155;
+    --sl-border-focus: #475569;
+    
+    --sl-primary: #3b82f6;
+    --sl-primary-hover: #60a5fa;
+    --sl-primary-bg: rgba(59, 130, 246, 0.15);
+    --sl-primary-border: rgba(59, 130, 246, 0.3);
+    
+    --sl-danger: #f87171;
+    --sl-danger-bg: rgba(239, 68, 68, 0.15);
+  }
 }
 
 /* =========================================
@@ -19,8 +64,8 @@
 .header {
   flex-shrink: 0;
   height: 60px;
-  background-color: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--sl-bg-main);
+  border-bottom: 1px solid var(--sl-border);
   display: flex;
   justify-content: center;
   padding: 0 1rem;
@@ -43,7 +88,7 @@
 
 .closeBtn {
   font-size: 0.95rem;
-  color: #64748b;
+  color: var(--sl-text-sub);
   background: none;
   border: none;
   cursor: pointer;
@@ -54,15 +99,15 @@
   align-items: center;
   gap: 0.2rem;
 }
-.closeBtn:hover {
-  background-color: #f1f5f9;
-  color: #334155;
+.closeBtn:hover:not(:disabled) {
+  background-color: var(--sl-bg-hover);
+  color: var(--sl-text-main);
 }
 
 .title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--sl-text-main);
   margin: 0;
   display: flex;
   align-items: center;
@@ -72,8 +117,8 @@
 .progressText {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #3b82f6;
-  background-color: #eff6ff;
+  color: var(--sl-primary);
+  background-color: var(--sl-primary-bg);
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
 }
@@ -85,8 +130,8 @@
   flex-shrink: 0;
   display: flex;
   justify-content: center;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--sl-bg-sub);
+  border-bottom: 1px solid var(--sl-border);
   padding: 0 1rem;
 }
 
@@ -105,15 +150,15 @@
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--sl-text-muted);
   white-space: nowrap;
 }
 .tabActive {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
+  color: var(--sl-primary);
+  border-bottom-color: var(--sl-primary);
 }
 .tabPast {
-  color: #334155;
+  color: var(--sl-text-sub);
 }
 
 .stepNum {
@@ -123,13 +168,13 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: #e2e8f0;
-  color: #64748b;
+  background-color: var(--sl-border);
+  color: var(--sl-text-sub);
   font-size: 0.8rem;
   font-weight: 700;
 }
-.tabActive .stepNum { background-color: #2563eb; color: white; }
-.tabPast .stepNum { background-color: #bfdbfe; color: #1e40af; }
+.tabActive .stepNum { background-color: var(--sl-primary); color: #fff; }
+.tabPast .stepNum { background-color: var(--sl-primary-border); color: var(--sl-primary); }
 
 .tabLabel {
   font-size: 0.95rem;
@@ -143,7 +188,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 2rem 1rem;
-  background-color: #f8fafc;
+  background-color: var(--sl-bg-sub);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -158,25 +203,28 @@
 }
 
 .card {
-  background: white;
+  background: var(--sl-bg-main);
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--sl-border);
 }
 
 /* 요약본 뷰 영역 */
 .summaryCard {
-  background: #f8fafc;
-  border-left: 4px solid #3b82f6;
+  background: var(--sl-bg-sub);
+  border-left: 4px solid var(--sl-primary);
   padding: 1.5rem 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border-top: 1px solid var(--sl-border);
+  border-right: 1px solid var(--sl-border);
+  border-bottom: 1px solid var(--sl-border);
 }
 .summaryTitle {
   font-size: 1.1rem;
   margin-bottom: 1rem;
-  color: #1e293b;
+  color: var(--sl-text-main);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -184,12 +232,12 @@
 }
 .summaryDesc {
   font-size: 0.95rem;
-  color: #64748b;
+  color: var(--sl-text-sub);
   margin-bottom: 1rem;
 }
 .summaryList {
   padding-left: 1.5rem;
-  color: #334155;
+  color: var(--sl-text-main);
   line-height: 1.8;
   margin: 0;
 }
@@ -201,36 +249,35 @@
 .fileCardTitle {
   font-size: 1.2rem;
   margin-bottom: 1rem;
-  color: #1e293b;
+  color: var(--sl-text-main);
   font-weight: 600;
 }
 .fileUploadedBox {
   margin-top: 1.5rem;
   padding: 1rem;
-  background: #eff6ff;
+  background: var(--sl-primary-bg);
   border-radius: 8px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--sl-primary-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .fileName {
   font-weight: bold;
-  color: #1e40af;
+  color: var(--sl-primary);
 }
 .fileRemoveBtn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--sl-text-sub);
   cursor: pointer;
   padding: 0.2rem;
   border-radius: 4px;
 }
 .fileRemoveBtn:hover {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--sl-primary-border);
+  color: var(--sl-primary);
 }
-
 
 /* =========================================
    4. 푸터 (Footer)
@@ -238,8 +285,8 @@
 .footer {
   flex-shrink: 0;
   height: 70px;
-  background: white;
-  border-top: 1px solid #e2e8f0;
+  background: var(--sl-bg-main);
+  border-top: 1px solid var(--sl-border);
   display: flex;
   justify-content: center;
   padding: 0 1rem;
@@ -247,7 +294,7 @@
 
 .footerMessage {
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--sl-text-sub);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -265,12 +312,12 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  background-color: #fff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background-color: var(--sl-bg-main);
+  border: 1px solid var(--sl-border-focus);
+  color: var(--sl-text-sub);
   transition: all 0.2s;
 }
-.navBtn:hover:not(:disabled) { background-color: #f1f5f9; }
+.navBtn:hover:not(:disabled) { background-color: var(--sl-bg-hover); color: var(--sl-text-main); }
 
 .navBtnPrimary {
   padding: 0.6rem 1.2rem;
@@ -278,12 +325,12 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  background-color: #2563eb;
-  border: 1px solid #2563eb;
-  color: white;
+  background-color: var(--sl-primary);
+  border: 1px solid var(--sl-primary);
+  color: #fff;
   transition: all 0.2s;
 }
-.navBtnPrimary:hover:not(:disabled) { background-color: #1d4ed8; }
+.navBtnPrimary:hover:not(:disabled) { background-color: var(--sl-primary-hover); }
 
 .submitBtn {
   padding: 0.6rem 1.5rem;
@@ -291,9 +338,9 @@
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  background: linear-gradient(135deg, var(--sl-primary), #1e40af);
   border: none;
-  color: white;
+  color: #fff;
   box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
   transition: all 0.2s;
   display: flex;
@@ -313,8 +360,8 @@
 .loadingOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.5); /* 다크모드/라이트모드 공통 어두운 오버레이 */
+  backdrop-filter: blur(4px);
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -324,17 +371,17 @@
 }
 
 .loadingPopup {
-  background: white;
+  background: var(--sl-bg-main);
   padding: 2.5rem;
   border-radius: 20px;
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
   text-align: center;
   width: 340px;
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid var(--sl-border);
 }
 
 .spinnerWrapper { position: relative; display: inline-flex; margin-bottom: 1.5rem; }
-.spin { color: #3b82f6; animation: spin 1s linear infinite; }
+.spin { color: var(--sl-primary); animation: spin 1s linear infinite; }
 
 .aiBadge {
   position: absolute; bottom: -5px; right: -5px;
@@ -343,8 +390,8 @@
   padding: 2px 7px; border-radius: 12px;
 }
 
-.loadingTitle { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
-.loadingDesc { font-size: 0.95rem; color: #64748b; line-height: 1.5; white-space: pre-wrap; }
+.loadingTitle { font-size: 1.2rem; font-weight: 700; color: var(--sl-text-main); margin-bottom: 0.5rem; }
+.loadingDesc { font-size: 0.95rem; color: var(--sl-text-sub); line-height: 1.5; white-space: pre-wrap; }
 
 /* =========================================
    6. 참석자 입력 폼 & 그룹 관리 UI
@@ -362,7 +409,7 @@
   display: flex; 
   align-items: center; 
   gap: 0.5rem; 
-  color: #1e293b; 
+  color: var(--sl-text-main); 
   font-weight: bold;
 }
 
@@ -377,39 +424,39 @@
 .groupSelect {
   padding: 0.5rem; 
   border-radius: 6px; 
-  border: 1px solid #cbd5e1; 
+  border: 1px solid var(--sl-border-focus); 
   font-size: 0.9rem; 
   outline: none; 
-  background: #fff;
-  color: #334155;
+  background: var(--sl-bg-main);
+  color: var(--sl-text-main);
   cursor: pointer;
 }
 .groupSelect:focus {
-  border-color: #3b82f6;
+  border-color: var(--sl-primary);
 }
 
 .saveGroupBtn {
   padding: 0.5rem 1rem; 
   border-radius: 6px; 
-  border: 1px solid #e2e8f0; 
-  background: #fff; 
+  border: 1px solid var(--sl-border); 
+  background: var(--sl-bg-main); 
   font-size: 0.9rem; 
   cursor: pointer; 
   display: flex; 
   align-items: center; 
   gap: 0.3rem; 
-  color: #334155;
+  color: var(--sl-text-main);
   transition: all 0.2s;
 }
 .saveGroupBtn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--sl-bg-hover);
+  border-color: var(--sl-border-focus);
 }
 
 .addBtn { 
   padding: 0.5rem 1rem; 
   border-radius: 6px; 
-  background: #3b82f6; 
+  background: var(--sl-primary); 
   color: #fff; 
   font-size: 0.9rem; 
   font-weight: bold; 
@@ -420,13 +467,13 @@
   gap: 0.3rem; 
   transition: all 0.2s;
 }
-.addBtn:hover { background: #2563eb; }
+.addBtn:hover { background: var(--sl-primary-hover); }
 
 /* 테이블 및 행 스타일 */
 .emptyState {
   text-align: center; 
   padding: 3rem 0; 
-  color: #94a3b8;
+  color: var(--sl-text-muted);
   line-height: 1.6;
 }
 
@@ -436,7 +483,7 @@
 .rowNum {
   width: 2rem; 
   text-align: center; 
-  color: #94a3b8; 
+  color: var(--sl-text-muted); 
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -444,21 +491,20 @@
 .inputCell { 
   flex: 1; 
   padding: 0.75rem; 
-  border: 1px solid #cbd5e1; 
+  border: 1px solid var(--sl-border-focus); 
   border-radius: 8px; 
   outline: none; 
   transition: border-color 0.2s;
-  color: #1e293b;
+  color: var(--sl-text-main);
+  background-color: var(--sl-bg-main);
 }
-.inputCell:focus { border-color: #3b82f6; }
-.inputCellLarge {
-  flex: 2;
-}
+.inputCell:focus { border-color: var(--sl-primary); }
+.inputCellLarge { flex: 2; }
 
 .removeBtn { 
   background: none; 
   border: none; 
-  color: #ef4444; 
+  color: var(--sl-danger); 
   cursor: pointer; 
   padding: 0.75rem; 
   border-radius: 6px;
@@ -468,19 +514,18 @@
   transition: all 0.2s;
 }
 .removeBtn:hover {
-  background-color: #fef2f2;
+  background-color: var(--sl-danger-bg);
 }
-
 
 /* =========================================
    7. 드래그 앤 드롭 업로드 영역
    ========================================= */
 .dropZone {
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--sl-border-focus);
   border-radius: 12px;
   padding: 4rem 2rem;
   text-align: center;
-  background-color: #f8fafc;
+  background-color: var(--sl-bg-sub);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -490,26 +535,26 @@
 }
 
 .dropZone:hover {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
+  background-color: var(--sl-bg-hover);
+  border-color: var(--sl-text-muted);
 }
 
 .dropZoneTitle {
-  color: #334155; 
+  color: var(--sl-text-main); 
   font-weight: bold; 
   font-size: 1.1rem; 
   margin: 0 0 0.5rem 0;
 }
 .dropZoneDesc {
-  color: #64748b; 
+  color: var(--sl-text-sub); 
   margin: 0; 
   line-height: 1.5;
 }
 
 /* 드래그 중일 때 시각적 강조 효과 */
 .dropZoneDragging {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
+  border-color: var(--sl-primary);
+  background-color: var(--sl-primary-bg);
 }
 
 /* =========================================
@@ -527,25 +572,30 @@
   animation: fadeIn 0.2s ease-out;
 }
 
+@media (prefers-color-scheme: dark) {
+  .modalOverlay { background-color: rgba(0, 0, 0, 0.8); }
+}
+
 .modalContent {
-  background: #fff; 
+  background: var(--sl-bg-main); 
   padding: 2rem; 
   border-radius: 16px; 
   width: 100%;
   max-width: 420px; 
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   margin: 0 1rem;
+  border: 1px solid var(--sl-border);
 }
 
 .modalTitle {
   margin-top: 0; 
   margin-bottom: 0.5rem; 
-  color: #1e293b;
+  color: var(--sl-text-main);
   font-size: 1.2rem;
   font-weight: bold;
 }
 .modalDesc {
-  color: #64748b; 
+  color: var(--sl-text-sub); 
   font-size: 0.9rem; 
   margin-bottom: 1.5rem;
 }
@@ -554,15 +604,17 @@
   width: 100%; 
   padding: 0.8rem; 
   border-radius: 8px; 
-  border: 1px solid #cbd5e1; 
+  border: 1px solid var(--sl-border-focus); 
   margin-bottom: 1.5rem; 
   outline: none; 
   box-sizing: border-box;
   font-size: 0.95rem;
   transition: border-color 0.2s;
+  background-color: var(--sl-bg-main);
+  color: var(--sl-text-main);
 }
 .modalInput:focus {
-  border-color: #3b82f6;
+  border-color: var(--sl-primary);
 }
 
 .modalActionBox {
@@ -574,29 +626,30 @@
 .modalCancelBtn {
   padding: 0.6rem 1.2rem; 
   border-radius: 8px; 
-  border: 1px solid #cbd5e1; 
-  background: #fff; 
+  border: 1px solid var(--sl-border-focus); 
+  background: var(--sl-bg-main); 
   cursor: pointer; 
-  color: #475569;
+  color: var(--sl-text-sub);
   font-weight: 600;
   transition: all 0.2s;
 }
 .modalCancelBtn:hover {
-  background: #f1f5f9;
+  background: var(--sl-bg-hover);
+  color: var(--sl-text-main);
 }
 
 .modalConfirmBtn {
   padding: 0.6rem 1.2rem; 
   border-radius: 8px; 
   border: none; 
-  background: #3b82f6; 
+  background: var(--sl-primary); 
   color: #fff; 
   font-weight: bold; 
   cursor: pointer;
   transition: background-color 0.2s;
 }
 .modalConfirmBtn:hover {
-  background: #2563eb;
+  background: var(--sl-primary-hover);
 }
 
 /* Animations */

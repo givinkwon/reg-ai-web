@@ -25,14 +25,14 @@ type DocItem = {
     kind?: string; 
     tbm_id?: string; 
     master_id?: string;
-    total_count?: number; // 🚀 서버에서 향후 보내줄 전체 인원
-    signed_count?: number; // 🚀 서버에서 향후 보내줄 완료 인원
+    total_count?: number; 
+    signed_count?: number; 
     [key: string]: any; 
   }; 
   kind?: string;
 };
 
-// 🚀 [추가] 모달에서 사용할 상태 타입
+// 🚀 모달 상태 타입
 type SignStatusData = {
   total: number;
   completed: number;
@@ -78,14 +78,13 @@ export default function DocsBoxPage() {
   
   // 다운로드 및 모달 상태
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [statusDocId, setStatusDocId] = useState<string | null>(null); // 현재 모달이 열린 master_id
+  const [statusDocId, setStatusDocId] = useState<string | null>(null); 
   const [statusData, setStatusData] = useState<SignStatusData | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
 
   const fetchAbortRef = useRef<AbortController | null>(null);
   const autoLoginRef = useRef(false);
 
-  // --- 로그인 유도 핸들러 ---
   const handleRequireLogin = () => {
     track(gaEvent(GA_CTX, 'ClickLogin'), {
       ui_id: gaUiId(GA_CTX, 'ClickLogin'),
@@ -109,7 +108,6 @@ export default function DocsBoxPage() {
     };
   }, []);
 
-  // --- 목록 페칭 ---
   const fetchDocs = async (source: 'mount' | 'manual' = 'manual') => {
     if (!userEmail) return;
 
@@ -162,7 +160,6 @@ export default function DocsBoxPage() {
     }
   }, [initialized, userEmail]);
 
-  // --- 실제 다운로드 핸들러 ---
   const handleDownload = async (doc: DocItem, source: 'desktop' | 'mobile') => {
     if (!userEmail) return handleRequireLogin();
     if (downloadingId) return; 
@@ -208,38 +205,29 @@ export default function DocsBoxPage() {
     }
   };
 
-  // 🚀 [추가] 서명 현황 보기 버튼 핸들러
   const handleViewStatus = async (masterId: string | undefined) => {
     if (!masterId) return alert("문서 정보를 찾을 수 없습니다.");
     setStatusDocId(masterId);
     setStatusLoading(true);
 
     try {
-      // 🚨 실제 백엔드 API가 완성되면 주석을 해제하고 연동하세요!
-      // const res = await fetch(`/api/docs-sign/status?master_id=${masterId}`);
-      // if (!res.ok) throw new Error("데이터 조회 실패");
-      // const data = await res.json();
-      // setStatusData(data);
-      
-      // 💡 현재는 UI 검증을 위한 가짜 데이터(Mock Data)를 0.5초 뒤에 보여줍니다.
-      await new Promise(r => setTimeout(r, 500));
-      setStatusData({
-        total: 8,
-        completed: 6,
-        pending: 1,
-        failed: 1,
-        updatedAt: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-        attendees: [
-          { name: '홍길동', phone: '010-1234-5678', status: 'completed' },
-          { name: '김현장', phone: '010-2345-6789', status: 'failed' },
-          { name: '박안전', phone: '010-3456-7890', status: 'completed' },
-          { name: '오야간', phone: '010-7890-1234', status: 'pending' },
-          { name: '최작업', phone: '010-4567-8901', status: 'completed' },
-          { name: '이협력', phone: '010-5678-9012', status: 'completed' },
-        ]
+      // ✅ 우리가 방금 백엔드에 만든 API를 호출합니다.
+      const res = await fetch(`/api/docs-sign/status?master_id=${masterId}`, {
+        method: 'GET',
+        headers: {
+          'x-user-email': userEmail || 'guest@reg.ai.kr'
+        }
       });
+      
+      if (!res.ok) {
+        throw new Error(`상태 조회 실패 (${res.status})`);
+      }
+      
+      const data = await res.json();
+      setStatusData(data); // 백엔드에서 준 데이터를 그대로 모달에 세팅
 
-    } catch (e) {
+    } catch (e: any) {
+      console.error(e);
       alert("서명 현황을 불러오지 못했습니다.");
       setStatusDocId(null);
     } finally {
@@ -249,7 +237,6 @@ export default function DocsBoxPage() {
 
   const countText = useMemo(() => loading ? '로딩 중...' : `총 ${docs.length}건`, [docs.length, loading]);
 
-  // --- 렌더링: 비로그인 상태 ---
   if (initialized && !userEmail) {
     return (
       <div className={s.container}>
@@ -264,11 +251,10 @@ export default function DocsBoxPage() {
     );
   }
 
-  // --- 렌더링: 로딩 중 ---
   if (!initialized) {
     return (
         <div className={s.container}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', color: '#666' }}>
+            <div className={s.loadingContainer}>
                 <Loader2 className="animate-spin mb-2" size={32} />
                 <p>문서함을 불러오는 중입니다...</p>
             </div>
@@ -276,7 +262,6 @@ export default function DocsBoxPage() {
     );
   }
 
-  // --- 렌더링: 문서함 (로그인 상태) ---
   return (
     <div className={s.container}>
       <header className={s.header}>
@@ -306,7 +291,6 @@ export default function DocsBoxPage() {
       <main className={s.content}>
         {error && <div className={s.errorBox}>{error}</div>}
 
-        {/* --- Desktop View (Table) --- */}
         <div className={s.desktopView}>
           <table className={s.table}>
             <thead>
@@ -326,8 +310,6 @@ export default function DocsBoxPage() {
               ) : (
                 docs.map((doc) => {
                     const isDownloading = downloadingId === doc.id;
-                    
-                    // 🚀 [추가] 서명 관련 문서 판별 및 진행률 계산
                     const isSignDoc = doc.kind === 'signing_progress' || doc.kind === 'signed_complete';
                     const masterId = doc.meta?.master_id;
                     const totalCount = doc.meta?.total_count; 
@@ -344,7 +326,6 @@ export default function DocsBoxPage() {
                                 <div className={s.docNameBox}>
                                   <span className={s.docName}>{doc.name}</span>
                                   
-                                  {/* 🚀 [추가] 서명 문서일 경우 진척도 뱃지 노출 */}
                                   {isSignDoc && (
                                     <span className={`${s.signBadge} ${doc.kind === 'signed_complete' ? s.signBadgeComplete : s.signBadgeProgress}`}>
                                       {doc.kind === 'signed_complete' 
@@ -370,7 +351,6 @@ export default function DocsBoxPage() {
                                     {isDownloading ? '다운로드 중' : '다운로드'}
                                 </Button>
                                 
-                                {/* 🚀 [추가] 현황 보기 버튼 */}
                                 {isSignDoc && (
                                   <Button 
                                     variant="outline" 
@@ -391,7 +371,6 @@ export default function DocsBoxPage() {
           </table>
         </div>
 
-        {/* --- Mobile View (List) --- */}
         <div className={s.mobileView}>
           {docs.length === 0 && !loading ? (
             <div className={s.emptyMobile}>생성된 문서가 없습니다.</div>
@@ -419,7 +398,6 @@ export default function DocsBoxPage() {
                               {isDownloading ? '다운로드 중...' : '다운로드'}
                           </Button>
 
-                          {/* 🚀 [추가] 모바일 현황 보기 버튼 */}
                           {isSignDoc && (
                             <Button 
                               variant="outline" 
@@ -445,7 +423,6 @@ export default function DocsBoxPage() {
           <LoginPromptModal onClose={() => setShowLoginModal(false)} />
       )}
 
-      {/* 🚀 [추가] 서명 현황 팝업 모달 */}
       {statusDocId && (
         <div className={s.modalOverlay}>
           <div className={s.modalContent}>
@@ -461,8 +438,8 @@ export default function DocsBoxPage() {
             
             <div className={s.modalBody}>
               {statusLoading || !statusData ? (
-                <div style={{ textAlign: 'center', padding: '3rem 0', color: '#64748b' }}>
-                  <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 1rem', color: '#3b82f6' }} />
+                <div className={s.loadingContainer} style={{ height: '200px' }}>
+                  <Loader2 size={32} className={`animate-spin ${s.primaryIcon}`} style={{ marginBottom: '1rem' }} />
                   데이터를 불러오고 있습니다...
                 </div>
               ) : (
@@ -478,7 +455,7 @@ export default function DocsBoxPage() {
                     </div>
                     <div className={s.statBox}>
                       <span className={s.statLabel}>실패</span>
-                      <span className={s.statValue} style={{ color: '#ef4444' }}>{statusData.failed}</span>
+                      <span className={`${s.statValue} ${s.statFail}`}>{statusData.failed}</span>
                     </div>
                   </div>
 

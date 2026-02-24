@@ -92,16 +92,12 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   const validateAndSetFile = (selectedFile: File) => {
     const fileName = selectedFile.name.toLowerCase();
 
-    // 1. HWP 전용 경고 팝업 (기획서 반영)
     if (fileName.endsWith('.hwp')) {
       alert("현재 HWP 파일은 지원 준비 중입니다. PDF로 변환하여 업로드해 주세요.");
       return;
     }
 
-    // 2. 허용된 확장자 리스트
     const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
-    
-    // 현재 파일이 허용된 확장자 중 하나로 끝나는지 검사
     const isValid = allowedExtensions.some(ext => fileName.endsWith(ext));
 
     if (!isValid) {
@@ -109,7 +105,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
       return;
     }
 
-    // 모든 검사를 통과했을 때만 파일 세팅
     setFile(selectedFile);
   };
 
@@ -322,7 +317,7 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
                 data-ga-event="ClickUploadBox"
                 data-ga-id={gaUiId(GA_CTX, 'ClickUploadBox')}
               >
-                <UploadCloud size={56} color={isDragging ? '#3b82f6' : '#94a3b8'} style={{ marginBottom: '1rem' }} />
+                <UploadCloud size={56} className={isDragging ? 'text-blue-500' : 'text-slate-400'} style={{ marginBottom: '1rem' }} />
                 <p className={s.dropZoneTitle}>
                   이곳으로 파일을 드래그하여 놓거나 클릭하여 업로드하세요
                 </p>
