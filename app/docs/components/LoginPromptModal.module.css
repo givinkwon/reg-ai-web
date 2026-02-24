@@ -1,13 +1,50 @@
 /* app/chat/components/LoginPromptModal.module.css */
 
 .loginOverlay {
+  /* --- Light Mode Variables --- */
+  --lp-overlay: rgba(15, 23, 42, 0.45);
+  --lp-bg-card: #ffffff;
+  --lp-shadow: rgba(15, 23, 42, 0.28);
+  
+  --lp-text-title: #111827;
+  --lp-text-sub: #6b7280;
+  
+  --lp-google-bg: #ffffff;
+  --lp-google-border: #e5e7eb;
+  --lp-google-hover: #f9fafb;
+  --lp-google-text: #111827;
+  
+  --lp-back-text: #6b7280;
+  --lp-back-hover: #111827;
+
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(15, 23, 42, 0.45); /* 살짝 어두운 오버레이 */
+  background: var(--lp-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .loginOverlay {
+    --lp-overlay: rgba(0, 0, 0, 0.75); /* 다크모드용 더 어두운 오버레이 */
+    --lp-bg-card: #1e293b;             /* 남색 계열 카드 배경 */
+    --lp-shadow: rgba(0, 0, 0, 0.5);
+    
+    --lp-text-title: #f8fafc;
+    --lp-text-sub: #94a3b8;
+    
+    --lp-google-bg: #0f172a;           /* 구글 버튼 다크 테마 */
+    --lp-google-border: #334155;
+    --lp-google-hover: #1e293b;
+    --lp-google-text: #f8fafc;
+    
+    --lp-back-text: #94a3b8;
+    --lp-back-hover: #ffffff;
+  }
 }
 
 /* 가운데 카드 */
@@ -15,16 +52,17 @@
   width: min(360px, 90vw);
   padding: 24px 20px 20px;
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28);
+  background: var(--lp-bg-card);
+  box-shadow: 0 18px 45px var(--lp-shadow);
 
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* REG 동그란 뱃지 */
+/* REG 동그란 뱃지 (브랜드 컬러 유지) */
 .loginBadge {
   width: 44px;
   height: 44px;
@@ -45,7 +83,7 @@
 .loginTitle {
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--lp-text-title);
   margin-bottom: 6px;
 }
 
@@ -53,11 +91,11 @@
 .loginSub {
   font-size: 13px;
   line-height: 1.5;
-  color: #6b7280;
+  color: var(--lp-text-sub);
   margin-bottom: 18px;
 }
 
-/* 공통 버튼 스타일 (구글 / 카카오) */
+/* 공통 버튼 스타일 */
 .loginBtnGoogle,
 .loginBtnKakao {
   width: 100%;
@@ -67,15 +105,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-
   cursor: pointer;
   margin-bottom: 10px;
 
   transition:
-    background 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.05s ease;
 }
@@ -83,7 +118,6 @@
 /* hover / active 효과 */
 .loginBtnGoogle:hover,
 .loginBtnKakao:hover {
-  background: #eef2ff;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
   transform: translateY(-1px);
 }
@@ -94,29 +128,45 @@
   box-shadow: none;
 }
 
-/* 구글 버튼은 흰색 느낌으로 */
+/* 구글 버튼 다크/라이트 테마 적용 */
 .loginBtnGoogle {
-  background: #ffffff;
+  background: var(--lp-google-bg);
+  border: 1px solid var(--lp-google-border);
+}
+.loginBtnGoogle:hover {
+  background: var(--lp-google-hover);
 }
 
-/* 카카오 버튼은 노란색 */
+/* 카카오 버튼 (브랜드 가이드에 따라 항상 노란색 유지) */
 .loginBtnKakao {
   background: #fee500;
-  border-color: #facc15;
+  border: 1px solid #facc15;
+}
+.loginBtnKakao:hover {
+  background: #fdd800; /* 카카오 전용 hover 색상 */
 }
 
-/* 버튼 안 텍스트 */
+/* 버튼 안 텍스트 기본 스타일 */
 .loginBtnLabel {
   font-size: 14px;
   font-weight: 500;
-  color: #111827;
+}
+
+/* 구글 텍스트 다크/라이트 테마 적용 */
+.loginBtnGoogle .loginBtnLabel {
+  color: var(--lp-google-text);
+}
+
+/* 카카오 텍스트 (항상 어둡게 유지) */
+.loginBtnKakao .loginBtnLabel {
+  color: #111827; 
 }
 
 /* 뒤로가기 */
 .loginBack {
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--lp-back-text);
 
   background: transparent;
   border: none;
@@ -124,10 +174,11 @@
 
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color 0.2s ease;
 }
 
 .loginBack:hover {
-  color: white;
+  color: var(--lp-back-hover);
 }
 
 /* 작은 화면에서 살짝 여백 줄이기 */
