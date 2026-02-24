@@ -658,13 +658,47 @@
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* Mobile Response */
+/* Mobile Response - 넘침 현상 해결 및 레이아웃 최적화 */
 @media (max-width: 600px) {
   .wrap { --content-width: 100%; } 
   .footerBtns button { font-size: 0.85rem; padding: 0.5rem 0.8rem; }
-  .tabLabel { display: none; }
+  .tabLabel { display: none; } /* 탭 글자 숨기고 숫자만 표시 */
   .card { padding: 1.5rem 1rem; }
   
-  .attendeeHeader { flex-direction: column; align-items: flex-start; }
-  .groupActionWrapper { width: 100%; justify-content: space-between; }
-  .groupSelect { flex: 1; }
+  /* 헤더와 그룹 기능 버튼 세로 정렬 */
+  .attendeeHeader { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .groupActionWrapper { width: 100%; justify-content: space-between; gap: 0.5rem; }
+  .groupSelect { flex: 1; min-width: 0; } /* 넘침 방지 */
+  
+  /* 🚀 핵심 수정: 입력 행(trow)을 세로 배치로 변경 */
+  .trow {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+    background-color: var(--sl-bg-sub); /* 개별 항목 구분을 위해 배경색 추가 */
+    border-radius: 12px;
+    position: relative; /* 삭제 버튼 배치를 위함 */
+    gap: 0.75rem;
+  }
+
+  .rowNum {
+    text-align: left;
+    width: auto;
+    font-size: 0.8rem;
+    margin-bottom: -0.25rem;
+  }
+
+  .inputCell, 
+  .inputCellLarge {
+    width: 100%; /* 입력창이 가로를 꽉 채우도록 설정 */
+    flex: none;  /* 기존의 flex-1, flex-2 비율 해제 */
+  }
+
+  /* 삭제 버튼을 우측 상단으로 이동 */
+  .removeBtn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.5rem;
+  }
 }
