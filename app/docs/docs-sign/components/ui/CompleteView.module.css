@@ -1,6 +1,23 @@
 /* app/chat/risk/ui/CompleteView.module.css */
 
 .container {
+  /* --- Light Mode Variables --- */
+  --cv-bg-main: #ffffff;
+  --cv-bg-sub: #f8fafc;
+  --cv-bg-hover: #f1f5f9;
+  
+  --cv-text-main: #111111;
+  --cv-text-sub: #666666;
+  --cv-text-muted: #64748b;
+  
+  --cv-border: #e2e8f0;
+  
+  --cv-primary: #2563eb;
+  --cv-primary-bg: #eff6ff;
+  
+  --cv-success-bg: #dcfce7;
+  --cv-success-icon: #16a34a;
+
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -9,14 +26,36 @@
   padding: 2rem;
   text-align: center;
   animation: fadeIn 0.5s ease-out;
-  background: #fff;
+  background-color: var(--cv-bg-main);
+  color: var(--cv-text-main);
   height: 100%;
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .container {
+    --cv-bg-main: #0f172a;
+    --cv-bg-sub: #1e293b;
+    --cv-bg-hover: #334155;
+    
+    --cv-text-main: #f8fafc;
+    --cv-text-sub: #94a3b8;
+    --cv-text-muted: #94a3b8;
+    
+    --cv-border: #334155;
+    
+    --cv-primary: #3b82f6;
+    --cv-primary-bg: rgba(59, 130, 246, 0.15);
+    
+    --cv-success-bg: rgba(34, 197, 94, 0.15);
+    --cv-success-icon: #4ade80;
+  }
 }
 
 .iconWrapper {
   width: 80px;
   height: 80px;
-  background-color: #dcfce7; /* Green-100 */
+  background-color: var(--cv-success-bg);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -26,25 +65,30 @@
   animation: popUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 아이콘 색상 강제 지정을 위한 클래스 (필요 시) */
+.iconWrapper svg {
+  color: var(--cv-success-icon);
+}
+
 .title {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #111;
+  color: var(--cv-text-main);
   margin: 0 0 0.8rem 0;
 }
 
 .desc {
   font-size: 1.05rem;
-  color: #666;
+  color: var(--cv-text-sub);
   line-height: 1.6;
   max-width: 420px;
   margin: 0 auto 2.5rem auto;
 }
 
 .highlight {
-  color: #2563eb;
+  color: var(--cv-primary);
+  background-color: var(--cv-primary-bg);
   font-weight: 600;
-  background-color: #eff6ff;
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
 }
@@ -62,7 +106,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: white;
-  background-color: #2563eb;
+  background-color: var(--cv-primary);
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
@@ -70,7 +114,7 @@
 }
 
 .confirmBtn:hover {
-  background-color: #1d4ed8;
+  background-color: var(--cv-primary-hover);
   transform: translateY(-2px);
   box-shadow: 0 8px 15px -3px rgba(37, 99, 235, 0.3);
 }
@@ -80,9 +124,9 @@
   border-radius: 12px;
   font-size: 1rem;
   font-weight: 600;
-  color: #64748b;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  color: var(--cv-text-muted);
+  background-color: var(--cv-bg-sub);
+  border: 1px solid var(--cv-border);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -91,8 +135,8 @@
 }
 
 .backBtn:hover {
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: var(--cv-bg-hover);
+  color: var(--cv-text-main);
 }
 
 @keyframes fadeIn {
