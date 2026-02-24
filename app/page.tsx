@@ -3,7 +3,7 @@
 
 import React, { useEffect } from 'react'; 
 import Link from 'next/link';
-import { FolderOpen, AlertTriangle, Users, CalendarCheck, ArrowRight } from 'lucide-react';
+import { FolderOpen, AlertTriangle, Users, CalendarCheck, ArrowRight, FileSignature } from 'lucide-react';
 import s from './page.module.css';
 
 // ✅ GA Imports
@@ -16,13 +16,21 @@ const GA_CTX = { page: 'SafetyDocs', section: 'Dashboard', area: 'MenuGrid' } as
 
 const MENU_ITEMS = [
   {
-    id: 'tools',
-    title: '안전보건 문서함',
-    desc: '작성한 문서를 관리하고 다운로드하세요.',
-    icon: <FolderOpen size={32} />,
-    href: '/docs/docs-box',
-    isPrimary: true,
+    id: 'sign',
+    title: '안전문서 단체서명',
+    desc: '문서를 업로드하고 다수의 대상자에게 알림톡으로 손쉽게 서명을 요청하세요.',
+    icon: <FileSignature size={32} />,
+    href: '/docs/docs-sign', // 💡 실제 서명 페이지 경로로 수정해서 사용하세요!
+    isPrimary: true
   },
+  // {
+  //   id: 'tools',
+  //   title: '안전보건 문서함',
+  //   desc: '작성한 문서를 관리하고 다운로드하세요.',
+  //   icon: <FolderOpen size={32} />,
+  //   href: '/docs/docs-box',
+  //   isPrimary: true,
+  // },
   {
     id: 'risk',
     title: '위험성평가',
