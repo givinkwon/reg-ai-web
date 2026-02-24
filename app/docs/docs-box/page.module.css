@@ -1,7 +1,5 @@
-/* RegAI Theme Colors 
-   CSS Module에서는 :root를 쓸 수 없으므로, 
-   최상위 클래스(.container)에 변수를 선언하여 스코프를 제한합니다. 
-*/
+/* app/docs/docs-box/page.module.css */
+
 .container {
   /* --- Local Variables --- */
   --sl-primary: #3b82f6;      /* RegAI Blue */
@@ -78,6 +76,7 @@
 }
 
 @keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* --- Content --- */
 .content {
@@ -142,22 +141,68 @@
   flex-shrink: 0;
 }
 
+.docNameBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .docName {
   font-weight: 500;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+/* 서명 진행상태 뱃지 */
+.signBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  width: fit-content;
+}
+.signBadgeProgress {
+  background-color: #fef9c3;
+  color: #b45309;
+  border: 1px solid #fef08a;
+}
+.signBadgeComplete {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 .textCenter {
   text-align: center;
 }
 
+.actionBtns {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
 .downloadBtn {
   color: var(--sl-text-sub);
   gap: 6px;
 }
-
 .downloadBtn:hover {
   color: var(--sl-primary);
   background-color: #eff6ff;
+}
+
+.statusBtn {
+  color: #0ea5e9;
+  gap: 6px;
+  border: 1px solid #bae6fd;
+  background-color: #f0f9ff;
+}
+.statusBtn:hover {
+  background-color: #e0f2fe;
+  color: #0369a1;
 }
 
 .emptyCell {
@@ -199,11 +244,21 @@
   line-height: 1.4;
 }
 
-.mobileDownloadBtn {
-  width: 100%;
+.mobileActionBtns {
+  display: flex;
   gap: 8px;
-  border-color: var(--sl-primary);
-  color: var(--sl-primary);
+}
+
+.mobileBtn {
+  flex: 1;
+  gap: 8px;
+}
+.mobileBtnStatus {
+  flex: 1;
+  gap: 8px;
+  border-color: #bae6fd;
+  color: #0ea5e9;
+  background-color: #f0f9ff;
 }
 
 /* --- Footer & Misc --- */
@@ -258,9 +313,170 @@
   color: white;
   padding: 0 40px;
 }
-
 .primaryBtn:hover {
   background-color: var(--sl-primary-hover);
+}
+
+/* =========================================
+   서명 현황 모달 (Signature Status Modal)
+   ========================================= */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s;
+}
+
+.modalContent {
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+.modalTime {
+  font-size: 0.85rem;
+  color: #3b82f6;
+  font-weight: 600;
+}
+.closeModalBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+.closeModalBtn:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.modalBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.statsGrid {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.statBox {
+  flex: 1;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+}
+.statLabel {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.progressTrack {
+  width: 100%;
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #10b981);
+  transition: width 0.5s ease-out;
+}
+
+.attendeeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.attendeeItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  background-color: #ffffff;
+}
+.attendeeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.attendeeName {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 1rem;
+}
+.attendeeDesc {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.attendeeActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* 개별 상태 뱃지 */
+.attBadge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.attComplete { background-color: #dcfce7; color: #166534; }
+.attPending { background-color: #f1f5f9; color: #475569; }
+.attFail { background-color: #fee2e2; color: #991b1b; }
+
+.resendBtn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #334155;
+  cursor: pointer;
+}
+.resendBtn:hover {
+  background-color: #f8fafc;
 }
 
 /* --- Responsive Media Queries --- */
@@ -286,5 +502,12 @@
   
   .btnText {
     display: none; /* 모바일에서 '새로고침' 텍스트 숨김 */
+  }
+
+  .statsGrid {
+    gap: 0.5rem;
+  }
+  .statBox {
+    padding: 0.8rem;
   }
 }
