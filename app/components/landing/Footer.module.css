@@ -1,11 +1,39 @@
 /* app/components/Footer/Footer.module.css */
+
 .footer {
+  /* --- Light Mode Variables --- */
+  --ft-bg: #f9fafb;
+  --ft-border: #eaeaea;
+  --ft-text: #666666;
+  --ft-muted: #999999;
+  
+  --ft-email-bg: #ffffff;
+  --ft-email-text: #333333;
+  --ft-email-border: #dddddd;
+  --ft-email-hover: #f0f0f0;
+
   width: 100%;
   padding: 3rem 1rem;
   margin-top: 4rem; /* 본문과 간격 */
-  border-top: 1px solid #eaeaea;
-  background-color: #f9fafb;
+  border-top: 1px solid var(--ft-border);
+  background-color: var(--ft-bg);
   text-align: center;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* --- Dark Mode Variables --- */
+@media (prefers-color-scheme: dark) {
+  .footer {
+    --ft-bg: #0f172a;           /* 깊은 남색 배경 (Slate 900) */
+    --ft-border: #1e293b;       /* Slate 800 */
+    --ft-text: #94a3b8;         /* Slate 400 */
+    --ft-muted: #64748b;        /* Slate 500 */
+    
+    --ft-email-bg: #1e293b;     /* 버튼도 살짝 어두운 배경으로 (Slate 800) */
+    --ft-email-text: #f8fafc;   /* 밝은 텍스트 */
+    --ft-email-border: #334155; /* Slate 700 */
+    --ft-email-hover: #334155;
+  }
 }
 
 .container {
@@ -19,8 +47,9 @@
 
 .message {
   font-size: 0.95rem;
-  color: #666;
+  color: var(--ft-text);
   margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
 }
 
 .buttonGroup {
@@ -43,7 +72,7 @@
   border: 1px solid transparent;
 }
 
-/* 카카오톡 스타일 */
+/* 카카오톡 스타일 (브랜드 컬러 유지) */
 .kakao {
   background-color: #FEE500;
   color: #000000;
@@ -51,21 +80,38 @@
 }
 .kakao:hover {
   background-color: #FDD835;
+  transform: translateY(-2px);
 }
 
-/* 이메일 스타일 */
+/* 이메일 스타일 (다크모드 가변 테마 적용) */
 .email {
-  background-color: #ffffff;
-  color: #333;
-  border-color: #ddd;
+  background-color: var(--ft-email-bg);
+  color: var(--ft-email-text);
+  border-color: var(--ft-email-border);
 }
 .email:hover {
-  background-color: #f0f0f0;
-  border-color: #ccc;
+  background-color: var(--ft-email-hover);
+  transform: translateY(-2px);
 }
 
 .copyright {
   margin-top: 1rem;
   font-size: 0.8rem;
-  color: #999;
+  color: var(--ft-muted);
+  transition: color 0.3s ease;
+}
+
+/* 모바일 대응: 버튼 간격 최적화 */
+@media (max-width: 480px) {
+  .footer {
+    padding: 2.5rem 1rem;
+  }
+  .buttonGroup {
+    flex-direction: column;
+    width: 100%;
+    max-width: 280px;
+  }
+  .contactBtn {
+    justify-content: center;
+  }
 }
