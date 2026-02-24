@@ -281,6 +281,47 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
         </div>
       </div>
 
+      <div className={s.footer}>
+        <div className={s.centerWrap}>
+          <div className={s.footerMessage}></div>
+          <div className={s.footerBtns}>
+            {step !== 'upload' && (
+              <button 
+                className={s.navBtn} 
+                onClick={handlePrev} 
+                disabled={isAnalyzing || submitting}
+                data-ga-event="ClickPrev"
+                data-ga-id={gaUiId(GA_CTX, 'ClickPrev')}
+              >
+                이전
+              </button>
+            )}
+            
+            {step === 'upload' ? (
+              <button 
+                className={s.navBtnPrimary} 
+                onClick={handleNext} 
+                disabled={isAnalyzing || !file}
+                data-ga-event="ClickNext"
+                data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
+              >
+                다음 단계
+              </button>
+            ) : (
+              <button 
+                className={s.submitBtn} 
+                onClick={handleFinish} 
+                disabled={submitting}
+                data-ga-event="ClickSubmit"
+                data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
+              >
+                서명 요청 발송
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* 탭 */}
       <div className={s.tabs}>
         <div className={s.centerWrap}>
@@ -452,47 +493,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
           </div>
         </div>
       )}
-
-      <div className={s.footer}>
-        <div className={s.centerWrap}>
-          <div className={s.footerMessage}></div>
-          <div className={s.footerBtns}>
-            {step !== 'upload' && (
-              <button 
-                className={s.navBtn} 
-                onClick={handlePrev} 
-                disabled={isAnalyzing || submitting}
-                data-ga-event="ClickPrev"
-                data-ga-id={gaUiId(GA_CTX, 'ClickPrev')}
-              >
-                이전
-              </button>
-            )}
-            
-            {step === 'upload' ? (
-              <button 
-                className={s.navBtnPrimary} 
-                onClick={handleNext} 
-                disabled={isAnalyzing || !file}
-                data-ga-event="ClickNext"
-                data-ga-id={gaUiId(GA_CTX, 'ClickNext')}
-              >
-                다음 단계
-              </button>
-            ) : (
-              <button 
-                className={s.submitBtn} 
-                onClick={handleFinish} 
-                disabled={submitting}
-                data-ga-event="ClickSubmit"
-                data-ga-id={gaUiId(GA_CTX, 'ClickSubmit')}
-              >
-                서명 요청 발송
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
