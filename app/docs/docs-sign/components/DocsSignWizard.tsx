@@ -205,7 +205,7 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     
     setSubmitting(true);
     try {
-      const res = await fetch('/api/docs-sign/request', {
+      const res = await fetch('/api/docs-sign/request-signatures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
