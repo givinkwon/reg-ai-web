@@ -1,7 +1,7 @@
 /* app/components/FloatingSupport/FloatingSupport.module.css */
 .wrapper {
   position: fixed;
-  bottom: 2rem;
+  bottom: 4rem;
   right: 2rem;
   z-index: 9999; /* 다른 요소보다 위에 오게 설정 */
   display: flex;
