@@ -52,7 +52,7 @@ const validateAndSetFile = (selectedFile: File) => {
     }
 
     // 2. 허용된 확장자 리스트
-    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
     
     // 현재 파일이 허용된 확장자 중 하나로 끝나는지 검사
     const isValid = allowedExtensions.some(ext => fileName.endsWith(ext));
@@ -247,7 +247,7 @@ const validateAndSetFile = (selectedFile: File) => {
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
                   style={{ display: 'none' }} 
-                  accept=".ppt,.pptx,.doc,.docx,.xls,.xlsx,.pdf" 
+                  accept=".doc,.docx,.xls,.xlsx,.pdf" 
                 />
               </div>
 

@@ -2,23 +2,22 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Users, Plus, X, Save, Download, PieChart, Clock } from 'lucide-react';
+import { Sparkles, RefreshCw, ArrowLeft, UploadCloud, Users, Plus, X, Save, Download } from 'lucide-react';
 import s from './DocsSignWizard.module.css';
 
+import Navbar from '@/app/docs/components/Navbar';
 import CompleteView from './ui/CompleteView'; 
 import { useUserStore } from '@/app/store/user';
 
 // ✅ GA 로직 임포트
 import { track } from '@/app/lib/ga/ga';
 import { gaEvent, gaUiId } from '@/app/lib/ga/naming';
-import Navbar from '../../components/Navbar';
 
 const GA_CTX = { page: 'DocsSign', section: 'Sign', area: 'Wizard' } as const;
 
 export type Attendee = { name: string; contact: string; status?: 'pending' | 'completed' | 'failed' };
 type AttendeeGroup = { groupName: string; attendees: Attendee[]; };
 
-// 🚀 3단계 상태 추가
 type StepId = 'upload' | 'request' | 'status';
 
 const STEPS: { id: StepId; label: string }[] = [
@@ -53,7 +52,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   const [isCompleted, setIsCompleted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // 🚀 3단계(현황) & 다운로드 상태
   const [masterId, setMasterId] = useState<string | null>(null);
   const [statusData, setStatusData] = useState<SignStatusData | null>(null);
   const [isStatusLoading, setIsStatusLoading] = useState(false);
@@ -70,8 +68,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     }
   }, [open]);
 
-  // 🚀 1. 실시간 데이터 가져오기 (isSilent 파라미터 추가)
-  // isSilent가 true면 화면에 로딩 스피너를 안 띄우고 조용히 뒤에서 데이터를 갱신합니다.
   const fetchStatus = async (id: string, isSilent = false) => {
     if (!isSilent) setIsStatusLoading(true);
     try {
@@ -90,19 +86,15 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     }
   };
 
-  // 🚀 2. 자동 업데이트 (Polling) 로직 추가
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-
-    // 3단계 창이 열려있고, masterId가 존재할 때만 5초마다 갱신
     if (step === 'status' && masterId) {
       intervalId = setInterval(() => {
-        fetchStatus(masterId, true); // 조용히 데이터만 갱신
+        fetchStatus(masterId, true);
       }, 5000); 
     }
-
     return () => {
-      if (intervalId) clearInterval(intervalId); // 컴포넌트가 꺼지거나 단계가 바뀌면 타이머 종료
+      if (intervalId) clearInterval(intervalId);
     };
   }, [step, masterId]);
 
@@ -124,11 +116,15 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     localStorage.setItem('docs_sign_usage_count', String(count + 1));
   };
 
+  // PPTX, PPT 차단
   const validateAndSetFile = (selectedFile: File) => {
     const fileName = selectedFile.name.toLowerCase();
     if (fileName.endsWith('.hwp')) return alert("현재 HWP 파일은 지원 준비 중입니다. PDF로 변환하여 업로드해 주세요.");
-    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
-    if (!allowedExtensions.some(ext => fileName.endsWith(ext))) return alert("지원하지 않는 파일 형식입니다.\n(지원 형식: PDF, Word, Excel, PPT)");
+    
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+    if (!allowedExtensions.some(ext => fileName.endsWith(ext))) {
+      return alert("지원하지 않는 파일 형식입니다.\n(지원 형식: PDF, Word, Excel)");
+    }
     setFile(selectedFile);
   };
 
@@ -260,13 +256,11 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
     setIsCompleted(true);
   };
 
-  // 🚀 3. 현재 상태로 다운로드 로직 완벽 구현
   const handleDownloadCurrentState = async () => {
     if (!masterId) return alert('문서 정보가 없습니다.');
     
     setIsDownloading(true);
     try {
-      // 1) 문서함 API를 조회하여 내 master_id와 일치하는 문서를 찾습니다.
       const listRes = await fetch('/api/docs?endpoint=list', {
         headers: { 'x-user-email': user?.email || 'guest@reg.ai.kr', 'Cache-Control': 'no-cache' }
       });
@@ -284,7 +278,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
          return;
       }
 
-      // 2) 찾은 문서 ID로 다운로드를 실행합니다 (docs-box의 다운로드 로직과 동일)
       const qs = new URLSearchParams({ endpoint: 'download', key: targetDoc.id });
       const tbmId = targetDoc.meta?.tbm_id || targetDoc.meta?.tbmId;
       if (tbmId) qs.append('tbmId', tbmId);
@@ -317,6 +310,9 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   if (isCompleted) {
     return (
       <div className={s.wrap}>
+        <div className={s.navWrapper}>
+          <Navbar />
+        </div>
         <CompleteView onClose={onClose} onBack={() => { setIsCompleted(false); setStep('status'); }} />
       </div>
     );
@@ -327,7 +323,7 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
   return (
     <div className={s.wrap}>
 
-      <div style={{ position: 'relative', zIndex: 100 }}>
+      <div className={s.navWrapper}>
         <Navbar />
       </div>
 
@@ -379,6 +375,20 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
         </div>
       </div>
 
+      <div className={s.footer}>
+        <div className={s.centerWrap}>
+          <div className={s.footerMessage}></div>
+          <div className={s.footerBtns}>
+            {step === 'request' && <button className={s.navBtn} onClick={handlePrev} disabled={submitting}>이전</button>}
+            {step === 'status' && <button className={s.navBtn} onClick={handlePrevFromStatus} disabled={isStatusLoading || isDownloading}>이전</button>}
+            
+            {step === 'upload' && <button className={s.navBtnPrimary} onClick={handleNext} disabled={isAnalyzing || !file}>다음 단계</button>}
+            {step === 'request' && <button className={s.submitBtn} onClick={handleSendRequest} disabled={submitting}>서명 요청 발송</button>}
+            {step === 'status' && <button className={s.submitBtn} onClick={handleCompleteWizard} disabled={isDownloading}>완료</button>}
+          </div>
+        </div>
+      </div>
+
       <div className={s.content}>
         <div className={s.container}>
           
@@ -393,14 +403,14 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
               >
                 <UploadCloud size={56} className={isDragging ? 'text-blue-500' : 'text-slate-400'} style={{ marginBottom: '1rem' }} />
                 <p className={s.dropZoneTitle}>이곳으로 파일을 드래그하여 놓거나 클릭하여 업로드하세요</p>
-                <p className={s.dropZoneDesc}>지원 형식: PDF, Word, Excel, PPT</p>
+                <p className={s.dropZoneDesc}>지원 형식: PDF, Word, Excel</p>
                 
                 <input 
                   type="file" 
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
                   style={{ display: 'none' }} 
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
+                  accept=".pdf,.doc,.docx,.xls,.xlsx" 
                 />
               </div>
 
@@ -468,12 +478,29 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
                   </div>
                 ) : (
                   <div className={s.table}>
+                    {/* 🚀 기획안 반영: 리스트 UI 변경 */}
                     {attendees.map((a, i) => (
-                      <div key={i} className={s.trow}>
+                      <div key={i} className={s.attendeeRow}>
                         <div className={s.rowNum}>{i + 1}</div>
-                        <input className={s.inputCell} placeholder="이름" value={a.name} onChange={e => { const n = [...attendees]; n[i].name = e.target.value; setAttendees(n); }} />
-                        <input className={`${s.inputCell} ${s.inputCellLarge}`} placeholder="연락처 (알림톡 발송용)" value={a.contact} onChange={e => { const n = [...attendees]; n[i].contact = e.target.value; setAttendees(n); }} />
-                        <button className={s.removeBtn} onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}><X size={20} /></button>
+                        <div className={s.inputWrapper}>
+                          <input 
+                            className={s.inputCell} 
+                            placeholder="이름" 
+                            value={a.name} 
+                            onChange={e => { const n = [...attendees]; n[i].name = e.target.value; setAttendees(n); }} 
+                          />
+                        </div>
+                        <div className={s.inputWrapperLarge}>
+                          <input 
+                            className={s.inputCell} 
+                            placeholder="연락처 (알림톡 발송용)" 
+                            value={a.contact} 
+                            onChange={e => { const n = [...attendees]; n[i].contact = e.target.value; setAttendees(n); }} 
+                          />
+                        </div>
+                        <button className={s.removeBtn} onClick={() => setAttendees(p => p.filter((_, idx) => idx !== i))}>
+                          <X size={20} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -542,7 +569,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
                     <button className={s.btnOutline} onClick={() => { onClose(); router.push('/docs/docs-box'); }}>
                       문서함 바로가기
                     </button>
-                    {/* 🚀 다운로드 버튼 로딩 처리 */}
                     <button className={s.btnPrimarySm} onClick={handleDownloadCurrentState} disabled={isDownloading}>
                       {isDownloading ? <RefreshCw size={14} className={s.spin} /> : <Download size={14}/>}
                       {isDownloading ? '다운로드 중...' : '현재 상태로 다운로드'}
@@ -553,20 +579,6 @@ export default function DocsSignWizard({ open, onClose, onRequireLogin }: Props)
             </div>
           )}
 
-        </div>
-      </div>
-
-      <div className={s.footer}>
-        <div className={s.centerWrap}>
-          <div className={s.footerMessage}></div>
-          <div className={s.footerBtns}>
-            {step === 'request' && <button className={s.navBtn} onClick={handlePrev} disabled={submitting}>이전</button>}
-            {step === 'status' && <button className={s.navBtn} onClick={handlePrevFromStatus} disabled={isStatusLoading || isDownloading}>이전</button>}
-            
-            {step === 'upload' && <button className={s.navBtnPrimary} onClick={handleNext} disabled={isAnalyzing || !file}>다음 단계</button>}
-            {step === 'request' && <button className={s.submitBtn} onClick={handleSendRequest} disabled={submitting}>서명 요청 발송</button>}
-            {step === 'status' && <button className={s.submitBtn} onClick={handleCompleteWizard} disabled={isDownloading}>완료</button>}
-          </div>
         </div>
       </div>
 

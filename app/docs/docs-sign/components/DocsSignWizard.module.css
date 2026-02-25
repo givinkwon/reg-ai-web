@@ -1,7 +1,7 @@
 /* app/docs/components/DocsSignWizard.module.css */
 
 .wrap {
-  --content-width: 900px;
+  --content-width: 1000px; 
   
   /* --- Light Mode Variables --- */
   --sl-bg-main: #ffffff;
@@ -15,10 +15,9 @@
   --sl-border: #e2e8f0;
   --sl-border-focus: #cbd5e1;
   
-  /* 브랜드 그라데이션 & 컬러 (기획안 반영) */
-  --sl-primary: #2388FF;
-  --sl-primary-grad: linear-gradient(135deg, #2388FF 0%, #1a6edb 100%);
-  --sl-primary-hover: #1b6cd9;
+  --sl-primary: #2563eb;
+  --sl-primary-grad: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  --sl-primary-hover: #1d4ed8;
   --sl-primary-bg: #eff6ff;
   --sl-primary-border: #bfdbfe;
   
@@ -27,7 +26,7 @@
   
   position: fixed;
   inset: 0;
-  background-color: var(--sl-bg-sub); /* 전체 배경을 살짝 회색으로 변경 (카드 돋보이게) */
+  background-color: var(--sl-bg-main); 
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -61,6 +60,12 @@
   }
 }
 
+.navWrapper {
+  position: relative;
+  z-index: 100;
+  width: 100%;
+}
+
 /* =========================================
    1. 헤더 (Header)
    ========================================= */
@@ -71,12 +76,13 @@
   border-bottom: 1px solid var(--sl-border);
   display: flex;
   justify-content: center;
-  padding: 0 1rem;
+  padding: 0 2rem;
 }
 
 .centerWrap {
   width: 100%;
   max-width: var(--content-width);
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -133,9 +139,8 @@
   flex-shrink: 0;
   display: flex;
   justify-content: center;
-  background-color: var(--sl-bg-main); /* 헤더와 색상 통일 */
-  border-bottom: 1px solid var(--sl-border);
-  padding: 0 1rem;
+  background-color: var(--sl-bg-main); 
+  padding: 0 2rem;
 }
 
 .tabs .centerWrap {
@@ -151,14 +156,12 @@
   padding: 1rem 0.8rem;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   cursor: pointer;
   color: var(--sl-text-muted);
   white-space: nowrap;
 }
 .tabActive {
   color: var(--sl-primary);
-  border-bottom-color: var(--sl-primary);
 }
 .tabPast {
   color: var(--sl-text-sub);
@@ -185,13 +188,88 @@
 }
 
 /* =========================================
-   3. 본문 (Content)
+   3. 푸터 (Footer) 
+   ========================================= */
+.footer {
+  flex-shrink: 0;
+  height: 70px;
+  background: var(--sl-bg-main);
+  display: flex;
+  justify-content: center;
+  padding: 0 2rem;
+  z-index: 10;
+}
+
+.footerMessage {
+  font-size: 0.9rem;
+  color: var(--sl-text-sub);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footerBtns {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.navBtn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background-color: var(--sl-bg-main);
+  border: 1px solid var(--sl-border-focus);
+  color: var(--sl-text-sub);
+  transition: all 0.2s;
+}
+.navBtn:hover:not(:disabled) { background-color: var(--sl-bg-hover); color: var(--sl-text-main); }
+
+.navBtnPrimary {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background-color: var(--sl-primary);
+  border: none;
+  color: #fff;
+  transition: all 0.2s;
+}
+.navBtnPrimary:hover:not(:disabled) { background-color: var(--sl-primary-hover); }
+
+.submitBtn {
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: var(--sl-primary-grad);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px -3px rgba(35, 136, 255, 0.4);
+}
+
+.wrap button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+
+/* =========================================
+   4. 본문 (Content)
    ========================================= */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem 1rem;
-  background-color: var(--sl-bg-sub);
+  padding: 2rem 2rem;
+  background-color: var(--sl-bg-main); 
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -205,13 +283,12 @@
   gap: 1.5rem;
 }
 
-/* 🚀 위험성평가 UI와 동일하게 변경 (테두리 제거, 그림자 강조) */
 .card {
   background: var(--sl-bg-main);
   padding: 2.5rem;
-  border-radius: 16px; /* 12px -> 16px로 더 둥글게 */
-  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); /* 더 깊은 그림자 */
-  border: none; /* 테두리 제거 */
+  border-radius: 16px; 
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); 
+  border: 1px solid var(--sl-border); 
 }
 
 @media (prefers-color-scheme: dark) {
@@ -288,82 +365,6 @@
 }
 
 /* =========================================
-   4. 푸터 (Footer)
-   ========================================= */
-.footer {
-  flex-shrink: 0;
-  height: 80px;
-  background: var(--sl-bg-main);
-  border-top: 1px solid var(--sl-border);
-  display: flex;
-  justify-content: center;
-  padding: 0 1rem;
-}
-
-.footerMessage {
-  font-size: 0.9rem;
-  color: var(--sl-text-sub);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.footerBtns {
-  display: flex;
-  gap: 0.8rem;
-}
-
-/* 🚀 Buttons Styling (기획안 통일) */
-.navBtn {
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  background-color: var(--sl-bg-main);
-  border: 1px solid var(--sl-border-focus);
-  color: var(--sl-text-sub);
-  transition: all 0.2s;
-}
-.navBtn:hover:not(:disabled) { background-color: var(--sl-bg-hover); color: var(--sl-text-main); }
-
-.navBtnPrimary {
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  background-color: var(--sl-primary);
-  border: none;
-  color: #fff;
-  transition: all 0.2s;
-}
-.navBtnPrimary:hover:not(:disabled) { background-color: var(--sl-primary-hover); }
-
-/* 🚀 서명 발송 & 완료 버튼 그라데이션 적용 */
-.submitBtn {
-  padding: 0.8rem 2rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  background: var(--sl-primary-grad);
-  border: none;
-  color: #fff;
-  box-shadow: 0 4px 6px -1px rgba(35, 136, 255, 0.3);
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.submitBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px -3px rgba(35, 136, 255, 0.4);
-}
-
-.wrap button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-
-/* =========================================
    5. 로딩 오버레이 & 공통 요소
    ========================================= */
 .loadingOverlay {
@@ -403,7 +404,7 @@
 .loadingDesc { font-size: 0.95rem; color: var(--sl-text-sub); line-height: 1.5; white-space: pre-wrap; }
 
 /* =========================================
-   6. 참석자 입력 폼 & 그룹 관리 UI
+   🚀 6. 기획안 반영: 참석자 둥근 입력 폼 UI
    ========================================= */
 .attendeeHeader { 
   display: flex; 
@@ -477,7 +478,6 @@
 }
 .addBtn:hover { transform: translateY(-1px); }
 
-/* 테이블 및 행 스타일 */
 .emptyState {
   text-align: center; 
   padding: 3rem 0; 
@@ -485,42 +485,74 @@
   line-height: 1.6;
 }
 
-.table { display: flex; flex-direction: column; gap: 0.75rem; }
-.trow { display: flex; gap: 0.5rem; align-items: center; }
+/* 🚀 테이블 대신 리스트 형식으로 변경 */
+.table { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.8rem; /* 행 간격 */
+}
+
+/* 🚀 개별 참석자 행 (둥근 테두리 및 그림자) */
+.attendeeRow { 
+  display: flex; 
+  gap: 1rem; 
+  align-items: center; 
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  background-color: var(--sl-bg-main);
+  border: 1px solid var(--sl-border);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: border-color 0.2s;
+}
+
+.attendeeRow:hover {
+  border-color: var(--sl-border-focus);
+}
 
 .rowNum {
-  width: 2rem; 
+  width: 1.5rem; 
   text-align: center; 
   color: var(--sl-text-muted); 
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+/* 🚀 입력 필드를 둥근 박스 안에 꽉 차게 만들기 위한 래퍼 */
+.inputWrapper {
+  flex: 1;
+}
+
+.inputWrapperLarge {
+  flex: 2;
 }
 
 .inputCell { 
-  flex: 1; 
-  padding: 0.75rem; 
-  border: 1px solid var(--sl-border-focus); 
-  border-radius: 8px; 
+  width: 100%;
+  padding: 0.6rem 0; 
+  border: none;
   outline: none; 
-  transition: border-color 0.2s;
   color: var(--sl-text-main);
-  background-color: var(--sl-bg-main);
+  background-color: transparent;
+  font-size: 0.95rem;
 }
-.inputCell:focus { border-color: var(--sl-primary); }
-.inputCellLarge { flex: 2; }
+
+.inputCell::placeholder {
+  color: var(--sl-text-muted);
+}
 
 .removeBtn { 
   background: none; 
   border: none; 
   color: var(--sl-danger); 
   cursor: pointer; 
-  padding: 0.75rem; 
-  border-radius: 6px;
+  padding: 0.5rem; 
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
 }
+
 .removeBtn:hover {
   background-color: var(--sl-danger-bg);
 }
@@ -565,7 +597,7 @@
 }
 
 /* =========================================
-   8. 🚀 3단계 서명 현황 (Status) 영역
+   8. 서명 현황 (Status) 영역
    ========================================= */
 .statusHeaderBox {
   margin-bottom: 2rem;
@@ -693,7 +725,6 @@
 .attPending { background-color: var(--sl-bg-sub); color: var(--sl-text-sub); }
 .attFail { background-color: var(--sl-danger-bg); color: var(--sl-danger); }
 
-/* 다크모드 뱃지 보정 */
 @media (prefers-color-scheme: dark) {
   .attComplete { background-color: rgba(22, 101, 52, 0.2); color: #86efac; }
 }
@@ -787,23 +818,38 @@
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Mobile Response */
+/* =========================================
+   📱 Mobile Response (모바일 완벽 대응)
+   ========================================= */
 @media (max-width: 600px) {
   .wrap { --content-width: 100%; } 
-  .footerBtns button { font-size: 0.85rem; padding: 0.8rem; }
+  .footerBtns button { font-size: 0.85rem; padding: 0.6rem 1rem; }
   .tabLabel { display: none; } 
   .card { padding: 1.5rem 1rem; }
+  .content { padding: 1rem; }
   
   .attendeeHeader { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .groupActionWrapper { width: 100%; justify-content: space-between; gap: 0.5rem; box-sizing: border-box; }
   .groupSelect { flex: 1; min-width: 0; box-sizing: border-box; }
   
-  .trow {
-    flex-direction: column; align-items: stretch; padding: 1rem;
-    background-color: var(--sl-bg-sub); border-radius: 12px; position: relative; gap: 0.75rem; width: 100%; box-sizing: border-box; 
+  /* 모바일에서 리스트 레이아웃 세로 배치 */
+  .attendeeRow {
+    flex-direction: column; 
+    align-items: stretch; 
+    padding: 1rem;
+    position: relative; 
+    gap: 0.75rem; 
+    width: 100%; 
+    box-sizing: border-box; 
   }
   .rowNum { text-align: left; width: auto; font-size: 0.8rem; margin-bottom: -0.25rem; }
-  .inputCell, .inputCellLarge { width: 100% !important; max-width: 100%; box-sizing: border-box; flex: none; display: block; }
+  
+  /* 인풋 필드에 모바일용 얇은 선 추가 */
+  .inputCell {
+      border-bottom: 1px solid var(--sl-border-focus);
+      padding: 0.5rem 0;
+  }
+  
   .saveGroupBtn, .addBtn { flex: 1; justify-content: center; font-size: 0.8rem; padding: 0.5rem 0.5rem; white-space: nowrap; }
   .removeBtn { position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.5rem; z-index: 10; }
 
